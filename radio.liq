@@ -7,7 +7,7 @@ noodband = single("/var/audio/fallback.ogg")
 # De studio voert hier zijn audio in
 radio = input.harbor("studio",port=8080,password="---")
 
-radio = fallback(track_sensitive = false, [radio, noodband])
+radio = fallback (track_sensitive=false, [ strip_blank(max_blank=10.,min_noise=30.,radio) , noodband ])
 
 # STL
 output.icecast(%vorbis.cbr(bitrate=320),
