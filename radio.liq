@@ -1,13 +1,16 @@
-# Server mag op alle ip-adressen luisteren
-set("harbor.bind_addr","0.0.0.0")
-
 # Als de studio er niet is, spelen we dit
-noodband = single("/var/audio/fallback.ogg")
+noodband = drop_metadata(single("/var/audio/fallback.ogg"))
 
 # De studio voert hier zijn audio in
-radio = input.harbor("studio",port=8080,password="---")
+radio = drop_metadata(input.harbor("studio",port=8080,password="---"))
 
+# Hier halen we de metadata op
+metacontent = list.hd(get_process_lines("wget -qO- http://www.zuidwesttv.nl/teksttv/rds_programma.php"))
+
+# Fallback en live combineren
 radio = fallback (track_sensitive=false, [ strip_blank(max_blank=10.,min_noise=30.,radio) , noodband ])
+
+radio = map_metadata(metacontent, radio)
 
 # STL
 output.icecast(%vorbis.cbr(bitrate=320),
