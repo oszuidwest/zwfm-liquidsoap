@@ -10,7 +10,8 @@ metacontent = list.hd(get_process_lines("wget -qO- http://www.zuidwesttv.nl/teks
 # Fallback en live combineren
 radio = fallback (track_sensitive=false, [ strip_blank(max_blank=10.,min_noise=30.,radio) , noodband ])
 
-radio = map_metadata(metacontent, radio)
+# Metadata van script in stream inseren (werkt nog niet)
+radio = map_metadata(test - test, radio)
 
 # STL
 output.icecast(%vorbis.cbr(bitrate=320),
