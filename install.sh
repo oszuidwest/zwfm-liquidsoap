@@ -1,5 +1,5 @@
 sudo apt-get -y install autoconf
-sudo apt-get -y install libtool libtoon-bin unzip
+sudo apt-get -y install libtool libtool-bin unzip
 sudo apt-get -y install g++
 sudo apt-get -y install make
 sudo apt-get -y install libxml-dom-perl
