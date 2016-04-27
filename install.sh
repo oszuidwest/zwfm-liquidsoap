@@ -60,6 +60,7 @@ rm -rf libaacplus-2.0.2 libaacplus-2.0.2.tar.gz
 wget https://github.com/savonet/liquidsoap/releases/download/1.2.0/liquidsoap-1.2.0-full.tar.bz2
 tar -xf liquidsoap-1.2.0-full.tar.bz2
 cd liquidsoap-1.2.0-full
+wget https://github.com/rmens/liquidsoap-ubuntu15/blob/master/PACKAGES-for-audio -O PACKAGES
 mv PACKAGES.default PACKAGES
 sudo useradd liquidsoap
 
