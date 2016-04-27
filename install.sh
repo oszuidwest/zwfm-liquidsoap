@@ -62,7 +62,7 @@ cd liquidsoap-1.2.0-full
 wget https://raw.githubusercontent.com/rmens/liquidsoap-ubuntu15/master/PACKAGES-for-audio -O PACKAGES
 sudo useradd liquidsoap
 
-./configure --enable-debugging --disable-graphics --with-user=liquidsoap --with-group=liquidsoap --sysconfdir=/etc
+./configure --disable-graphics --with-user=liquidsoap --with-group=liquidsoap --sysconfdir=/etc
 make
 sudo make install
 cd liquidsoap-1.2.0
