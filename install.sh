@@ -58,8 +58,11 @@ sudo make install
 rm -rf libaacplus-2.0.2 libaacplus-2.0.2.tar.gz
 
 wget https://github.com/savonet/liquidsoap/releases/download/1.2.0/liquidsoap-1.2.0-full.tar.bz2
-sudo useradd liquidsoap
+tar -xf liquidsoap-1.2.0-full.tar.bz2
+cd liquidsoap-1.2.0-full
 mv PACKAGES.default PACKAGES
+sudo useradd liquidsoap
+
 
 ./configure --enable-debugging --disable-graphics --with-user=liquidsoap --with-group=liquidsoap --sysconfdir=/etc
 make
