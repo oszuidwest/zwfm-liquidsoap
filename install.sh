@@ -46,7 +46,6 @@ sudo apt-get -y install libgstreamer0.10-dev libgstreamer-plugins-base0.10-dev
 sudo apt-get -y install libshine-ocaml-dev
 sudo apt-get -y install libflac-dev
 sudo apt-get -y install liblo-dev
-sudo apt-get -y install libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev libschroedinger-1.0-0
 
 wget http://ffmpeg.gusari.org/uploads/libaacplus-2.0.2.tar.gz
 tar xvf libaacplus-2.0.2.tar.gz
@@ -60,10 +59,8 @@ rm -rf libaacplus-2.0.2 libaacplus-2.0.2.tar.gz
 wget https://github.com/savonet/liquidsoap/releases/download/1.2.0/liquidsoap-1.2.0-full.tar.bz2
 tar -xf liquidsoap-1.2.0-full.tar.bz2
 cd liquidsoap-1.2.0-full
-wget https://github.com/rmens/liquidsoap-ubuntu15/blob/master/PACKAGES-for-audio -O PACKAGES
-mv PACKAGES.default PACKAGES
+wget https://raw.githubusercontent.com/rmens/liquidsoap-ubuntu15/master/PACKAGES-for-audio -O PACKAGES
 sudo useradd liquidsoap
-
 
 ./configure --enable-debugging --disable-graphics --with-user=liquidsoap --with-group=liquidsoap --sysconfdir=/etc
 make
