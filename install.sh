@@ -59,7 +59,7 @@ rm -rf libaacplus-2.0.2 libaacplus-2.0.2.tar.gz
 wget https://github.com/savonet/liquidsoap/releases/download/1.2.0/liquidsoap-1.2.0-full.tar.bz2
 tar -xf liquidsoap-1.2.0-full.tar.bz2
 cd liquidsoap-1.2.0-full
-wget https://raw.githubusercontent.com/rmens/liquidsoap-ubuntu15/master/PACKAGES-for-audio -O PACKAGES
+wget https://raw.githubusercontent.com/rmens/liquidsoap-ubuntu/master/PACKAGES-for-audio -O PACKAGES
 sudo useradd liquidsoap
 
 ./configure --disable-graphics --with-user=liquidsoap --with-group=liquidsoap --sysconfdir=/etc
