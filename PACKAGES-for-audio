@@ -38,7 +38,7 @@ ocaml-bjack
 # Gstreamer is a library for constructing graphs of media-handling components.
 # It is currently used to provide audio and video encoding and decoding
 # as well as input and outputs such as V4l inputs.
-#ocaml-gstreamer
+ocaml-gstreamer
 
 # ============================================================================
 # Codecs
@@ -81,7 +81,7 @@ ocaml-theora
 
 # SCHROEDINGER is for ogg/dirac encoding and decoding
 # you need ocaml-ogg to enable ocaml-schroedinger
-ocaml-schroedinger
+#ocaml-schroedinger
 
 # VOAACENC is for AAC encoding.
 ocaml-voaacenc
