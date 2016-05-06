@@ -15,12 +15,13 @@ radio = map_metadata(test - test, radio)
 
 # STL
 output.icecast(%vorbis.cbr(bitrate=320),
-  host="icecast.zuidwestfm.nl", port=80, password="---", mount="/zuidwest.stl.test", name="ZuidWest FM", radio)
+  host="icecast.zuidwestfm.nl", port=80, password="---", mount="/zuidwest.stl", name="ZuidWest FM", description="Studio to Transmitter", radio)
 
 # WEB
-output.icecast(%mp3(bitrate=128),
-  host="icecast.zuidwestfm.nl", port=80, password="---", mount="/zuidwest.mp3.test", name="ZuidWest FM", radio)
+output.icecast(%mp3(bitrate=192),
+  host="icecast.zuidwestfm.nl", port=80, password="---", mount="/zuidwest.mp3", name="ZuidWest FM", description="Hoge Kwaliteit Stream (192kbit MP3)", radio)
 
 # APP
-output.icecast(%aacplus(bitrate=56),
-  host="icecast.zuidwestfm.nl", port=80, password="---", mount="/zuidwest.aac.test", name="ZuidWest FM", radio)
+output.icecast(%aacplus(bitrate=64),
+  host="icecast.zuidwestfm.nl", port=80, password="---", mount="/zuidwest.aac", name="ZuidWest FM", description="iPad/Mobile Stream (64kbit AAC)", radio)
+
