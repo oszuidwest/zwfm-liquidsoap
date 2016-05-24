@@ -8,7 +8,7 @@ radio = drop_metadata(input.harbor("studio",port=8080,password="---"))
 metacontent = list.hd(get_process_lines("wget -qO- http://www.zuidwesttv.nl/teksttv/rds_programma.php"))
 
 # Fallback en live combineren
-radio = fallback (track_sensitive=false, [ strip_blank(max_blank=10.,min_noise=30.,radio) , noodband ])
+radio = fallback (track_sensitive=false, [ strip_blank(max_blank=15.,min_noise=30.,radio) , noodband ])
 
 # Metadata van script in stream inseren (werkt nog niet)
 radio = map_metadata(test - test, radio)
