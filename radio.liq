@@ -14,8 +14,8 @@ radio = fallback (track_sensitive=false, [ strip_blank(max_blank=15.,min_noise=3
 radio = map_metadata(test - test, radio)
 
 # STL
-output.icecast(%vorbis.cbr(bitrate=320),
-  host="icecast.zuidwestfm.nl", port=80, password="---", mount="/zuidwest.stl", name="ZuidWest FM", description="Studio to Transmitter", radio)
+output.icecast(%ogg(%flac),
+  host="icecast.zuidwestfm.nl", port=80, password="---", mount="/zuidwest.stl", name="ZuidWest FM", description="Studio to Transmitter (ongecomprimeerde audio)", radio)
 
 # WEB
 output.icecast(%mp3(bitrate=192),
