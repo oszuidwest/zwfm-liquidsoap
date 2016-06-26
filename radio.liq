@@ -2,7 +2,7 @@
 noodband = drop_metadata(single("/var/audio/fallback.ogg"))
 
 # De studio voert hier zijn audio in
-radio = drop_metadata(input.harbor("studio",port=8080,password="---"))
+radio = drop_metadata(input.harbor("studio",port=8080,buffer=8.,max=20.,password="---"))
 
 # Hier halen we de metadata op
 metacontent = list.hd(get_process_lines("wget -qO- http://www.zuidwesttv.nl/teksttv/rds_programma.php"))
