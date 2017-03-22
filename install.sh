@@ -57,8 +57,8 @@ sudo make install
 rm -rf libaacplus-2.0.2 libaacplus-2.0.2.tar.gz
 
 wget https://github.com/savonet/liquidsoap/releases/download/1.2.1/liquidsoap-1.2.1-full.tar.gz
-tar -xf liquidsoap-1.2.1-full.tar.bz2
-cd liquidsoap-1.2.0-full
+tar -xf liquidsoap-1.2.1-full.tar.gz
+cd liquidsoap-1.2.1-full
 wget https://raw.githubusercontent.com/rmens/liquidsoap-ubuntu/master/PACKAGES-for-audio -O PACKAGES
 sudo useradd liquidsoap
 
