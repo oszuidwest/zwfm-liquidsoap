@@ -65,7 +65,7 @@ sudo useradd liquidsoap
 ./configure --disable-graphics --with-user=liquidsoap --with-group=liquidsoap --sysconfdir=/etc
 make
 sudo make install
-cd liquidsoap-1.2.0
+cd liquidsoap-1.2.1
 sudo make service-install
 sudo update-rc.d liquidsoap defaults
 sudo touch /etc/liquidsoap/radio.liq
