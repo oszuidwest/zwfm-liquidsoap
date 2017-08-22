@@ -19,6 +19,7 @@ output.icecast(%mp3(bitrate=192),
   host='icecast.zuidwestfm.nl', port=80, password='---', mount='/zuidwest.mp3', name='ZuidWest FM', description='Hoge Kwaliteit Stream (192kbit MP3)', radio)
 
 # APP
-output.icecast(%aacplus(bitrate=64),
+output.icecast(%fdkaac(channels=2, samplerate=44100, bitrate=64, afterburner=false, aot="mpeg2_he_aac_v2", transmux="adts", sbr_mode=false)),
   host='icecast.zuidwestfm.nl', port=80, password='---', mount='/zuidwest.aac', name='ZuidWest FM', description='iPad/Mobile Stream (64kbit AAC)', radio)
   
+
