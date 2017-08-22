@@ -47,15 +47,6 @@ sudo apt-get -y install libshine-ocaml-dev
 sudo apt-get -y install libflac-dev
 sudo apt-get -y install liblo-dev
 
-wget http://ffmpeg.gusari.org/uploads/libaacplus-2.0.2.tar.gz
-tar xvf libaacplus-2.0.2.tar.gz
-cd libaacplus-2.0.2
-./autogen.sh
-./configure
-make
-sudo make install
-rm -rf libaacplus-2.0.2 libaacplus-2.0.2.tar.gz
-
 wget https://github.com/savonet/liquidsoap/releases/download/1.3.1/liquidsoap-1.3.1-full.tar.bz2
 tar -xf liquidsoap-1.3.1-full.tar.bz2
 cd liquidsoap-1.3.1-full
