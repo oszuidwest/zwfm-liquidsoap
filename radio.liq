@@ -1,17 +1,14 @@
-# Als de studio er niet is, spelen we dit
+# Als de studio en fallback er niet zijn, spelen we dit
 noodband = drop_metadata(single("/var/audio/fallback.ogg"))
 
 # De studio voert hier zijn audio in
-radio = drop_metadata(input.harbor("studio",port=8080,buffer=8.,max=20.,password="---"))
+studio = drop_metadata(input.harbor("studio",port=8080,buffer=8.,max=20.,password="---"))
 
-# Hier halen we de metadata op
-metacontent = list.hd(get_process_lines("wget -qO- http://www.zuidwesttv.nl/teksttv/rds_programma.php"))
+# De NLPO stream heeft een ander aanvoerpad en is handig als eerste fallback
+studiofallback = drop_metadata(input.http("http://icecast.streamone.net/ZhYMCIqSRcQS"))
 
 # Fallback en live combineren
-radio = fallback (track_sensitive=false, [ strip_blank(max_blank=15.,min_noise=30.,radio) , noodband ])
-
-# Metadata van script in stream inseren (werkt nog niet)
-radio = map_metadata(test - test, radio)
+radio = fallback (track_sensitive=false, [ strip_blank(max_blank=15.,min_noise=30.,studio), strip_blank(max_blank=15.,min_noise=30.,studiofallback), noodband ])
 
 # STL
 output.icecast(%ogg(%flac),
