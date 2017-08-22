@@ -1,9 +1,9 @@
 # liquidsoap-ubuntu
-Liquidsoap + aacplus on Ubuntu 16.04 LTS (also tested on Ubutu 15.10)
+Liquidsoap + aacplus on Ubuntu 16.04 LTS. Used for feeding transmitters a 'unfallable' source.
 
 # MIT License
 
-Copyright (c) 2016 Omroepstichting ZuidWest
+Copyright (c) 2017 Omroepstichting ZuidWest
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
