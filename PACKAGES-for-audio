@@ -79,10 +79,6 @@ ocaml-theora
 # you need ocaml-ogg to enable ocaml-opus
 #ocaml-opus
 
-# SCHROEDINGER is for ogg/dirac encoding and decoding
-# you need ocaml-ogg to enable ocaml-schroedinger
-#ocaml-schroedinger
-
 # VOAACENC is for AAC encoding.
 ocaml-voaacenc
 
