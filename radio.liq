@@ -5,7 +5,7 @@ noodband = drop_metadata(single('/var/audio/fallback.ogg'))
 studio = drop_metadata(input.harbor('studio',port=8080,buffer=8.,max=20.,password='---'))
 
 # De NLPO stream heeft een ander aanvoerpad en is handig als eerste fallback
-studiofallback = drop_metadata(input.http('http://icecast.streamone.net/ZhYMCIqSRcQS'))
+studiofallback = drop_metadata(input.http('http://icecast.streamone.net/ZhYMCIqSRcQS,buffer=8.,max=20.'))
 
 # Fallback en live combineren
 radio = fallback (track_sensitive=false, [ strip_blank(max_blank=15.,min_noise=30.,studio), strip_blank(max_blank=15.,min_noise=30.,studiofallback), noodband ])
