@@ -47,16 +47,16 @@ sudo apt-get -y install libshine-ocaml-dev
 sudo apt-get -y install libflac-dev
 sudo apt-get -y install liblo-dev
 
-wget https://github.com/savonet/liquidsoap/releases/download/1.3.1/liquidsoap-1.3.1-full.tar.bz2
-tar -xf liquidsoap-1.3.1-full.tar.bz2
-cd liquidsoap-1.3.1-full
+wget https://github.com/savonet/liquidsoap/releases/download/1.3.3/liquidsoap-1.3.3-full.tar.gz
+tar -xf liquidsoap-1.3.3-full.tar.gz
+cd liquidsoap-1.3.3-full
 wget https://raw.githubusercontent.com/rmens/liquidsoap-ubuntu/master/PACKAGES-for-audio -O PACKAGES
 sudo useradd liquidsoap
 
 ./configure --disable-graphics --with-user=liquidsoap --with-group=liquidsoap --sysconfdir=/etc
 make
 sudo make install
-cd liquidsoap-1.3.1
+cd liquidsoap-1.3.3
 sudo make service-install
 sudo update-rc.d liquidsoap defaults
 sudo touch /etc/liquidsoap/radio.liq
