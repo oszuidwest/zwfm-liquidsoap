@@ -28,9 +28,9 @@ sudo apt-get -y install libmad0 libmad0-dev
 sudo apt-get -y install libspeex1 libspeex-dev
 sudo apt-get -y install libtheora0 libtheora-dev
 sudo apt-get -y install libvo-aacenc0 libvo-aacenc-dev
-sudo apt-get -y install libfdk-aac0 libfdk-aac-dev
+sudo apt-get -y install libfdk-aac libfdk-aac-dev
 sudo apt-get -y install libsoundtouch0 libsoundtouch-dev
-sudo apt-get -y install libsamplerate0 libsamplerate0-dev
+sudo apt-get -y install libsamplerate00 libsamplerate0-dev
 sudo apt-get -y install libflac++-dev libflac++6 libflac8
 sudo apt-get -y install liblame0 libmp3lame-dev
 sudo apt-get -y install libmp3lame0 libmp3lame-dev
@@ -46,17 +46,18 @@ sudo apt-get -y install libgstreamer0.10-dev libgstreamer-plugins-base0.10-dev
 sudo apt-get -y install libshine-ocaml-dev
 sudo apt-get -y install libflac-dev
 sudo apt-get -y install liblo-dev
+sudo apt-get -y install fdkaac
 
-wget https://github.com/savonet/liquidsoap/releases/download/1.3.3/liquidsoap-1.3.3-full.tar.gz
-tar -xf liquidsoap-1.3.3-full.tar.gz
-cd liquidsoap-1.3.3-full
+wget https://github.com/savonet/liquidsoap/releases/download/1.3.6/liquidsoap-1.3.6-full.tar.gz
+tar -xf liquidsoap-1.3.6-full.tar.gz
+cd liquidsoap-1.3.6-full
 wget https://raw.githubusercontent.com/rmens/liquidsoap-ubuntu/master/PACKAGES-for-audio -O PACKAGES
 sudo useradd liquidsoap
 
-./configure --disable-graphics --with-user=liquidsoap --with-group=liquidsoap --sysconfdir=/etc
+./configure --disable-graphics --disable-camomile --with-user=liquidsoap --with-group=liquidsoap --sysconfdir=/etc 
 make
 sudo make install
-cd liquidsoap-1.3.3
+cd liquidsoap-1.3.6
 sudo make service-install
 sudo update-rc.d liquidsoap defaults
 sudo touch /etc/liquidsoap/radio.liq
