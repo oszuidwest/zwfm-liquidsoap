@@ -51,7 +51,7 @@ sudo apt-get -y install fdkaac
 wget https://github.com/savonet/liquidsoap/releases/download/1.3.6/liquidsoap-1.3.6-full.tar.gz
 tar -xf liquidsoap-1.3.6-full.tar.gz
 cd liquidsoap-1.3.6-full
-wget https://raw.githubusercontent.com/rmens/liquidsoap-ubuntu/master/PACKAGES-for-audio -O PACKAGES
+wget https://raw.githubusercontent.com/oszuidwest/liquidsoap-ubuntu/master/PACKAGES-for-audio -O PACKAGES
 sudo useradd liquidsoap
 
 ./configure --disable-graphics --disable-camomile --with-user=liquidsoap --with-group=liquidsoap --sysconfdir=/etc 
