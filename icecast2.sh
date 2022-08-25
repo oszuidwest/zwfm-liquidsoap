@@ -3,35 +3,37 @@
 set -e
 
 if [ "$(id -u)" != "0" ]; then
-	echo "You must be root to execute the script. Exiting."
+	printf "You must be root to execute the script. Exiting."
 	exit 1
 fi
 
 if [ "$(uname -s)" != "Linux" ]; then
-	echo "This script does not support \"$(uname -s)\" Operating System. Exiting."
+	printf "This script does not support \"$(uname -s)\" Operating System. Exiting."
 	exit 1
 fi
 
 if [ "$(cat /etc/debian_version)" != "bookworm/sid" ]; then
-	echo "This script only supports Ubuntu 22.04 LTS. Exiting."
+	printf "This script only supports Ubuntu 22.04 LTS. Exiting."
 	exit 1
 fi
 
-echo "********************************"
-echo "ICECAST 2 INSTALLER"
-echo "********************************"
-echo "> Specify the host name (without http:// or www) please"
+clear
+printf "********************************\n"
+printf "ICECAST 2 INSTALLER\n"
+printf "********************************\n\n\"
+printf "> Specify the host name (without http:// or www) please: "
 read HOSTNAME
-echo "> Specify the source and relay password"
+printf "> Specify the source and relay password: "
 read SOURCEPASS
-echo "> Specify the admin password"
+printf "> Specify the admin password: "
 read ADMINPASS
-echo "> Where is this server located (visible on admin pages)?"
+printf "> Where is this server located (visible on admin pages)? "
 read LOCATED
-echo "> What's the admins e-mail (visible on admin pages and for let's encrypt)?"
+printf "> What's the admins e-mail (visible on admin pages and for let's encrypt)? "
 read ADMINMAIL
+printf "> Do you want SSL (y/n)? "
+read SSL
 #Todo: ask user for port
-#Todo: ask user if they want ssl
 #Todo: if port is not 80 ssl is not possible
 
 # Set vars
