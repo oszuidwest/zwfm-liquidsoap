@@ -45,6 +45,6 @@ sed -i 	-e "s|<location>[^<]*</location>|<location>$LOCATED</location>|" \
 service icecast2 restart
 
 ### SSL IS WIP
-certbot --text --agree-tos --email $ADMINMAIL --noninteractive --no-eff-email --webroot --webroot-path="/usr/share/icecast2/web" -d '$HOSTNAME' certonly --test-cert --dry-run
+certbot --text --agree-tos --email $ADMINMAIL --noninteractive --no-eff-email --webroot --webroot-path="/usr/share/icecast2/web" -d '$HOSTNAME' --deploy-hook "cat /etc/letsencrypt/live/$HOSTNAME/fullchain.pem /etc/letsencrypt/live/$HOSTNAME/privkey.pem > /etc/icecast2/bundle.pem && service icecast2 reload" certonly --test-cert --dry-run
 cat /etc/letsencrypt/live/$HOSTNAME/fullchain.pem /etc/letsencrypt/live/$HOSTNAME/privkey.pem > /etc/icecast2/bundle.pem
 chmod 666 /etc/icecast2/bundle.pem
