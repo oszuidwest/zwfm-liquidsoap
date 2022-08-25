@@ -1,4 +1,22 @@
-clear
+#!/bin/sh
+
+set -e
+
+if [ "$(id -u)" != "0" ]; then
+	echo "You must be root to execute the script. Exiting."
+	exit 1
+fi
+
+if [ "$(uname -s)" != "Linux" ]; then
+	echo "This script does not support \"$(uname -s)\" Operating System. Exiting."
+	exit 1
+fi
+
+if [ "$(cat /etc/debian_version)" != "bookworm/sid" ]; then
+	echo "This script only supports Ubuntu 22.04 LTS. Exiting."
+	exit 1
+fi
+
 echo "********************************"
 echo "ICECAST 2 INSTALLER"
 echo "********************************"
@@ -25,16 +43,16 @@ icecast2 icecast2/icecast-setup boolean true
 EOF
 
 # Update OS
-sudo apt update -y 
-sudo apt upgrade -y
-sudo apt dist-upgrade -y
-sudo apt autoremove -y
+sudo apt --quiet --quiet --yes update
+sudo apt --quiet --quiet --yes upgrade
+sudo apt --quiet --quiet --yes dist-upgrade
+sudo apt --quiet --quiet --yes autoremove
 
 # Remove old installs
-sudo apt remove icecast2 -y
+sudo apt --quiet --quiet --yes remove icecast2
 
 # Install icecast2
-sudo apt install icecast2 -y
+sudo apt --quiet --quiet --yes install icecast2
 
 # Post configuration
 sed -i 	-e "s|<location>[^<]*</location>|<location>$LOCATED</location>|" \
@@ -45,6 +63,6 @@ sed -i 	-e "s|<location>[^<]*</location>|<location>$LOCATED</location>|" \
 service icecast2 restart
 
 ### SSL IS WIP
-certbot --text --agree-tos --email $ADMINMAIL --noninteractive --no-eff-email --webroot --webroot-path="/usr/share/icecast2/web" -d '$HOSTNAME' --deploy-hook "cat /etc/letsencrypt/live/$HOSTNAME/fullchain.pem /etc/letsencrypt/live/$HOSTNAME/privkey.pem > /etc/icecast2/bundle.pem && service icecast2 reload" certonly --test-cert --dry-run
+certbot --quiet --text --agree-tos --email $ADMINMAIL --noninteractive --no-eff-email --webroot --webroot-path="/usr/share/icecast2/web" -d '$HOSTNAME' --deploy-hook "cat /etc/letsencrypt/live/$HOSTNAME/fullchain.pem /etc/letsencrypt/live/$HOSTNAME/privkey.pem > /etc/icecast2/bundle.pem && service icecast2 reload" certonly --test-cert --dry-run
 cat /etc/letsencrypt/live/$HOSTNAME/fullchain.pem /etc/letsencrypt/live/$HOSTNAME/privkey.pem > /etc/icecast2/bundle.pem
 chmod 666 /etc/icecast2/bundle.pem
