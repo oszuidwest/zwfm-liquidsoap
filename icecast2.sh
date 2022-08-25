@@ -30,6 +30,9 @@ echo "> Where is this server located (visible on admin pages)?"
 read LOCATED
 echo "> What's the admins e-mail (visible on admin pages and for let's encrypt)?"
 read ADMINMAIL
+#Todo: ask user for port
+#Todo: ask user if they want ssl
+#Todo: if port is not 80 ssl is not possible
 
 # Set vars
 export DEBIAN_FRONTEND="noninteractive"
@@ -63,6 +66,7 @@ sed -i 	-e "s|<location>[^<]*</location>|<location>$LOCATED</location>|" \
 service icecast2 restart
 
 ### SSL IS WIP
-certbot --quiet --text --agree-tos --email $ADMINMAIL --noninteractive --no-eff-email --webroot --webroot-path="/usr/share/icecast2/web" -d '$HOSTNAME' --deploy-hook "cat /etc/letsencrypt/live/$HOSTNAME/fullchain.pem /etc/letsencrypt/live/$HOSTNAME/privkey.pem > /etc/icecast2/bundle.pem && service icecast2 reload" certonly --test-cert --dry-run
+## This currently doesn't work because let's encrypt _requires_ validation over port 80 while icecast is on port 8000.
+certbot --quiet --text --agree-tos --email $ADMINMAIL --noninteractive --no-eff-email --webroot --webroot-path="/usr/share/icecast2/web" -d "$HOSTNAME" --deploy-hook "cat /etc/letsencrypt/live/$HOSTNAME/fullchain.pem /etc/letsencrypt/live/$HOSTNAME/privkey.pem > /etc/icecast2/bundle.pem && service icecast2 reload" certonly --test-cert --dry-run
 cat /etc/letsencrypt/live/$HOSTNAME/fullchain.pem /etc/letsencrypt/live/$HOSTNAME/privkey.pem > /etc/icecast2/bundle.pem
 chmod 666 /etc/icecast2/bundle.pem
