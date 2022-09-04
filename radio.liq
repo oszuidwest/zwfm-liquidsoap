@@ -7,6 +7,9 @@ studio = drop_metadata(input.harbor('studio',port=8080,buffer=8.,max=20.,passwor
 # Fallback en live combineren
 radio = fallback (track_sensitive=false, [ strip_blank(max_blank=15.,min_noise=30.,studio), noodband ])
 
+# Kale mix door processing trekken
+radioproc = pipe(process='/sbin/stereotool_arm_64 - - -w 8888 -q -k "<xxxxxxxxx>"', radio)
+
 # STL
 output.icecast(%ogg(%flac),fallible=true,
   host='icecast.zuidwestfm.nl', port=80, password='---', mount='/zuidwest.stl', name='ZuidWest FM', description='Studio to Transmitter (ongecomprimeerde audio)', radio)
@@ -19,4 +22,5 @@ output.icecast(%mp3(bitrate=192),fallible=true,
 output.icecast(%fdkaac(channels=2, samplerate=44100, bitrate=64, afterburner=false, aot='mpeg4_he_aac_v2', transmux='adts', sbr_mode=false),fallible=true,
   host='icecast.zuidwestfm.nl', port=80, password='---', mount='/zuidwest.aac', name='ZuidWest FM', description='iPad/Mobile Stream (64kbit AAC)', radio)
   
-
+# Altijd alle audio-mixen uitvoeren als dummy
+output.dummy(fallible=true, radioproc)
