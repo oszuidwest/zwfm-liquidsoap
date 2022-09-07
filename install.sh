@@ -9,7 +9,7 @@ sudo apt install sudo opam -y
 opam init -y
 
 # Install dependencies and packages
-opam install taglib mad lame vorbis cry flac samplerate ocurl liquidsoap liquidsoap-daemon fdkaac alsa --confirm-level unsafe-yes
+opam install taglib mad lame vorbis cry flac samplerate ocurl liquidsoap fdkaac alsa --confirm-level unsafe-yes
 
 #Set path
 eval $(opam env)
