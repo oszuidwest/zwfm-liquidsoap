@@ -6,9 +6,9 @@ Documentation=http://liquidsoap.fm/
 [Service]
 Type=forking
 User=liquidsoap
-PIDFile=
-WorkingDirectory=
-ExecStart=
+PIDFile=/var/run/liquidsoap.pid
+WorkingDirectory=/etc/liquidsoap/
+ExecStart=/usr/bin/liquidsoap /etc/liquidsoap/radio.liq
 ExecStop=
 Restart=always
 
