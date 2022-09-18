@@ -20,7 +20,7 @@ fi
 clear
 printf "********************************\n"
 printf "ICECAST 2 INSTALLER\n"
-printf "********************************\n\n\"
+printf "********************************\n"
 printf "> Specify the host name (without http:// or www) please: "
 read HOSTNAME
 printf "> Specify the source and relay password: "
