@@ -19,7 +19,7 @@ sudo systemctl daemon-reload
 
 # Make dir for files
 sudo mkdir /etc/liquidsoap
-chown -R liquidsoap:liquidsoap /etc/liquidsoap
+sudo chown -R liquidsoap:liquidsoap /etc/liquidsoap
 
 # Download radio.liq
-wget https://raw.githubusercontent.com/oszuidwest/liquidsoap-ubuntu/master/radio.liq -O /etc/liquidsoap/radio.liq
+sudo wget https://raw.githubusercontent.com/oszuidwest/liquidsoap-ubuntu/master/radio.liq -O /etc/liquidsoap/radio.liq
