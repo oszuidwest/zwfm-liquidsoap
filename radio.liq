@@ -1,4 +1,5 @@
 # Configuratie
+settings.init.daemon.set(true)
 settings.init.daemon.change_user.set(true)
 settings.init.daemon.change_user.group.set("liquidsoap")
 settings.init.daemon.change_user.user.set("liquidsoap")
