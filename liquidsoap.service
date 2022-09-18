@@ -7,7 +7,7 @@ Documentation=http://liquidsoap.fm/
 Type=forking
 User=liquidsoap
 WorkingDirectory=/etc/liquidsoap/
-ExecStart=/usr/bin/liquidsoap /etc/liquidsoap/radio.liq -q
+ExecStart=/usr/bin/liquidsoap /etc/liquidsoap/radio.liq -d
 Restart=always
 
 [Install]
