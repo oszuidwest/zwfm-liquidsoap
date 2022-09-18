@@ -15,6 +15,7 @@ sudo apt install ./tmp/liq_2.2.1_amd64.deb --fix-broken
 
 # Make dir for files
 sudo mkdir /etc/liquidsoap
+chown -R liquidsoap:liquidsoap /etc/liquidsoap
 
 # Download radio.liq
 wget https://raw.githubusercontent.com/oszuidwest/liquidsoap-ubuntu/master/radio.liq -O /etc/liquidsoap/radio.liq
