@@ -14,7 +14,8 @@ wget https://github.com/savonet/liquidsoap/releases/download/v2.1.1/liquidsoap_2
 sudo apt install /tmp/liq_2.2.1_amd64.deb --fix-broken
 
 # Install service
-wget https://raw.githubusercontent.com/oszuidwest/liquidsoap-ubuntu/Ubuntu-22.04-LTS/liquidsoap.service -O /etc/systemd/system/liquidsoap.service
+sudo wget https://raw.githubusercontent.com/oszuidwest/liquidsoap-ubuntu/Ubuntu-22.04-LTS/liquidsoap.service -O /etc/systemd/system/liquidsoap.service
+sudo systemctl daemon-reload
 
 # Make dir for files
 sudo mkdir /etc/liquidsoap
