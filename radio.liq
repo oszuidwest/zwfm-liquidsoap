@@ -1,11 +1,7 @@
 # Configuratie
-settings.init.daemon.set(true)
 settings.init.daemon.change_user.set(true)
 settings.init.daemon.change_user.group.set("liquidsoap")
 settings.init.daemon.change_user.user.set("liquidsoap")
-settings.init.daemon.pidfile.set(true)
-settings.init.daemon.pidfile.path.set("/etc/liquidsoap/liquidsoap.pid")
-settings.init.daemon.pidfile.perms.set(0o640)
 
 # Als de studio en fallback er niet zijn, spelen we dit
 noodband = drop_metadata(single('/var/audio/fallback.ogg'))
