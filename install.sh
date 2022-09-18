@@ -12,3 +12,9 @@ wget https://github.com/savonet/liquidsoap/releases/download/v2.1.1/liquidsoap_2
 
 # Install deb package 
 sudo apt install ./tmp/liq_2.2.1_amd64.deb --fix-broken
+
+# Make dir for files
+sudo mkdir /etc/liquidsoap
+
+# Download radio.liq
+wget https://raw.githubusercontent.com/oszuidwest/liquidsoap-ubuntu/master/radio.liq -O /etc/liquidsoap/radio.liq
