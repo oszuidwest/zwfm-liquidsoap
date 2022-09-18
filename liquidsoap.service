@@ -8,8 +8,8 @@ Type=forking
 User=liquidsoap
 PIDFile=/run/liquidsoap.pid
 WorkingDirectory=/etc/liquidsoap/
-ExecStart=/usr/bin/liquidsoap /etc/liquidsoap/radio.liq
-ExecStop=
+ExecStart=rm /run/liquidsoap.pid; touch /var/run/liquidsoap.pid; /usr/bin/liquidsoap /etc/liquidsoap/radio.liq
+ExecStop=cat /run/liquidsoap.pid | xargs kill
 Restart=always
 
 [Install]
