@@ -6,11 +6,11 @@ Documentation=http://liquidsoap.fm/
 [Service]
 Type=forking
 User=liquidsoap
-PIDFile=/run/liquidsoap.pid
+PIDFile=/etc/liquidsoap.pid
 WorkingDirectory=/etc/liquidsoap/
-ExecStartPre=touch /run/liquidsoap.pid
+ExecStartPre=touch /etc/liquidsoap.pid
 ExecStart=/usr/bin/liquidsoap /etc/liquidsoap/radio.liq
-ExecStop=cat /run/liquidsoap.pid | xargs kill
+ExecStop=cat /etc/liquidsoap.pid | xargs kill
 Restart=always
 
 [Install]
