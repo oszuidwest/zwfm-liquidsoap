@@ -64,6 +64,9 @@ sed -i 	-e "s|<location>[^<]*</location>|<location>$LOCATED</location>|" \
 	-e "s|<admin>[^<]*</admin>|<admin>$ADMINMAIL</admin>|" \
 	/etc/icecast2/icecast.xml 2>/dev/null 1>&2
 
+# Grant icecast access to ports < 1024
+sudo setcap CAP_NET_BIND_SERVICE=+eip /usr/bin/icecast2
+
 # Apply post configuration
 service icecast2 restart
 
