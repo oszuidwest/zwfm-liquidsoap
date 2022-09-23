@@ -54,10 +54,10 @@ sudo apt --quiet --quiet --yes dist-upgrade
 sudo apt --quiet --quiet --yes autoremove
 
 # Remove old installs
-sudo apt --quiet --quiet --yes remove icecast2
+sudo apt --quiet --quiet --yes remove icecast2 certbot
 
 # Install icecast2
-sudo apt --quiet --quiet --yes install icecast2
+sudo apt --quiet --quiet --yes install icecast2 certbot
 
 # Post configuration
 sed -i 	-e "s|<location>[^<]*</location>|<location>$LOCATED</location>|" \
