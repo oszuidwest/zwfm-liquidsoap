@@ -1,0 +1,15 @@
+[Unit]
+Description=Liquidsoap
+After=network.target
+Documentation=http://liquidsoap.fm/
+
+[Service]
+Type=forking
+User=liquidsoap
+WorkingDirectory=/etc/liquidsoap/
+ExecStart=/usr/bin/liquidsoap /etc/liquidsoap/radio.liq -d
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+Alias=liquidsoap.service
