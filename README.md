@@ -1,9 +1,9 @@
 # liquidsoap-ubuntu
-Liquidsoap + aacplus on Ubuntu 16.04 LTS. Used for feeding transmitters a 'unfallable' source.
+Liquidsoap + fdkaac + icecast2 on Ubuntu 22.04 LTS. Used for feeding transmitters an 'unfallable' source.
 
 # MIT License
 
-Copyright (c) 2017 Omroepstichting ZuidWest
+Copyright (c) 2022 Streekomroep ZuidWest
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
