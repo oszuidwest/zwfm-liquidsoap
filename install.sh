@@ -21,6 +21,6 @@ sudo chown -R liquidsoap:liquidsoap /etc/liquidsoap
 sudo wget https://raw.githubusercontent.com/oszuidwest/liquidsoap-ubuntu/master/radio.liq -O /etc/liquidsoap/radio.liq
 
 # Install service
-sudo wget https://raw.githubusercontent.com/oszuidwest/liquidsoap-ubuntu/Ubuntu-22.04-LTS/liquidsoap.service -O /etc/systemd/system/liquidsoap.service
+sudo wget https://raw.githubusercontent.com/oszuidwest/liquidsoap-ubuntu/master/liquidsoap.service -O /etc/systemd/system/liquidsoap.service
 sudo systemctl daemon-reload
 sudo systemctl enable liquidsoap.service
