@@ -26,4 +26,4 @@ output.icecast(%fdkaac(channels=2, samplerate=44100, bitrate=64, afterburner=fal
   host='localhost', port=80, password='---', mount='/zuidwest.aac', name='ZuidWest FM', description='iPad/Mobile Stream (64kbit AAC)', radio)
 
 # uMPX
-output.external(%wav(channels=2, samplerate=44100, restart_on_crash=true), "stereotool - /dev/null -w 8888 -q -s /etc/liquidsoap/st.ini", radio)
+output.external(%wav(channels=2, samplerate=44100), reopen_on_error=true, "stereotool - /dev/null -w 8888 -q -s /etc/liquidsoap/st.ini", radio)
