@@ -14,7 +14,7 @@ studio = drop_metadata(input.harbor('studio',port=8080,buffer=8.,max=20.,passwor
 radio = fallback (track_sensitive=false, [ strip_blank(max_blank=15.,min_noise=30.,studio), noodband ])
 
 # Kale mix door processing trekken
-radioproc = pipe(process='/sbin/stereotool_arm_64 - - -w 8888 -q -k "<xxxxxxxxx>"', radio)
+radioproc = pipe(process='/bin/stereotool - - -w 8888 -q -k "<xxxxxxxxx>" -s /etc/liquidsoap/st.ini', radio)
 
 # STL
 output.icecast(%ogg(%flac),fallible=true,
