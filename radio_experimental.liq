@@ -30,3 +30,4 @@ output.icecast(%fdkaac(channels=2, samplerate=44100, bitrate=64, afterburner=fal
   
 # Altijd alle audio-mixen uitvoeren als dummy
 output.dummy(fallible=true, radioproc)
+output.dummy(fallible=true, radio)
