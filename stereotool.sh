@@ -18,7 +18,7 @@ if [ "$(cat /etc/debian_version)" != "bookworm/sid" ]; then
 fi
 
 # Download stereotool
-sudo wget https://www.stereotool.com/download/stereo_tool_64_BETA992-058 -O /bin/stereotool
+sudo wget https://www.stereotool.com/download/stereo_tool_64_BETA992-060 -O /bin/stereotool
 
 # Configure stereotool
 sudo mkdir /etc/stereotool
