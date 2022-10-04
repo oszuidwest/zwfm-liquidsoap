@@ -15,7 +15,7 @@ Liquidsoap + fdkaac + icecast2 on Ubuntu 22.04 LTS. Used for feeding transmitter
 
 `radio_experimental` Like `radio.liq` but with integrated StereoTool processing on all the strams (very experimental)
 
-`radio_micrompx_ Like `radio.liq` but with intergrated MicroMPX for feeding transmitters MPX data (experimental)
+`radio_micrompx.liq` Like `radio.liq` but with intergrated MicroMPX for feeding transmitters MPX data (experimental)
 
 # MIT License
 
