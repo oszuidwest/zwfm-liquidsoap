@@ -27,7 +27,7 @@ sudo apt autoremove -y
 sudo apt install fdkaac libfdkaac-ocaml libfdkaac-ocaml-dynlink -y
 
 # Get deb package
-wget https://github.com/savonet/liquidsoap/releases/download/v2.1.1/liquidsoap_2.1.1-ubuntu-jammy-1_amd64.deb -O /tmp/liq_2.2.1_amd64.deb
+wget https://github.com/savonet/liquidsoap/releases/download/v2.1.2/liquidsoap_2.1.2-ubuntu-jammy-1_amd64.deb -O /tmp/liq_2.1.2_amd64.deb
 
 # Install deb package 
 sudo apt install /tmp/liq_2.2.1_amd64.deb --fix-broken
