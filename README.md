@@ -6,6 +6,8 @@ Liquidsoap + fdkaac + icecast2 on Ubuntu 22.04 LTS. Used for feeding transmitter
 
 `install.sh` Script that installs Liquidsoap 2.1 with fdkaac support. It also enables Liquidsoap as service that automatically starts. The configuration is in `/etc/liquidsoap/radio.liq`
 
+`stereotool.sh` Script that install StereoTool for audio processing. Work in progress. Not finished or integrated.
+
 # MIT License
 
 Copyright (c) 2022 Streekomroep ZuidWest
