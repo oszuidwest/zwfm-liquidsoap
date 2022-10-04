@@ -11,7 +11,7 @@ Liquidsoap + fdkaac + icecast2 on Ubuntu 22.04 LTS. Used for feeding transmitter
 `stereotool.sh` Script that install StereoTool for audio processing. Work in progress. Not finished or integrated.
 
 ### Liquidsoap configurations
-`radio.liq` Production ready Liquidsoap transcoder. Accepts a high quality (preferabably ogg/flac) stream and transcodes it to mp3, aac and ogg/flac. Also integrates a silence detector that fires after 15 seconds of silence.
+`radio.liq` Production ready Liquidsoap transcoder. Accepts a high quality (preferably ogg/flac) stream and transcodes it to mp3, aac and ogg/flac. Also integrates a silence detector that fires after 15 seconds of silence.
 
 `radio_experimental` Like `radio.liq` but with integrated StereoTool processing on all the strams (very experimental)
 
