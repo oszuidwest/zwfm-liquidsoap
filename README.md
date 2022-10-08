@@ -13,7 +13,7 @@ Liquidsoap + fdkaac + icecast2 on Ubuntu 22.04 LTS. Used for feeding transmitter
 ### Liquidsoap configurations
 `radio.liq` Production ready Liquidsoap transcoder. Accepts a high quality (preferably ogg/flac) stream and transcodes it to mp3, aac and ogg/flac. Also integrates a silence detector that fires after 15 seconds of silence.
 
-`radio_experimental` Like `radio.liq` but with integrated StereoTool processing on all the strams (very experimental)
+`radio_experimental` Like `radio.liq` but with integrated StereoTool processing on all the streams (very experimental)
 
 `radio_micrompx.liq` Like `radio.liq` but with intergrated MicroMPX for feeding transmitters MPX data (experimental)
 
