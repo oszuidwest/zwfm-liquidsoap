@@ -4,12 +4,12 @@ After=network.target
 Documentation=http://liquidsoap.fm/
 
 [Service]
-Type=forking
+Type=simple
 User=liquidsoap
 WorkingDirectory=/etc/liquidsoap/
 ExecStart=/usr/bin/liquidsoap /etc/liquidsoap/radio.liq -d
 Restart=always
-RestartSec=30
+RestartSec=15
 
 [Install]
 WantedBy=multi-user.target
