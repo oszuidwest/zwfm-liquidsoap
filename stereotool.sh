@@ -22,8 +22,8 @@ sudo wget https://www.stereotool.com/download/stereo_tool_cmd_64 -O /bin/stereot
 
 # Configure stereotool
 sudo mkdir /etc/stereotool
-sudo chmod +x /bin/stereotool
+sudo chmod +x /usr/bin/stereotool
 sudo stereotool -X /etc/stereotool/st.ini
 
 # Grant stereotool access to ports < 1024
-sudo setcap CAP_NET_BIND_SERVICE=+eip /bin/stereotool
+sudo setcap CAP_NET_BIND_SERVICE=+eip /usr/bin/stereotool
