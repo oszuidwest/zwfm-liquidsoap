@@ -2,11 +2,12 @@
 Liquidsoap + fdkaac + icecast2 on Ubuntu 22.04 LTS. Used for feeding transmitters an 'unfallable' source.
 
 ## What's here?
+This repository contains the audio streaming stack for [ZuidWest FM](https://www.zuidwestfm.nl/) in the Netherlands. It uses [Liquidsoap](https://www.liquidsoap.info) as audio router and transcoder, [Icecast](https://www.icecast.org) as server and recently [StereoTool](https://www.thimeo.com/stereo-tool/) for feeding [MicroMPX](https://www.thimeo.com/micrompx/) to transmitters.
 
 ### Scripts
 `icecast2.sh` Script that installs Icecast 2 with optional SSL via Let's Encrypt/Certbot
 
-`install.sh` Script that installs Liquidsoap 2.1 with fdkaac support. It also enables Liquidsoap as service that automatically starts. The configuration is in `/etc/liquidsoap/radio.liq`
+`install.sh` Script that installs Liquidsoap 2.1 with fdkaac support. It also enables Liquidsoap as service that automatically starts. The configuration is in `/etc/liquidsoap/radio.liq` but there are other more experimental `.liq` files included too.
 
 `stereotool.sh` Script that install StereoTool for audio processing. Work in progress. Not finished or integrated.
 
@@ -15,7 +16,7 @@ Liquidsoap + fdkaac + icecast2 on Ubuntu 22.04 LTS. Used for feeding transmitter
 
 `radio_experimental` Like `radio.liq` but with integrated StereoTool processing on all the streams (very experimental)
 
-`radio_micrompx.liq` Like `radio.liq` but with intergrated MicroMPX for feeding transmitters MPX data (experimental)
+`radio_micrompx.liq` Like `radio.liq` but with intergrated MicroMPX for feeding transmitters MPX data (beta)
 
 # MIT License
 
