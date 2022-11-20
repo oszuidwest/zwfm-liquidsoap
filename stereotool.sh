@@ -13,7 +13,7 @@ if [ "$(uname -s)" != "Linux" ]; then
 fi
 
 if [ "$(cat /etc/debian_version)" != "bookworm/sid" ]; then
-	printf "This script only supports Ubuntu 22.04 LTS. Exiting."
+	printf "This script is only tested on Ubuntu 22.04 LTS. Exiting."
 	exit 1
 fi
 
