@@ -27,8 +27,8 @@ output.icecast(%ogg(%flac),fallible=true,
 output.icecast(%mp3(bitrate=192,samplerate=48000),fallible=true,
   host=icecastserver, port=icecastport, password=icecastpassword, mount='/zuidwest.mp3', name='ZuidWest FM', description='Hoge Kwaliteit Stream (192kbit MP3)', radio)
 
-# Output a low quality HE-AAC v2 stream
-output.icecast(%fdkaac(channels=2, samplerate=48000, bitrate=64, afterburner=false, aot='mpeg4_he_aac_v2', transmux='adts', sbr_mode=false),fallible=true,
+# Output a low quality HE-AACv2 stream
+output.icecast(%fdkaac(channels=2, samplerate=48000, bitrate=64, afterburner=true, aot='mpeg4_he_aac_v2', transmux='adts', sbr_mode=true),fallible=true,
   host=icecastserver, port=icecastport, password=icecastpassword, mount='/zuidwest.aac', name='ZuidWest FM', description='Mobile Stream (64kbit HE-AAC v2)', radio)
 
 # Feed the audio to StereoTool too, which can generate MicroMPX
