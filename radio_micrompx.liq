@@ -18,12 +18,12 @@ output.icecast(%ogg(%flac),fallible=true,
   host='localhost', port=80, password='---', mount='/zuidwest.stl', name='ZuidWest FM', description='Studio to Transmitter (ongecomprimeerde audio)', radio)
 
 # WEB
-output.icecast(%mp3(bitrate=192),fallible=true,
+output.icecast(%mp3(bitrate=192,samplerate=48000),fallible=true,
   host='localhost', port=80, password='---', mount='/zuidwest.mp3', name='ZuidWest FM', description='Hoge Kwaliteit Stream (192kbit MP3)', radio)
 
 # MOB
-output.icecast(%fdkaac(channels=2, samplerate=44100, bitrate=64, afterburner=false, aot='mpeg4_he_aac_v2', transmux='adts', sbr_mode=false),fallible=true,
+output.icecast(%fdkaac(channels=2, samplerate=48000, bitrate=64, afterburner=false, aot='mpeg4_he_aac_v2', transmux='adts', sbr_mode=false),fallible=true,
   host='localhost', port=80, password='---', mount='/zuidwest.aac', name='ZuidWest FM', description='iPad/Mobile Stream (64kbit AAC)', radio)
 
 # uMPX
-output.external(%wav(channels=2, samplerate=44100), reopen_on_error=true, "stereotool - /dev/null -w 90 -q -s /etc/stereotool/st.ini", radio)
+output.external(%wav(channels=2, samplerate=48000), reopen_on_error=true, "stereotool - /dev/null -w 90 -q -s /etc/stereotool/st.ini", radio)
