@@ -23,4 +23,4 @@ output.icecast(%mp3(bitrate=192,samplerate=48000),fallible=true,
 
 # Output a low quality HE-AAC v2 stream
 output.icecast(%fdkaac(channels=2, samplerate=48000, bitrate=64, afterburner=false, aot='mpeg4_he_aac_v2', transmux='adts', sbr_mode=false),fallible=true,
-  host='localhost', port=80, password='---', mount='/zuidwest.aac', name='ZuidWest FM', description='iPad/Mobile Stream (64kbit AAC)', radio)
+  host='localhost', port=80, password='---', mount='/zuidwest.aac', name='ZuidWest FM', description='Mobile Stream (64kbit HE-AAC v2)', radio)
