@@ -1,11 +1,17 @@
-# General configuration
+# Daemon configuration (should not be changed)
 settings.init.daemon.change_user.set(true)
 settings.init.daemon.change_user.group.set("liquidsoap")
 settings.init.daemon.change_user.user.set("liquidsoap")
 settings.init.daemon.pidfile.path.set("/dev/null")
 
+# General configuration (do change this)
+icecastserver = icecast.example.org
+icecastport = 8000
+icecastpassword = changeme
+fallbackfile = /var/audio/fallback.ogg
+
 # Fallback if there is no audio coming from the studio
-noodband = drop_metadata(single('/var/audio/fallback.ogg'))
+noodband = drop_metadata(single('fallbackfile'))
 
 # Input port for the studio stream
 studio = drop_metadata(input.harbor('studio',port=8080,buffer=8.,max=20.,password='---'))
