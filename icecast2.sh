@@ -21,7 +21,7 @@ clear
 printf "********************************\n"
 printf "ICECAST 2 INSTALLER\n"
 printf "********************************\n"
-printf "> Specify the host name (without http:// or www) please: "
+printf "> Specify the host name (for example: icecast.zuidwestfm.nl. Enter it without http:// or www) please: "
 read HOSTNAME
 printf "> Specify the source and relay password: "
 read SOURCEPASS
@@ -80,6 +80,17 @@ sudo setcap CAP_NET_BIND_SERVICE=+eip /usr/bin/icecast2
 
 # Apply post configuration
 service icecast2 restart
+
+# If port is 80 and SSL is enabled, nudge the user to run certbot
+if [ "$PORT" == "80" ] && [ "$SSL" == "y" ]; then
+    echo "You should edit icecast.xml to reflect the new port situation and get a certificate with certbot. I can't do that yet..."
+# If port is 80 and SSL is disabled, nudge the user to edit icecast.xml
+elif [ "$PORT" == "80" ] && [ "$SSL" == "n" ]; then
+    echo "You should edit icecast.xml to reflect the new port situation. I can't do that yet..."
+# If port is not 80 and SSL is not enabled, show a message
+else
+    echo "Icecast was installed. Happy streaming"
+fi
 
 ### SSL IS WIP
 ## This currently doesn't work because let's encrypt _requires_ validation over port 80 while icecast is on port 8000.
