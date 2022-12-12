@@ -73,6 +73,8 @@ sudo apt --quiet --quiet --yes install icecast2 certbot
 # Post configuration
 sed -i 	-e "s|<location>[^<]*</location>|<location>$LOCATED</location>|" \
 	-e "s|<admin>[^<]*</admin>|<admin>$ADMINMAIL</admin>|" \
+	-e "s|<clients>[^<]*</clients>|<clients>250</clients>|" \
+	-e "s|<sources>[^<]*</sources>|<sources>5</sources>|" \
 	/etc/icecast2/icecast.xml 2>/dev/null 1>&2
 
 # Grant icecast access to ports < 1024
