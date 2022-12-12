@@ -3,18 +3,18 @@
 set -e
 
 if [ "$(id -u)" != "0" ]; then
-	printf "You must be root to execute the script. Exiting."
-	exit 1
+    printf "You must be root to execute the script. Exiting."
+    exit 1
 fi
 
 if [ "$(uname -s)" != "Linux" ]; then
-	printf "This script does not support \"$(uname -s)\" Operating System. Exiting."
-	exit 1
+    printf "This script does not support \"$(uname -s)\" Operating System. Exiting."
+    exit 1
 fi
 
 if [ "$(cat /etc/debian_version)" != "bookworm/sid" ]; then
-	printf "This script only supports Ubuntu 22.04 LTS. Exiting."
-	exit 1
+    printf "This script only supports Ubuntu 22.04 LTS. Exiting."
+    exit 1
 fi
 
 clear
@@ -38,13 +38,13 @@ read PORT
 
 # Assume port is 80 if no port was entered
 if [ -z "$PORT" ]; then
-PORT=80
+    PORT=80
 fi
 
 # If port is not 80 ssl is not possible
 if [ "$PORT" != "80" ]; then
-SSL="n"
-printf "Since the specified port is not 80, SSL is not possible. Disabling SSL.\n"
+    SSL="n"
+    printf "Since the specified port is not 80, SSL is not possible. Disabling SSL.\n"
 fi
 
 # Set vars
