@@ -33,8 +33,19 @@ printf "> What's the admins e-mail (visible on admin pages and for let's encrypt
 read ADMINMAIL
 printf "> Do you want SSL (y/n)? "
 read SSL
-#Todo: ask user for port
-#Todo: if port is not 80 ssl is not possible
+printf "> Specify the port (default: 80): "
+read PORT
+
+# Assume port is 80 if no port was entered
+if [ -z "$PORT" ]; then
+PORT=80
+fi
+
+# If port is not 80 ssl is not possible
+if [ "$PORT" != "80" ]; then
+SSL="n"
+printf "Since the specified port is not 80, SSL is not possible. Disabling SSL.\n"
+fi
 
 # Set vars
 export DEBIAN_FRONTEND="noninteractive"
