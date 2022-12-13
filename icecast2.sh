@@ -39,6 +39,7 @@ read PORT
 # Assume port is 80 if no port was entered
 if [ -z "$PORT" ]; then
     PORT=80
+    printf "You didn't specify a port. We assume port 80.\n"
 fi
 
 # If port is not 80 ssl is not possible
