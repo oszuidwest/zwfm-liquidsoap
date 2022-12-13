@@ -32,9 +32,13 @@ wget https://github.com/savonet/liquidsoap/releases/download/v2.1.3/liquidsoap_2
 # Install deb package 
 sudo apt install /tmp/liq_2.1.3_amd64.deb --fix-broken --yes
 
-# Make dir for files
+# Make dirs for files
 sudo mkdir /etc/liquidsoap
-sudo chown -R liquidsoap:liquidsoap /etc/liquidsoap
+sudo mkdir /var/audio
+sudo chown -R liquidsoap:liquidsoap /etc/liquidsoap /var/audio
+
+# Download sample fallback file
+sudo wget https://upload.wikimedia.org/wikipedia/commons/6/66/Aaron_Dunn_-_Sonata_No_1_-_Movement_2.ogg -O /var/audio/fallback.ogg
 
 # Download radio.liq
 sudo wget https://raw.githubusercontent.com/oszuidwest/liquidsoap-ubuntu/main/radio.liq -O /etc/liquidsoap/radio.liq
