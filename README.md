@@ -1,22 +1,25 @@
 # liquidsoap-ubuntu
-Liquidsoap + fdkaac + icecast2 on Ubuntu 22.04 LTS. Used for feeding transmitters an 'unfallable' source.
+Liquidsoap + fdkaac + icecast2 on Ubuntu 22.04 LTS. Used for feeding transmitters a source that's never silent.
 
 ## What's here?
-This repository contains the audio streaming stack for [ZuidWest FM](https://www.zuidwestfm.nl/) in the Netherlands. It uses [Liquidsoap](https://www.liquidsoap.info) as audio router and transcoder, [Icecast](https://www.icecast.org) as server and recently [StereoTool](https://www.thimeo.com/stereo-tool/) for feeding [MicroMPX](https://www.thimeo.com/micrompx/) to transmitters.
+This repository contains the audio streaming stack for [ZuidWest FM](https://www.zuidwestfm.nl/) in the Netherlands. It uses [Liquidsoap](https://www.liquidsoap.info) as audio router and transcoder, [Icecast](https://www.icecast.org) as server and recently [StereoTool](https://www.thimeo.com/stereo-tool/) for feeding [MicroMPX](https://www.thimeo.com/micrompx/) to transmitters (this is still experimental and we are reporting lots of upstream bugs).
 
 ### Scripts
 `icecast2.sh` Script that installs Icecast 2 with optional SSL via Let's Encrypt/Certbot
 
 `install.sh` Script that installs Liquidsoap 2.1 with fdkaac support. It also enables Liquidsoap as service that automatically starts. The configuration is in `/etc/liquidsoap/radio.liq` but there are other more experimental `.liq` files included too.
 
-`stereotool.sh` Script that install StereoTool for audio processing. Work in progress. Not finished or integrated.
+`stereotool.sh` Script that installs StereoTool for audio processing. Work in progress. Not finished or integrated.
 
 ### Liquidsoap configurations
 `radio.liq` Production ready Liquidsoap transcoder. Accepts a high quality (preferably ogg/flac) stream and transcodes it to mp3, aac and ogg/flac. Also integrates a silence detector that fires after 15 seconds of silence.
 
 `radio_experimental` Like `radio.liq` but with integrated StereoTool processing on all the streams (very experimental)
 
-`radio_micrompx.liq` Like `radio.liq` but with intergrated MicroMPX for feeding transmitters MPX data (beta)
+`radio_micrompx.liq` Like `radio.liq` but with intergrated MicroMPX for feeding transmitters MPX data (experimental, many upstream bugs to be fixed before this can be used in production)
+
+## A word on ARM platforms
+This system should be able to run on an ARM platform, like Ampere Altra of Raspberry Pi. StereoTool and MicroMPX are still very shaky on ARM. For example only 48KHz audio is supported in MicroMPX on ARM. We will eventually run this on an ARM intance, but for now x86-64 is more stable.
 
 # MIT License
 
