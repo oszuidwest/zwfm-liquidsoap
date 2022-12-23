@@ -10,11 +10,21 @@ icecastport = 8000
 icecastpassword = "changeme"
 fallbackfile = "/var/audio/fallback.ogg"
 
+# Define functions for connection and disconnects
+def log_disconnect () =
+     process.run("/etc/liquidsoap/harbor_log.sh disconnect /tmp/harborlog.txt")
+end
+
+def log_connect (header) =
+     process.run("/etc/liquidsoap/harbor_log.sh connect /tmp/harborlog.txt")
+     log("We need to specify a header so here it is - #{header}")
+end
+
 # Fallback if there is no audio coming from the studio
 noodband = drop_metadata(single(fallbackfile))
 
 # Input port for the studio stream
-studio = drop_metadata(input.harbor('studio',port=8080,buffer=8.,max=20.,password='---'))
+studio = drop_metadata(input.harbor('studio',port=8080,buffer=8.,max=20.,password='---', on_disconnect=log_disconnect, on_connect=log_connect))
 
 # Combine fallback and live input
 radio = fallback (track_sensitive=false, [ strip_blank(max_blank=15.,min_noise=30.,studio), noodband ])
