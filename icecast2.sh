@@ -82,6 +82,8 @@ sed -i 	-e "s|<location>[^<]*</location>|<location>$LOCATED</location>|" \
 sudo setcap CAP_NET_BIND_SERVICE=+eip /usr/bin/icecast2
 
 # Apply post configuration
+systemctl enable icecast2
+systemctl daemon-reload
 service icecast2 restart
 
 # If port is 80 and SSL is enabled, nudge the user to run certbot
