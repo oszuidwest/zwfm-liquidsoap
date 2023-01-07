@@ -14,7 +14,7 @@ fallbackfile = "/var/audio/fallback.ogg"
 noodband = drop_metadata(single(fallbackfile))
 
 # Input port for the studio stream
-studio = drop_metadata(input.harbor('studio',port=8080,buffer=8.,max=20.,password='---'))
+studio = input.srt(port=9000, mode="listener", max=2.0)
 
 # Combine fallback and live input
 radio = fallback (track_sensitive=false, [ strip_blank(max_blank=15.,min_noise=30.,studio), noodband ])
