@@ -9,16 +9,19 @@ icecastserver = "icecast.example.org"
 icecastport = 8000
 icecastpassword = "changeme"
 fallbackfile = "/var/audio/fallback.ogg"
-encryptionkey = "foxtrotuniformcharliekilo"
+encryptionkey = "foxtrot-uniform-charlie-kilo"
 
 # Fallback if there is no audio coming from the studio
 noodband = drop_metadata(single(fallbackfile))
 
 # Input port for the studio stream
-studio = input.srt(port=9000, mode="listener", max=2.0, streamid=icecastpassword, passphrase=encryptionkey)
+studio = input.srt(id="studio", port=9000, mode="listener", max=2.0, streamid=icecastpassword, passphrase=encryptionkey)
+
+# Insert silence when there is no data from input
+studio = mksafe(studio)
 
 # Combine fallback and live input
-radio = fallback (track_sensitive=false, [ strip_blank(max_blank=15.,min_noise=30.,studio), noodband ])
+radio = fallback(track_sensitive=false, [ blank.strip(max_blank=15.,min_noise=30.,studio), noodband ])
 
 # Output a high quality ogg/flac stream
 output.icecast(%ogg(%flac),fallible=true,
