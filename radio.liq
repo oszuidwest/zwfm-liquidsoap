@@ -14,7 +14,7 @@ fallbackfile = "/var/audio/fallback.ogg"
 noodband = drop_metadata(single(fallbackfile))
 
 # Input port for the studio stream
-studio = input.srt(port=9000, mode="listener", max=2.0)
+studio = input.srt(port=9000, mode="listener", max=2.0 streamid=icecastpassword)
 
 # Combine fallback and live input
 radio = fallback (track_sensitive=false, [ strip_blank(max_blank=15.,min_noise=30.,studio), noodband ])
