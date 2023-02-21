@@ -18,7 +18,7 @@ noodband = drop_metadata(single(fallbackfile))
 studio = drop_metadata(input.harbor('studio',port=8080,buffer=8.,max=20.,password='---'))
 
 # Combine fallback and live input
-radio = fallback (track_sensitive=false, [ blank.strip(max_blank=15.,min_noise=30.,studio), noodband ])
+radio = fallback(track_sensitive=false, [ blank.strip(max_blank=15.,min_noise=30.,studio), noodband ])
 
 # Output a high quality ogg/flac stream
 output.icecast(%ogg(%flac),fallible=true,
