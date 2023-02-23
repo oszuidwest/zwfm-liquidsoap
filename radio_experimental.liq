@@ -9,12 +9,13 @@ icecastserver = "icecast.example.org"
 icecastport = 8000
 icecastpassword = "changeme"
 fallbackfile = "/var/audio/fallback.ogg"
+upstreampassword = "foxtrotuniformcharliekilo"
 
 # Fallback if there is no audio coming from the studio
 noodband = drop_metadata(single(fallbackfile))
 
 # Input port for the studio stream
-studio = drop_metadata(input.harbor('studio',port=8080,buffer=8.,max=20.,password='---'))
+studio = drop_metadata(input.harbor('studio',port=8080,buffer=8.,max=20.,password=upstreampassword))
 
 # Combine fallback and live input
 radio = fallback(track_sensitive=false, [ blank.strip(max_blank=15.,min_noise=30.,studio), noodband ])
