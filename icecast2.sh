@@ -78,6 +78,9 @@ sed -i 	-e "s|<location>[^<]*</location>|<location>$LOCATED</location>|" \
 	-e "s|<sources>[^<]*</sources>|<sources>5</sources>|" \
 	/etc/icecast2/icecast.xml 2>/dev/null 1>&2
 
+# Replace the first port element in the Icecast config file with the configured port
+sed -i '0,/<port>/{s/<port>[0-9]\{1,5\}<\/port>/<port>$PORT<\/port>/;}' /etc/icecast2/icecast.xml
+
 # Grant icecast access to ports < 1024
 sudo setcap CAP_NET_BIND_SERVICE=+eip /usr/bin/icecast2
 
