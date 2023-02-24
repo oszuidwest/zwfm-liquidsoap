@@ -30,6 +30,7 @@ read -rp "Specify the admin password: " ADMINPASS
 read -rp "Where is this server located (visible on admin pages)? " LOCATED
 read -rp "What's the admins e-mail (visible on admin pages and for let's encrypt)? " ADMINMAIL
 read -rp "Specify the port (default: 80): " PORT
+read -rp "Do you want Let's Encrypt to get a certificate for this server? (y/n): " SSL
 
 # Assume port is 80 if no port was entered
 if [ -z "$PORT" ]; then
@@ -70,7 +71,7 @@ sed -i 	-e "s|<location>[^<]*</location>|<location>$LOCATED</location>|" \
 	-e "s|<admin>[^<]*</admin>|<admin>$ADMINMAIL</admin>|" \
 	-e "s|<clients>[^<]*</clients>|<clients>250</clients>|" \
 	-e "s|<sources>[^<]*</sources>|<sources>5</sources>|" \
-	"0,/<port>/{s/<port>[0-9]\{1,5\}<\/port>/<port>$PORT<\/port>/;}" \
+	-e "0,/<port>/{s/<port>[0-9]\{1,5\}<\/port>/<port>$PORT<\/port>/;}" \
 	/etc/icecast2/icecast.xml 2>/dev/null 1>&2
 
 # Grant icecast access to ports < 1024
