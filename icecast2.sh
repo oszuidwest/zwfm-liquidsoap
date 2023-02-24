@@ -22,19 +22,19 @@ printf "********************************\n"
 printf "ICECAST 2 INSTALLER\n"
 printf "********************************\n"
 printf "> Specify the host name (for example: icecast.zuidwestfm.nl. Enter it without http:// or www) please: "
-read r HOSTNAME
+read -r HOSTNAME
 printf "> Specify the source and relay password: "
-read r SOURCEPASS
+read -r SOURCEPASS
 printf "> Specify the admin password: "
-read r ADMINPASS
+read -r ADMINPASS
 printf "> Where is this server located (visible on admin pages)? "
-read r LOCATED
+read -r LOCATED
 printf "> What's the admins e-mail (visible on admin pages and for let's encrypt)? "
-read r ADMINMAIL
+read -r ADMINMAIL
 printf "> Do you want SSL (y/n)? "
-read r SSL
+read -r SSL
 printf "> Specify the port (default: 80): "
-read r PORT
+read -r PORT
 
 # Assume port is 80 if no port was entered
 if [ -z "$PORT" ]; then
