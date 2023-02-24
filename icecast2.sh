@@ -1,4 +1,7 @@
-#!/bin/sh
+#!/bin/bash
+
+# Start with a clean terminal
+clear
 
 set -e
 
