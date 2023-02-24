@@ -22,19 +22,19 @@ printf "********************************\n"
 printf "ICECAST 2 INSTALLER\n"
 printf "********************************\n"
 printf "> Specify the host name (for example: icecast.zuidwestfm.nl. Enter it without http:// or www) please: "
-read HOSTNAME
+read r HOSTNAME
 printf "> Specify the source and relay password: "
-read SOURCEPASS
+read r SOURCEPASS
 printf "> Specify the admin password: "
-read ADMINPASS
+read r ADMINPASS
 printf "> Where is this server located (visible on admin pages)? "
-read LOCATED
+read r LOCATED
 printf "> What's the admins e-mail (visible on admin pages and for let's encrypt)? "
-read ADMINMAIL
+read r ADMINMAIL
 printf "> Do you want SSL (y/n)? "
-read SSL
+read r SSL
 printf "> Specify the port (default: 80): "
-read PORT
+read r PORT
 
 # Assume port is 80 if no port was entered
 if [ -z "$PORT" ]; then
@@ -87,10 +87,10 @@ systemctl daemon-reload
 service icecast2 restart
 
 # If port is 80 and SSL is enabled, nudge the user to run certbot
-if [ "$PORT" == "80" ] && [ "$SSL" == "y" ]; then
+if [ "$PORT" = "80" ] && [ "$SSL" = "y" ]; then
     echo "You should edit icecast.xml to reflect the new port situation and get a certificate with certbot. I can't do that yet..."
 # If port is 80 and SSL is disabled, nudge the user to edit icecast.xml
-elif [ "$PORT" == "80" ] && [ "$SSL" == "n" ]; then
+elif [ "$PORT" = "80" ] && [ "$SSL" = "n" ]; then
     echo "You should edit icecast.xml to reflect the new port situation. I can't do that yet..."
 # If port is not 80 and SSL is not enabled, show a message
 else
