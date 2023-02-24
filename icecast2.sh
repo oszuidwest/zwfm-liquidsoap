@@ -90,12 +90,6 @@ service icecast2 restart
 # If port is 80 and SSL is enabled, nudge the user to run certbot
 if [ "$PORT" = "80" ] && [ "$SSL" = "y" ]; then
     echo "You should edit icecast.xml to reflect the new port situation and get a certificate with certbot. I can't do that yet..."
-# If port is 80 and SSL is disabled, nudge the user to edit icecast.xml
-elif [ "$PORT" = "80" ] && [ "$SSL" = "n" ]; then
-    echo "You should edit icecast.xml to reflect the new port situation. I can't do that yet..."
-# If port is not 80 and SSL is not enabled, show a message
-else
-    echo "Icecast was installed. Happy streaming"
 fi
 
 ### SSL IS WIP
