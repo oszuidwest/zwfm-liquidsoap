@@ -21,20 +21,12 @@ clear
 printf "********************************\n"
 printf "ICECAST 2 INSTALLER\n"
 printf "********************************\n"
-printf "> Specify the host name (for example: icecast.zuidwestfm.nl. Enter it without http:// or www) please: "
-read -r HOSTNAME
-printf "> Specify the source and relay password: "
-read -r SOURCEPASS
-printf "> Specify the admin password: "
-read -r ADMINPASS
-printf "> Where is this server located (visible on admin pages)? "
-read -r LOCATED
-printf "> What's the admins e-mail (visible on admin pages and for let's encrypt)? "
-read -r ADMINMAIL
-printf "> Do you want SSL (y/n)? "
-read -r SSL
-printf "> Specify the port (default: 80): "
-read -r PORT
+read -rp "Specify the host name (for example: icecast.zuidwestfm.nl. Enter it without http:// or www) please: " HOSTNAME
+read -rp "Specify the source and relay password: " SOURCEPASS
+read -rp "Specify the admin password: " ADMINPASS
+read -rp "Where is this server located (visible on admin pages)? " LOCATED
+read -rp "What's the admins e-mail (visible on admin pages and for let's encrypt)? " ADMINMAIL
+read -rp "Specify the port (default: 80): " PORT
 
 # Assume port is 80 if no port was entered
 if [ -z "$PORT" ]; then
@@ -60,10 +52,9 @@ icecast2 icecast2/icecast-setup boolean true
 EOF
 
 # Update OS
-sudo apt --quiet --quiet --yes update
-sudo apt --quiet --quiet --yes upgrade
-sudo apt --quiet --quiet --yes dist-upgrade
-sudo apt --quiet --quiet --yes autoremove
+apt --quiet --quiet --yes update >/dev/null 2>&1
+apt --quiet --quiet --yes upgrade >/dev/null 2>&1
+apt --quiet --quiet --yes autoremove >/dev/null 2>&1
 
 # Remove old installs
 sudo apt --quiet --quiet --yes remove icecast2 certbot
