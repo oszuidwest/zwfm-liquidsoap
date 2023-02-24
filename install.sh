@@ -1,6 +1,7 @@
-#!/bin/sh
+#!/bin/bash
 
-set -e
+# Start with a clean terminal
+clear
 
 if [ "$(id -u)" != "0" ]; then
 	printf "You must be root to execute the script. Exiting."
@@ -18,19 +19,18 @@ if [ "$(cat /etc/debian_version)" != "bookworm/sid" ]; then
 fi
 
 # Update OS
-sudo apt --quiet --quiet --yes update
-sudo apt --quiet --quiet --yes upgrade
-sudo apt --quiet --quiet --yes dist-upgrade
-sudo apt --quiet --quiet --yes autoremove
+apt --quiet --quiet --yes update >/dev/null 2>&1
+apt --quiet --quiet --yes upgrade >/dev/null 2>&1
+apt --quiet --quiet --yes autoremove >/dev/null 2>&1
 
 # Install FDKAAC and bindings
-sudo apt install fdkaac libfdkaac-ocaml libfdkaac-ocaml-dynlink -y
+apt --quiet --quiet --yes install fdkaac libfdkaac-ocaml libfdkaac-ocaml-dynlink >/dev/null 2>&1
 
 # Get deb package
 wget https://github.com/savonet/liquidsoap/releases/download/v2.1.3/liquidsoap_2.1.3-ubuntu-jammy-1_amd64.deb -O /tmp/liq_2.1.3_amd64.deb
 
 # Install deb package 
-sudo apt install /tmp/liq_2.1.3_amd64.deb --fix-broken --yes
+apt install /tmp/liq_2.1.3_amd64.deb --fix-broken --yes
 
 # Make dirs for files
 sudo mkdir /etc/liquidsoap
