@@ -1,6 +1,7 @@
-#!/bin/sh
+#!/bin/bash
 
-set -e
+# Start with a clean terminal
+clear
 
 if [ "$(id -u)" != "0" ]; then
 	printf "You must be root to execute the script. Exiting."
