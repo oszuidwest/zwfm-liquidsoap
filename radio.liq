@@ -9,6 +9,7 @@ icecastserver = "icecast.example.org"
 icecastport = 8000
 icecastpassword = "changeme"
 fallbackfile = "/var/audio/fallback.ogg"
+upstreampassword = "foxtrotuniformcharliekilo"
 
 # Define functions for connection and disconnects
 def log_disconnect () =
@@ -24,10 +25,13 @@ end
 noodband = drop_metadata(single(fallbackfile))
 
 # Input port for the studio stream
-studio = drop_metadata(input.harbor('studio',port=8080,buffer=8.,max=20.,password='---', on_disconnect=log_disconnect, on_connect=log_connect))
+studio = drop_metadata(input.harbor('studio',port=8080,buffer=8.,max=20.,password=upstreampassword, on_disconnect=log_disconnect, on_connect=log_connect))
+
+# Insert silence when there is no data from input
+studio = mksafe(studio)
 
 # Combine fallback and live input
-radio = fallback (track_sensitive=false, [ strip_blank(max_blank=15.,min_noise=30.,studio), noodband ])
+radio = fallback(track_sensitive=false, [ blank.strip(max_blank=15.,min_noise=30.,studio), noodband ])
 
 # Output a high quality ogg/flac stream
 output.icecast(%ogg(%flac),fallible=true,

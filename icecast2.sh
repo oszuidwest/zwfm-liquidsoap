@@ -1,4 +1,7 @@
-#!/bin/sh
+#!/bin/bash
+
+# Start with a clean terminal
+clear
 
 set -e
 
@@ -8,7 +11,7 @@ if [ "$(id -u)" != "0" ]; then
 fi
 
 if [ "$(uname -s)" != "Linux" ]; then
-    printf "This script does not support \"$(uname -s)\" Operating System. Exiting."
+    printf "This script does not support '%s' Operating System. Exiting.\n" "$(uname -s)"
     exit 1
 fi
 
@@ -21,20 +24,13 @@ clear
 printf "********************************\n"
 printf "ICECAST 2 INSTALLER\n"
 printf "********************************\n"
-printf "> Specify the host name (for example: icecast.zuidwestfm.nl. Enter it without http:// or www) please: "
-read HOSTNAME
-printf "> Specify the source and relay password: "
-read SOURCEPASS
-printf "> Specify the admin password: "
-read ADMINPASS
-printf "> Where is this server located (visible on admin pages)? "
-read LOCATED
-printf "> What's the admins e-mail (visible on admin pages and for let's encrypt)? "
-read ADMINMAIL
-printf "> Do you want SSL (y/n)? "
-read SSL
-printf "> Specify the port (default: 80): "
-read PORT
+read -rp "Specify the host name (for example: icecast.zuidwestfm.nl. Enter it without http:// or www) please: " HOSTNAME
+read -rp "Specify the source and relay password: " SOURCEPASS
+read -rp "Specify the admin password: " ADMINPASS
+read -rp "Where is this server located (visible on admin pages)? " LOCATED
+read -rp "What's the admins e-mail (visible on admin pages and for let's encrypt)? " ADMINMAIL
+read -rp "Specify the port (default: 80): " PORT
+read -rp "Do you want Let's Encrypt to get a certificate for this server? (y/n): " SSL
 
 # Assume port is 80 if no port was entered
 if [ -z "$PORT" ]; then
@@ -60,10 +56,9 @@ icecast2 icecast2/icecast-setup boolean true
 EOF
 
 # Update OS
-sudo apt --quiet --quiet --yes update
-sudo apt --quiet --quiet --yes upgrade
-sudo apt --quiet --quiet --yes dist-upgrade
-sudo apt --quiet --quiet --yes autoremove
+apt --quiet --quiet --yes update >/dev/null 2>&1
+apt --quiet --quiet --yes upgrade >/dev/null 2>&1
+apt --quiet --quiet --yes autoremove >/dev/null 2>&1
 
 # Remove old installs
 sudo apt --quiet --quiet --yes remove icecast2 certbot
@@ -76,23 +71,20 @@ sed -i 	-e "s|<location>[^<]*</location>|<location>$LOCATED</location>|" \
 	-e "s|<admin>[^<]*</admin>|<admin>$ADMINMAIL</admin>|" \
 	-e "s|<clients>[^<]*</clients>|<clients>250</clients>|" \
 	-e "s|<sources>[^<]*</sources>|<sources>5</sources>|" \
+	-e "0,/<port>/{s/<port>[0-9]\{1,5\}<\/port>/<port>$PORT<\/port>/;}" \
 	/etc/icecast2/icecast.xml 2>/dev/null 1>&2
 
 # Grant icecast access to ports < 1024
 sudo setcap CAP_NET_BIND_SERVICE=+eip /usr/bin/icecast2
 
 # Apply post configuration
+systemctl enable icecast2
+systemctl daemon-reload
 service icecast2 restart
 
 # If port is 80 and SSL is enabled, nudge the user to run certbot
-if [ "$PORT" == "80" ] && [ "$SSL" == "y" ]; then
+if [ "$PORT" = "80" ] && [ "$SSL" = "y" ]; then
     echo "You should edit icecast.xml to reflect the new port situation and get a certificate with certbot. I can't do that yet..."
-# If port is 80 and SSL is disabled, nudge the user to edit icecast.xml
-elif [ "$PORT" == "80" ] && [ "$SSL" == "n" ]; then
-    echo "You should edit icecast.xml to reflect the new port situation. I can't do that yet..."
-# If port is not 80 and SSL is not enabled, show a message
-else
-    echo "Icecast was installed. Happy streaming"
 fi
 
 ### SSL IS WIP

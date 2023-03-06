@@ -1,6 +1,7 @@
-#!/bin/sh
+#!/bin/bash
 
-set -e
+# Start with a clean terminal
+clear
 
 if [ "$(id -u)" != "0" ]; then
 	printf "You must be root to execute the script. Exiting."
@@ -8,7 +9,7 @@ if [ "$(id -u)" != "0" ]; then
 fi
 
 if [ "$(uname -s)" != "Linux" ]; then
-	printf "This script does not support \"$(uname -s)\" Operating System. Exiting."
+	printf "This script does not support '%s' Operating System. Exiting.\n" "$(uname -s)"
 	exit 1
 fi
 
