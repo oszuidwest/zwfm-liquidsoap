@@ -43,6 +43,7 @@ sudo wget https://upload.wikimedia.org/wikipedia/commons/6/66/Aaron_Dunn_-_Sonat
 # Download radio.liq and logger
 sudo wget https://raw.githubusercontent.com/oszuidwest/liquidsoap-ubuntu/main/radio.liq -O /etc/liquidsoap/radio.liq
 sudo wget https://raw.githubusercontent.com/oszuidwest/liquidsoap-ubuntu/main/harbor_log.sh -O /etc/liquidsoap/harbor_log.sh
+sudo chmod +x /etc/liquidsoap/harbor_log.sh
 
 # Install service
 sudo wget https://raw.githubusercontent.com/oszuidwest/liquidsoap-ubuntu/main/liquidsoap.service -O /etc/systemd/system/liquidsoap.service
