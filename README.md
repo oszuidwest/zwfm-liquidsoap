@@ -23,7 +23,7 @@ This system should be able to run on an ARM platform, like Ampere Altra of Raspb
 
 # MIT License
 
-Copyright (c) 2022 Streekomroep ZuidWest
+Copyright (c) 2023 Streekomroep ZuidWest
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
