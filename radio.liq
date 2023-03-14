@@ -15,7 +15,7 @@ upstreampassword = "foxtrot-uniform-charlie-kilo"
 noodband = drop_metadata(single(fallbackfile))
 
 # Input for the studio stream
-studio = input.srt(id="studio", port=9000, mode="listener", max=2.0, streamid=icecastpassword, passphrase=upstreampassword)
+studio = input.srt(id="studio", port=9000, mode="listener", max=2.0, streamid="studio", passphrase=upstreampassword)
 
 # Insert silence when there is no data from input
 studio = mksafe(studio)

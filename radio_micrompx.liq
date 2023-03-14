@@ -16,7 +16,7 @@ stereotoolport = 90
 noodband = drop_metadata(single(fallbackfile))
 
 # Input for the studio stream
-studio = input.srt(id="studio", port=9000, mode="listener", max=2.0, streamid=icecastpassword, passphrase=upstreampassword)
+studio = input.srt(id="studio", port=9000, mode="listener", max=2.0, streamid="studio", passphrase=upstreampassword)
 
 # Combine fallback and live input
 radio = fallback(track_sensitive=false, [ blank.strip(max_blank=15.,min_noise=30.,studio), noodband ])
