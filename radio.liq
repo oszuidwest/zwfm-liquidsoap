@@ -41,4 +41,3 @@ output.icecast(%mp3(bitrate=192,samplerate=48000), description='Hoge Kwaliteit S
 
 # Output a low bitrate AAC stream
 output.icecast(%fdkaac(channels=2, samplerate=48000, bitrate=96, afterburner=true, aot='mpeg4_aac_lc', transmux='adts', sbr_mode=true), description='Mobile Stream (96kbit AAC)', mount='/zuidwest.aac', output_config)
-

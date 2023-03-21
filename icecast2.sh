@@ -56,15 +56,15 @@ icecast2 icecast2/icecast-setup boolean true
 EOF
 
 # Update OS
-apt --quiet --quiet --yes update >/dev/null 2>&1
-apt --quiet --quiet --yes upgrade >/dev/null 2>&1
-apt --quiet --quiet --yes autoremove >/dev/null 2>&1
+apt -qq -y update >/dev/null 2>&1
+apt -qq -y upgrade >/dev/null 2>&1
+apt -qq -y autoremove >/dev/null 2>&1
 
 # Remove old installs
-sudo apt --quiet --quiet --yes remove icecast2 certbot
+apt -qq -y remove icecast2 certbot
 
 # Install icecast2
-sudo apt --quiet --quiet --yes install icecast2 certbot
+apt -qq -y install icecast2 certbot
 
 # Post configuration
 sed -i 	-e "s|<location>[^<]*</location>|<location>$LOCATED</location>|" \
