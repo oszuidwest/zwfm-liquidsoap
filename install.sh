@@ -19,18 +19,18 @@ if [ "$(cat /etc/debian_version)" != "bookworm/sid" ]; then
 fi
 
 # Update OS
-apt --quiet --quiet --yes update >/dev/null 2>&1
-apt --quiet --quiet --yes upgrade >/dev/null 2>&1
-apt --quiet --quiet --yes autoremove >/dev/null 2>&1
+apt -qq -y update >/dev/null 2>&1
+apt -qq -y upgrade >/dev/null 2>&1
+apt -qq -y autoremove >/dev/null 2>&1
 
 # Install FDKAAC and bindings
-apt --quiet --quiet --yes install fdkaac libfdkaac-ocaml libfdkaac-ocaml-dynlink >/dev/null 2>&1
+apt -qq --yes install fdkaac libfdkaac-ocaml libfdkaac-ocaml-dynlink >/dev/null 2>&1
 
 # Get deb package
 wget https://github.com/savonet/liquidsoap/releases/download/rolling-release-v2.2.x/liquidsoap-a7eea64_2.2.0-ubuntu-jammy-1_amd64.deb -O /tmp/liq_2.2.0_amd64.deb
 
 # Install deb package 
-apt install /tmp/liq_2.2.0_amd64.deb --fix-broken --yes
+apt -qq -y install /tmp/liq_2.2.0_amd64.deb --fix-broken
 
 # Make dirs for files
 sudo mkdir /etc/liquidsoap
