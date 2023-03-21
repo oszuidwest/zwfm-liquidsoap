@@ -33,11 +33,12 @@ output_config = (
   radio
 )
 
-# Output a high quality ogg/flac stream
+# Output a lossless ogg/flac stream
 output.icecast(%ogg(%flac), description='Studio to Transmitter (ongecomprimeerde audio)', mount='/zuidwest.stl', output_config)
 
-# Output a high quality mp3 stream
+# Output a high bitrate mp3 stream
 output.icecast(%mp3(bitrate=192,samplerate=48000), description='Hoge Kwaliteit Stream (192kbit MP3)', mount='/zuidwest.mp3', output_config)
 
-# Output a low quality HE-AACv2 stream
+# Output a low bitrate AAC stream
 output.icecast(%fdkaac(channels=2, samplerate=48000, bitrate=96, afterburner=true, aot='mpeg4_aac_lc', transmux='adts', sbr_mode=true), description='Mobile Stream (96kbit AAC)', mount='/zuidwest.aac', output_config)
+
