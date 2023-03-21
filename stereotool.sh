@@ -19,12 +19,12 @@ if [ "$(cat /etc/debian_version)" != "bookworm/sid" ]; then
 fi
 
 # Download stereotool
-sudo wget https://www.stereotool.com/download/stereo_tool_cmd_64 -O /usr/bin/stereotool
+wget https://www.stereotool.com/download/stereo_tool_cmd_64 -O /usr/bin/stereotool
 
 # Configure stereotool
-sudo mkdir /etc/stereotool
-sudo chmod +x /usr/bin/stereotool
-sudo stereotool -X /etc/stereotool/st.ini
+mkdir /etc/stereotool
+chmod +x /usr/bin/stereotool
+stereotool -X /etc/stereotool/st.ini
 
 # Grant stereotool access to ports < 1024
-sudo setcap CAP_NET_BIND_SERVICE=+eip /usr/bin/stereotool
+setcap CAP_NET_BIND_SERVICE=+eip /usr/bin/stereotool
