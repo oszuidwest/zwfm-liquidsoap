@@ -48,8 +48,4 @@ output_icecast_stream(format=%ogg(%flac), description="Studio to Transmitter (on
 output_icecast_stream(format=%mp3(bitrate=192, samplerate=48000), description="Hoge Kwaliteit Stream (192kbit MP3)", mount="/zuidwest.mp3")
 
 # Output a low birate AAC stream
-output_icecast_stream(
-  format=%fdkaac(channels=2, samplerate=48000, bitrate=96, afterburner=true, aot='mpeg4_aac_lc', transmux='adts', sbr_mode=true),
-  description="Mobile Stream (96kbit AAC)",
-  mount="/zuidwest.aac"
-)
+output_icecast_stream(format=%fdkaac(channels=2, samplerate=48000, bitrate=96, afterburner=true, aot='mpeg4_aac_lc', transmux='adts', sbr_mode=true), description="Mobile Stream (96kbit AAC)", mount="/zuidwest.aac")
