@@ -5,9 +5,9 @@ settings.init.daemon.change_user.user.set("liquidsoap")
 settings.init.daemon.pidfile.path.set("/dev/null")
 
 # General configuration (do change this)
-icecastserver = "localhost"
-icecastport = 80
-icecastpassword = "zwiv001"
+icecastserver = "icecast.example.org"
+icecastport = 8000
+icecastpassword = "hackme"
 fallbackfile = "/var/audio/fallback.ogg"
 upstreampassword = "foxtrot-uniform-charlie-kilo"
 
