@@ -5,9 +5,9 @@ settings.init.daemon.change_user.user.set("liquidsoap")
 settings.init.daemon.pidfile.path.set("/dev/null")
 
 # General configuration (do change this)
-icecastserver = "icecast.example.org"
-icecastport = 8000
-icecastpassword = "changeme"
+icecastserver = "localhost"
+icecastport = 80
+icecastpassword = "zwiv001"
 fallbackfile = "/var/audio/fallback.ogg"
 upstreampassword = "foxtrot-uniform-charlie-kilo"
 
@@ -26,21 +26,30 @@ studio = mksafe(studio)
 # Combine fallback and live input
 radio = fallback(track_sensitive=false, [ blank.strip(max_blank=15.,min_noise=30.,studio), noodband ])
 
-# Output configuration
-output_config = (
-  fallible=true,
-  host=icecastserver,
-  port=icecastport,
-  password=icecastpassword,
-  name='ZuidWest FM',
-  radio
-)
+# Function to output an icecast stream with common parameters
+def output_icecast_stream(~format, ~description, ~mount) =
+  output.icecast(
+    format,
+    fallible=true,
+    host=icecastserver,
+    port=icecastport,
+    password=icecastpassword,
+    name="ZuidWest FM",
+    description=description,
+    mount=mount,
+    radio
+  )
+end
 
 # Output a lossless ogg/flac stream
-output.icecast(%ogg(%flac), description='Studio to Transmitter (ongecomprimeerde audio)', mount='/zuidwest.stl', output_config)
+output_icecast_stream(format=%ogg(%flac), description="Studio to Transmitter (ongecomprimeerde audio)", mount="/zuidwest.stl")
 
 # Output a high bitrate mp3 stream
-output.icecast(%mp3(bitrate=192,samplerate=48000), description='Hoge Kwaliteit Stream (192kbit MP3)', mount='/zuidwest.mp3', output_config)
+output_icecast_stream(format=%mp3(bitrate=192, samplerate=48000), description="Hoge Kwaliteit Stream (192kbit MP3)", mount="/zuidwest.mp3")
 
-# Output a low bitrate AAC stream
-output.icecast(%fdkaac(channels=2, samplerate=48000, bitrate=96, afterburner=true, aot='mpeg4_aac_lc', transmux='adts', sbr_mode=true), description='Mobile Stream (96kbit AAC)', mount='/zuidwest.aac', output_config)
+# Output a low birate AAC stream
+output_icecast_stream(
+  format=%fdkaac(channels=2, samplerate=48000, bitrate=96, afterburner=true, aot='mpeg4_aac_lc', transmux='adts', sbr_mode=true),
+  description="Mobile Stream (96kbit AAC)",
+  mount="/zuidwest.aac"
+)
