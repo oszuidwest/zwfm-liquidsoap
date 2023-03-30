@@ -18,7 +18,7 @@ noodband = drop_metadata(single(fallbackfile))
 studio = input.srt(id="studio", port=9000, mode="listener", max=2.0, streamid="studio", passphrase=upstreampassword)
 
 # Insert silence when there is no data from input
-studio = mksafe(studio)
+# studio = mksafe(studio) # This causes the ogg/flac stream to disconnect when using SRT as upstream?
 
 # Wrap it in a buffer to prevent latency from connection/disconnection to impact downstream operators/output
 studio = buffer(fallible=true, studio)
