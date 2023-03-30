@@ -30,7 +30,7 @@ radio = fallback(track_sensitive=false, [ blank.strip(max_blank=15.,min_noise=30
 def output_icecast_stream(~format, ~description, ~mount) =
   output.icecast(
     format,
-    fallible=true,
+    fallible=false,
     host=icecastserver,
     port=icecastport,
     password=icecastpassword,
