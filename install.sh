@@ -23,10 +23,10 @@ read -rp "Do you want to perform all OS updates? (default: y): " -i "y" DO_UPDAT
 
 # Check if the DO_UPDATES variable is set to 'y'
 if [ "$DO_UPDATES" == "y" ]; then
-  # If it is, run the apt update, upgrade, and autoremove commands with the --yes flag to automatically answer yes to prompts
-  apt -qq --yes update >/dev/null 2>&1
-  apt -qq --yes upgrade >/dev/null 2>&1
-  apt -qq --yes autoremove >/dev/null 2>&1
+	# If it is, run the apt-get update, upgrade, and autoremove commands with the -y flag to automatically answer yes to prompts
+	apt -qq -y update >/dev/null 2>&1
+	apt -qq -y upgrade >/dev/null 2>&1
+	apt -qq -y autoremove >/dev/null 2>&1
 fi
 
 # Install FDKAAC and bindings
