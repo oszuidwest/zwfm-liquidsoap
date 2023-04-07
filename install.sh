@@ -14,6 +14,7 @@ if [ "$(uname -s)" != "Linux" ]; then
 fi
 
 # Detect OS version and architecture
+OS_ID=$(lsb_release -is | tr '[:upper:]' '[:lower:]')
 OS_VERSION=$(lsb_release -cs)
 OS_ARCH=$(dpkg --print-architecture)
 
@@ -35,7 +36,7 @@ fi
 
 # Set the liquidsoap package download URL based on OS version and architecture
 BASE_URL="https://github.com/savonet/liquidsoap/releases/download/rolling-release-v2.2.x/liquidsoap-471bd7c_2.2.0"
-PACKAGE_URL="${BASE_URL}-${OS_VERSION}-${OS_ARCH}.deb"
+PACKAGE_URL="${BASE_URL}-${OS_ID}-${OS_VERSION}-1_${OS_ARCH}.deb"
 
 # Ask for input for variables
 read -rp "Do you want to perform all OS updates? (default: y): " -i "y" DO_UPDATES
