@@ -4,7 +4,7 @@
 clear
 
 if [ "$(id -u)" != "0" ]; then
-  printf "You must be root to execute the script. Exiting."
+  printf "You must be root to execute the script. Exiting.\n"
   exit 1
 fi
 
@@ -13,10 +13,20 @@ if [ "$(uname -s)" != "Linux" ]; then
   exit 1
 fi
 
-if [ "$(cat /etc/debian_version)" != "bookworm/sid" ]; then
-  printf "This script only supports Ubuntu 22.04 LTS. Exiting."
+# Detect OS version and architecture
+OS_VERSION=$(lsb_release -cs)
+OS_ARCH=$(dpkg --print-architecture)
+
+# Check if the OS version is supported
+SUPPORTED_OS=("bookworm" "bullseye" "focal" "jammy")
+if [[ ! " ${SUPPORTED_OS[@]} " =~ " ${OS_VERSION} " ]]; then
+  printf "This script does not support '%s' OS version. Exiting.\n" "$OS_VERSION"
   exit 1
 fi
+
+# Set the liquidsoap package download URL based on OS version and architecture
+BASE_URL="https://github.com/savonet/liquidsoap/releases/download/rolling-release-v2.2.x/liquidsoap-471bd7c_2.2.0"
+PACKAGE_URL="${BASE_URL}-${OS_VERSION}-${OS_ARCH}.deb"
 
 # Ask for input for variables
 read -rp "Do you want to perform all OS updates? (default: y): " -i "y" DO_UPDATES
@@ -41,10 +51,10 @@ wget https://download.thimeo.com/Stereo_Tool_Generic_plugin.zip -O /tmp/st.zip
 unzip /tmp/st.zip -d /opt
 
 # Get deb package
-wget https://github.com/savonet/liquidsoap/releases/download/rolling-release-v2.2.x/liquidsoap-471bd7c_2.2.0-ubuntu-jammy-1_amd64.deb -O /tmp/liq_2.2.0_amd64.deb
+wget "$PACKAGE_URL" -O /tmp/liq_2.2.0.deb
 
 # Install deb package 
-apt -qq -y install /tmp/liq_2.2.0_amd64.deb --fix-broken
+apt -qq -y install /tmp/liq_2.2.0.deb --fix-broken
 
 # Make dirs for files
 mkdir /etc/liquidsoap
