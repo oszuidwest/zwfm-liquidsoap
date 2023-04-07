@@ -4,18 +4,18 @@
 clear
 
 if [ "$(id -u)" != "0" ]; then
-	printf "You must be root to execute the script. Exiting."
-	exit 1
+  printf "You must be root to execute the script. Exiting."
+  exit 1
 fi
 
 if [ "$(uname -s)" != "Linux" ]; then
-	printf "This script does not support '%s' Operating System. Exiting.\n" "$(uname -s)"
-	exit 1
+  printf "This script does not support '%s' Operating System. Exiting.\n" "$(uname -s)"
+  exit 1
 fi
 
 if [ "$(cat /etc/debian_version)" != "bookworm/sid" ]; then
-	printf "This script only supports Ubuntu 22.04 LTS. Exiting."
-	exit 1
+  printf "This script only supports Ubuntu 22.04 LTS. Exiting."
+  exit 1
 fi
 
 # Ask for input for variables
@@ -23,10 +23,9 @@ read -rp "Do you want to perform all OS updates? (default: y): " -i "y" DO_UPDAT
 
 # Check if the DO_UPDATES variable is set to 'y'
 if [ "$DO_UPDATES" == "y" ]; then
-	# If it is, run the apt-get update, upgrade, and autoremove commands with the -y flag to automatically answer yes to prompts
-	apt -qq -y update >/dev/null 2>&1
-	apt -qq -y upgrade >/dev/null 2>&1
-	apt -qq -y autoremove >/dev/null 2>&1
+  apt -qq -y update >/dev/null 2>&1
+  apt -qq -y upgrade >/dev/null 2>&1
+  apt -qq -y autoremove >/dev/null 2>&1
 fi
 
 # Install FDKAAC and bindings
