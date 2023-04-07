@@ -26,6 +26,9 @@ apt -qq -y autoremove >/dev/null 2>&1
 # Install FDKAAC and bindings
 apt -qq -y install fdkaac libfdkaac-ocaml libfdkaac-ocaml-dynlink >/dev/null 2>&1
 
+# Download Thimeo-ST plugin 
+wget https://download.thimeo.com/Stereo_Tool_Generic_plugin.zip -O /tmp/st.zip
+
 # Get deb package
 wget https://github.com/savonet/liquidsoap/releases/download/rolling-release-v2.2.x/liquidsoap-471bd7c_2.2.0-ubuntu-jammy-1_amd64.deb -O /tmp/liq_2.2.0_amd64.deb
 
