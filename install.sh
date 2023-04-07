@@ -18,10 +18,16 @@ if [ "$(cat /etc/debian_version)" != "bookworm/sid" ]; then
 	exit 1
 fi
 
-# Update OS
-apt -qq -y update >/dev/null 2>&1
-apt -qq -y upgrade >/dev/null 2>&1
-apt -qq -y autoremove >/dev/null 2>&1
+# Ask for input for variables
+read -rp "Do you want to perform all OS updates? (default: y): " -i "y" DO_UPDATES
+
+# Check if the DO_UPDATES variable is set to 'y'
+if [ "$DO_UPDATES" == "y" ]; then
+  # If it is, run the apt update, upgrade, and autoremove commands with the --yes flag to automatically answer yes to prompts
+  apt -qq --yes update >/dev/null 2>&1
+  apt -qq --yes upgrade >/dev/null 2>&1
+  apt -qq --yes autoremove >/dev/null 2>&1
+fi
 
 # Install FDKAAC and bindings
 apt -qq -y install fdkaac libfdkaac-ocaml libfdkaac-ocaml-dynlink >/dev/null 2>&1
