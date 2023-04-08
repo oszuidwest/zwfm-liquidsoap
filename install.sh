@@ -40,6 +40,7 @@ PACKAGE_URL="${BASE_URL}-${OS_ID}-${OS_VERSION}-1_${OS_ARCH}.deb"
 
 # Ask for input for variables
 read -rp "Do you want to perform all OS updates? (default: y): " -i "y" DO_UPDATES
+read -rp "Do you want to use StereoTool for sound processing? (default: n): " -i "n" USE_ST
 
 # Check if the DO_UPDATES variable is set to 'y'
 if [ "$DO_UPDATES" == "y" ]; then
@@ -51,14 +52,12 @@ fi
 # Install FDKAAC and bindings
 apt -qq -y install fdkaac libfdkaac-ocaml libfdkaac-ocaml-dynlink >/dev/null 2>&1
 
-# Install Unzip
-apt -qq -y install unzip >/dev/null 2>&1
-
-# Download Thimeo-ST plugin 
-wget https://download.thimeo.com/Stereo_Tool_Generic_plugin.zip -O /tmp/st.zip
-
-# Unzip Thimeo-ST plugin
-unzip /tmp/st.zip -d /opt
+# Check if the DO_UPDATES variable is set to 'y'
+if [ "$USE_ST" == "y" ]; then
+  apt -qq -y install unzip >/dev/null 2>&1
+  wget https://download.thimeo.com/Stereo_Tool_Generic_plugin.zip -O /tmp/st.zip
+  unzip /tmp/st.zip -d /opt
+fi
 
 # Get deb package
 wget "$PACKAGE_URL" -O /tmp/liq_2.2.0.deb
