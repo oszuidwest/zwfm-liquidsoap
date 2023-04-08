@@ -9,8 +9,6 @@ This repository contains the audio streaming stack for [ZuidWest FM](https://www
 
 `install.sh` Script that installs Liquidsoap 2.2 with fdkaac support. It also enables Liquidsoap as service that automatically starts. The configuration is in `/etc/liquidsoap/radio.liq` but there are other more experimental `.liq` files included too.
 
-`stereotool.sh` Script that installs StereoTool for audio processing. Work in progress. Not finished or integrated.
-
 ### Liquidsoap configurations
 `radio.liq` Production ready Liquidsoap transcoder. Accepts a high quality (preferably ogg/flac) stream over SRT and transcodes it to mp3, aac and ogg/flac. Also integrates a silence detector that fires after 15 seconds of silence.
 
