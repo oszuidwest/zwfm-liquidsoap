@@ -35,7 +35,7 @@ if [ "$OS_SUPPORTED" = false ]; then
 fi
 
 # Set the liquidsoap package download URL based on OS version and architecture
-BASE_URL="https://github.com/savonet/liquidsoap/releases/download/rolling-release-v2.2.x/liquidsoap-471bd7c_2.2.0"
+BASE_URL="https://github.com/savonet/liquidsoap/releases/download/rolling-release-v2.2.x/liquidsoap-2a3bf62_2.2.0"
 PACKAGE_URL="${BASE_URL}-${OS_ID}-${OS_VERSION}-1_${OS_ARCH}.deb"
 
 # Ask for input for variables
