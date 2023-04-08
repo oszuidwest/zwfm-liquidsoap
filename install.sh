@@ -78,6 +78,7 @@ wget https://upload.wikimedia.org/wikipedia/commons/6/66/Aaron_Dunn_-_Sonata_No_
 wget https://raw.githubusercontent.com/oszuidwest/liquidsoap-ubuntu/srt/radio.liq -O /etc/liquidsoap/radio.liq
 
 # Install service
+rm -f /etc/systemd/system/liquidsoap.service
 wget https://raw.githubusercontent.com/oszuidwest/liquidsoap-ubuntu/srt/liquidsoap.service -O /etc/systemd/system/liquidsoap.service
 systemctl daemon-reload
 systemctl enable liquidsoap.service
