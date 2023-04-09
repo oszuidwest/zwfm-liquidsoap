@@ -41,6 +41,9 @@ def output_icecast_stream(~format, ~description, ~mount) =
   )
 end
 
+# Test stereotool implementation
+radio = stereotool(library_file="/opt/Stereo_Tool_Generic_plugin_1000", license_key="1337", preset="/path/to/preset/file", radio)
+
 # Output a lossless ogg/flac stream
 output_icecast_stream(format=%ogg(%flac), description="Studio to Transmitter (ongecomprimeerde audio)", mount="/zuidwest.stl")
 
