@@ -12,7 +12,7 @@ This repository contains the audio streaming stack for [ZuidWest FM](https://www
 ### Liquidsoap configurations
 `radio.liq` Production ready Liquidsoap transcoder. Accepts a high quality (preferably ogg/flac) stream over SRT and transcodes it to mp3, aac and ogg/flac. Also integrates a silence detector that fires after 15 seconds of silence.
 
-`radio-liq.liq` Experimental ready Liquidsoap transcoder with StereoTool. Accepts a high quality (preferably ogg/flac) stream over SRT and transcodes it to mp3, aac and ogg/flac. Also integrates a silence detector that fires after 15 seconds of silence. Also integrates StereoTool as audio processor.
+`radio-experimental.liq` Experimental ready Liquidsoap transcoder with StereoTool. Accepts a high quality (preferably ogg/flac) stream over SRT and transcodes it to mp3, aac and ogg/flac. Also integrates a silence detector that fires after 15 seconds of silence. Also integrates StereoTool as audio processor.
 
 ## A word on ARM platforms
 This system should be able to run on an ARM platform, like Ampere Altra of Raspberry Pi. StereoTool and MicroMPX are still very shaky on ARM. For example only 48KHz audio is supported in MicroMPX on ARM. We will eventually run this on an ARM instance, but for now x86-64 is more stable.
