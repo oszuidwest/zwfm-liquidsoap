@@ -50,7 +50,7 @@ if [ "$DO_UPDATES" == "y" ]; then
 fi
 
 # Install FDKAAC and bindings
-apt -qq -y install fdkaac libfdkaac-ocaml libfdkaac-ocaml-dynlink >/dev/null 2>&1
+apt update -qq -y && apt -qq -y install fdkaac libfdkaac-ocaml libfdkaac-ocaml-dynlink >/dev/null 2>&1
 
 # Check if the DO_UPDATES variable is set to 'y'
 if [ "$USE_ST" == "y" ]; then
