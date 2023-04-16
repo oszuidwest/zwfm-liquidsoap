@@ -49,8 +49,8 @@ if [ "$DO_UPDATES" == "y" ]; then
   apt -qq -y autoremove >/dev/null 2>&1
 fi
 
-# Install FDKAAC and other dependencies
-apt update -qq -y && apt -qq -y install logrotate fdkaac libfdkaac-ocaml libfdkaac-ocaml-dynlink >/dev/null 2>&1
+# Install FDKAAC and bindings
+apt update -qq -y && apt -qq -y install fdkaac libfdkaac-ocaml libfdkaac-ocaml-dynlink >/dev/null 2>&1
 
 # Check if the DO_UPDATES variable is set to 'y'
 if [ "$USE_ST" == "y" ]; then
