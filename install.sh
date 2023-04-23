@@ -70,6 +70,13 @@ mkdir /etc/liquidsoap
 mkdir /var/audio
 chown -R liquidsoap:liquidsoap /etc/liquidsoap /var/audio
 
+# Download StereoTool
+if [ "$USE_ST" == "y" ]; then
+  apt -qq -y install unzip
+  wget https://download.thimeo.com/Stereo_Tool_Generic_plugin.zip -O /tmp/st.zip
+  unzip -o /tmp/st.zip -d /opt/
+fi
+
 # Download sample fallback file
 wget https://upload.wikimedia.org/wikipedia/commons/6/66/Aaron_Dunn_-_Sonata_No_1_-_Movement_2.ogg -O /var/audio/fallback.ogg
 
