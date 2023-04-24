@@ -46,7 +46,7 @@ end
 radioproc = stereotool(library_file="/opt/Stereo_Tool_Generic_plugin_1000/libStereoTool_64.so", license_key="1337", preset="/path/to/preset/file", radio)
 
 # Output a lossless ogg/flac stream
-output_icecast_stream(format=%ogg(%flac), description="Studio to Transmitter (ongecomprimeerde audio)", mount="/zuidwest.stl", source=radioproc)
+output_icecast_stream(format=%ogg(%flac), description="Studio to Transmitter (ongecomprimeerde audio)", mount="/zuidwest.stl", source=radio)
 
 # Output a high bitrate mp3 stream
 output_icecast_stream(format=%mp3(bitrate=192, samplerate=48000), description="Hoge Kwaliteit Stream (192kbit MP3)", mount="/zuidwest.mp3", source=radio)
