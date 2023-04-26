@@ -52,13 +52,6 @@ fi
 # Install FDKAAC and bindings
 apt update -qq -y && apt -qq -y install fdkaac libfdkaac-ocaml libfdkaac-ocaml-dynlink >/dev/null 2>&1
 
-# Check if the DO_UPDATES variable is set to 'y'
-if [ "$USE_ST" == "y" ]; then
-  apt -qq -y install unzip >/dev/null 2>&1
-  wget https://download.thimeo.com/Stereo_Tool_Generic_plugin.zip -O /tmp/st.zip
-  unzip -o /tmp/st.zip -d /opt
-fi
-
 # Get deb package
 wget "$PACKAGE_URL" -O /tmp/liq_2.2.0.deb
 
