@@ -73,8 +73,8 @@ chown -R liquidsoap:liquidsoap /etc/liquidsoap /var/audio
 # Download StereoTool 
 if [ "$USE_ST" == "y" ]; then
   mkdir -p /opt/stereotool
-  wget https://www.stereotool.com/download/stereo_tool_cmd_64 -O /opt/streotool/stereotool
-  chmod +x /opt/streotool/stereotool
+  wget https://www.stereotool.com/download/stereo_tool_cmd_64 -O /opt/stereotool/stereotool
+  chmod +x /opt/stereotool/stereotool
 fi
 
 # Download sample fallback file
