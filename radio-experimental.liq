@@ -46,7 +46,7 @@ end
 #radioproc = stereotool(library_file="/opt/Stereo_Tool_Generic_plugin_1000/libStereoTool_64.so", license_key="1337", preset="/path/to/preset/file", radio)
 
 # Pipe the final mix trough StereoTool (Replace this when MicroMPX in libStereoTool is available)
-radioproc = pipe(process='/opt/stereotool/stereotool - - -w 8888 -q -k "1337" -s /etc/liquidsoap/st.ini', radio)
+radioproc = pipe(process='/opt/stereotool/stereotool - - -w 8888 -q -s /etc/liquidsoap/st.ini', radio)
 
 # Output a lossless ogg/flac stream
 output_icecast_stream(format=%ogg(%flac), description="Studio to Transmitter (ongecomprimeerde audio)", mount="/zuidwest.stl", source=radio)
