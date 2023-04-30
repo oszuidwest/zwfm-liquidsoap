@@ -46,7 +46,7 @@ end
 #radioproc = stereotool(library_file="/opt/Stereo_Tool_Generic_plugin_1000/libStereoTool_64.so", license_key="1337", preset="/path/to/preset/file", radio)
 
 # Feed the audio to StereoTool too, which can generate MicroMPX
-output.external(%wav(channels=2, samplerate=48000), restart_on_crash=true, "/opt/stereotool/stereotool - /dev/null -w 8888 -q -s /etc/liquidsoap/st.ini", radio)
+output.external(fallible=true, %wav, "/opt/stereotool/stereotool - /dev/null -w 8888 -q -s /etc/liquidsoap/st.ini", radio)
 
 # Output a lossless ogg/flac stream
 output_icecast_stream(format=%ogg(%flac), description="Studio to Transmitter (ongecomprimeerde audio)", mount="/zuidwest.stl", source=radio)
