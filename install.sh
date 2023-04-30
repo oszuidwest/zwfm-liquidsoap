@@ -63,11 +63,18 @@ mkdir /etc/liquidsoap
 mkdir /var/audio
 chown -R liquidsoap:liquidsoap /etc/liquidsoap /var/audio
 
-# Download StereoTool
+# Download StereoTool plug-in
+#if [ "$USE_ST" == "y" ]; then
+#  apt -qq -y install unzip
+#  wget https://download.thimeo.com/Stereo_Tool_Generic_plugin.zip -O /tmp/st.zip
+#  unzip -o /tmp/st.zip -d /opt/
+#fi
+
+# Download StereoTool 
 if [ "$USE_ST" == "y" ]; then
-  apt -qq -y install unzip
-  wget https://download.thimeo.com/Stereo_Tool_Generic_plugin.zip -O /tmp/st.zip
-  unzip -o /tmp/st.zip -d /opt/
+  mkdir -p /opt/stereotool
+  wget https://www.stereotool.com/download/stereo_tool_cmd_64 -O /opt/streotool/stereotool
+  chmod +x /opt/streotool/stereotool
 fi
 
 # Download sample fallback file
