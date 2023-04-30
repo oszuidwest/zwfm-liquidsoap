@@ -58,4 +58,4 @@ output_icecast_stream(format=%mp3(bitrate=192, samplerate=48000), description="H
 output_icecast_stream(format=%fdkaac(channels=2, samplerate=48000, bitrate=96, afterburner=true, aot='mpeg4_aac_lc', transmux='adts', sbr_mode=true), description="Mobile Stream (96kbit AAC)", mount="/zuidwest.aac", source=radio)
 
 # Don't output the StereoTool anywhere, we just use it for μMPX 
-output.dummy(radioproc)
+output.dummy(fallible=true, radioproc)
