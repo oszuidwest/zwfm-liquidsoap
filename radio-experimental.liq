@@ -45,8 +45,8 @@ end
 # Test stereotool implementation (There's no MicroMPX in libStereoTool yet) 
 #radioproc = stereotool(library_file="/opt/Stereo_Tool_Generic_plugin_1000/libStereoTool_64.so", license_key="1337", preset="/path/to/preset/file", radio)
 
-# Pipe the final mix trough StereoTool (Replace this when MicroMPX in libStereoTool is available)
-radioproc = pipe(process='/opt/stereotool/stereotool - - -w 8888 -q -s /etc/liquidsoap/st.ini', radio)
+# Feed the audio to StereoTool too, which can generate MicroMPX
+output.external(%wav(channels=2, samplerate=48000), reopen_on_error=true, "stereotool - /dev/null -w 8888 -q -s /etc/liquidsoap/st.ini", radio)
 
 # Output a lossless ogg/flac stream
 output_icecast_stream(format=%ogg(%flac), description="Studio to Transmitter (ongecomprimeerde audio)", mount="/zuidwest.stl", source=radio)
@@ -56,6 +56,3 @@ output_icecast_stream(format=%mp3(bitrate=192, samplerate=48000), description="H
 
 # Output a low bitrate AAC stream
 output_icecast_stream(format=%fdkaac(channels=2, samplerate=48000, bitrate=96, afterburner=true, aot='mpeg4_aac_lc', transmux='adts', sbr_mode=true), description="Mobile Stream (96kbit AAC)", mount="/zuidwest.aac", source=radio)
-
-# Don't output the StereoTool anywhere, we just use it for μMPX 
-output.dummy(fallible=true, radioproc)
