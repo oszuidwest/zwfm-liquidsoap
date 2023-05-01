@@ -10,13 +10,16 @@ icecastport = 8000
 stereotoolport = 90
 icecastpassword = "changeme"
 fallbackfile = "/var/audio/fallback.ogg"
-upstreampassword = "foxtrotuniformcharliekilo"
+upstreampassword = "foxtrot-uniform-charlie-kilo"
 
 # Fallback if there is no audio coming from the studio
 noodband = drop_metadata(single(fallbackfile))
 
 # Input port for the studio stream
 studio = drop_metadata(input.harbor('studio',port=8080,buffer=8.,max=20.,password=upstreampassword))
+
+# Insert silence when there is no data from input
+studio = mksafe(studio)
 
 # Combine fallback and live input
 radio = fallback(track_sensitive=false, [ blank.strip(max_blank=15.,min_noise=30.,studio), noodband ])
