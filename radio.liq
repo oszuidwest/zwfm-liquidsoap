@@ -9,23 +9,13 @@ icecastserver = "icecast.example.org"
 icecastport = 8000
 icecastpassword = "changeme"
 fallbackfile = "/var/audio/fallback.ogg"
-upstreampassword = "foxtrotuniformcharliekilo"
-
-# Define functions for connection and disconnects
-def log_disconnect () =
-     process.run("/etc/liquidsoap/harbor_log.sh disconnect /tmp/harborlog.txt")
-end
-
-def log_connect (header) =
-     process.run("/etc/liquidsoap/harbor_log.sh connect /tmp/harborlog.txt")
-     log("We need to specify a header so here it is - #{header}")
-end
+upstreampassword = "foxtrot-uniform-charlie-kilo"
 
 # Fallback if there is no audio coming from the studio
 noodband = drop_metadata(single(fallbackfile))
 
 # Input port for the studio stream
-studio = drop_metadata(input.harbor('studio',port=8080,buffer=8.,max=20.,password=upstreampassword, on_disconnect=log_disconnect, on_connect=log_connect))
+studio = drop_metadata(input.harbor('studio',port=8080,buffer=8.,max=20.,password=upstreampassword))
 
 # Insert silence when there is no data from input
 studio = mksafe(studio)

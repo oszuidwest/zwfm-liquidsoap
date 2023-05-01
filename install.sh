@@ -4,48 +4,85 @@
 clear
 
 if [ "$(id -u)" != "0" ]; then
-	printf "You must be root to execute the script. Exiting."
-	exit 1
+  printf "You must be root to execute the script. Exiting.\n"
+  exit 1
 fi
 
 if [ "$(uname -s)" != "Linux" ]; then
-	printf "This script does not support '%s' Operating System. Exiting.\n" "$(uname -s)"
-	exit 1
+  printf "This script does not support '%s' Operating System. Exiting.\n" "$(uname -s)"
+  exit 1
 fi
 
-if [ "$(cat /etc/debian_version)" != "bookworm/sid" ]; then
-	printf "This script only supports Ubuntu 22.04 LTS. Exiting."
-	exit 1
+# Detect OS version and architecture
+OS_ID=$(lsb_release -is | tr '[:upper:]' '[:lower:]')
+OS_VERSION=$(lsb_release -cs)
+OS_ARCH=$(dpkg --print-architecture)
+
+# Check if the OS version is supported
+SUPPORTED_OS=("bookworm" "bullseye" "focal" "jammy")
+OS_SUPPORTED=false
+
+for os in "${SUPPORTED_OS[@]}"; do
+  if [ "$OS_VERSION" == "$os" ]; then
+    OS_SUPPORTED=true
+    break
+  fi
+done
+
+if [ "$OS_SUPPORTED" = false ]; then
+  printf "This script does not support '%s' OS version. Exiting.\n" "$OS_VERSION"
+  exit 1
 fi
 
-# Update OS
-apt --quiet --quiet --yes update >/dev/null 2>&1
-apt --quiet --quiet --yes upgrade >/dev/null 2>&1
-apt --quiet --quiet --yes autoremove >/dev/null 2>&1
+# Set the liquidsoap package download URL based on OS version and architecture
+BASE_URL="https://github.com/savonet/liquidsoap/releases/download/v2.1.4/liquidsoap_2.1.4"
+PACKAGE_URL="${BASE_URL}-${OS_ID}-${OS_VERSION}-1_${OS_ARCH}.deb"
+
+# Ask for input for variables
+read -rp "Do you want to perform all OS updates? (default: y): " -i "y" DO_UPDATES
+read -rp "Do you want to use StereoTool for sound processing? (default: n): " -i "n" USE_ST
+
+# Check if the DO_UPDATES variable is set to 'y'
+if [ "$DO_UPDATES" == "y" ]; then
+  apt -qq -y update >/dev/null 2>&1
+  apt -qq -y upgrade >/dev/null 2>&1
+  apt -qq -y autoremove >/dev/null 2>&1
+fi
 
 # Install FDKAAC and bindings
-apt --quiet --quiet --yes install fdkaac libfdkaac-ocaml libfdkaac-ocaml-dynlink >/dev/null 2>&1
+apt update -qq -y && apt -qq -y install fdkaac libfdkaac-ocaml libfdkaac-ocaml-dynlink >/dev/null 2>&1
 
 # Get deb package
-wget https://github.com/savonet/liquidsoap/releases/download/v2.1.4/liquidsoap_2.1.4-ubuntu-jammy-1_amd64.deb -O /tmp/liq_2.1.4_amd64.deb
+wget "$PACKAGE_URL" -O /tmp/liq_2.1.4.deb
 
 # Install deb package 
-apt install /tmp/liq_2.1.4_amd64.deb --fix-broken --yes
+apt -qq -y install /tmp/liq_2.1.4.deb --fix-broken
 
 # Make dirs for files
-sudo mkdir /etc/liquidsoap
-sudo mkdir /var/audio
-sudo chown -R liquidsoap:liquidsoap /etc/liquidsoap /var/audio
+mkdir /etc/liquidsoap
+mkdir /var/audio
+chown -R liquidsoap:liquidsoap /etc/liquidsoap /var/audio
+
+# Download StereoTool 
+if [ "$USE_ST" == "y" ]; then
+  mkdir -p /opt/stereotool
+  wget https://www.stereotool.com/download/stereo_tool_cmd_64 -O /opt/stereotool/stereotool
+  chmod +x /opt/stereotool/stereotool
+  setcap CAP_NET_BIND_SERVICE=+eip /opt/stereotool/stereotool
+fi
 
 # Download sample fallback file
-sudo wget https://upload.wikimedia.org/wikipedia/commons/6/66/Aaron_Dunn_-_Sonata_No_1_-_Movement_2.ogg -O /var/audio/fallback.ogg
+wget https://upload.wikimedia.org/wikipedia/commons/6/66/Aaron_Dunn_-_Sonata_No_1_-_Movement_2.ogg -O /var/audio/fallback.ogg
 
-# Download radio.liq and logger
-sudo wget https://raw.githubusercontent.com/oszuidwest/liquidsoap-ubuntu/main/radio.liq -O /etc/liquidsoap/radio.liq
-sudo wget https://raw.githubusercontent.com/oszuidwest/liquidsoap-ubuntu/main/harbor_log.sh -O /etc/liquidsoap/harbor_log.sh
-sudo chmod +x /etc/liquidsoap/harbor_log.sh
+# Download radio.liq or radio_micrompx.liq based on user input
+if [ "$USE_ST" == "y" ]; then
+  wget https://raw.githubusercontent.com/oszuidwest/liquidsoap-ubuntu/main/radio_micrompx.liq -O /etc/liquidsoap/radio.liq
+else
+  wget https://raw.githubusercontent.com/oszuidwest/liquidsoap-ubuntu/main/radio.liq -O /etc/liquidsoap/radio.liq
+fi
 
 # Install service
-sudo wget https://raw.githubusercontent.com/oszuidwest/liquidsoap-ubuntu/main/liquidsoap.service -O /etc/systemd/system/liquidsoap.service
-sudo systemctl daemon-reload
-sudo systemctl enable liquidsoap.service
+rm -f /etc/systemd/system/liquidsoap.service
+wget https://raw.githubusercontent.com/oszuidwest/liquidsoap-ubuntu/main/liquidsoap.service -O /etc/systemd/system/liquidsoap.service
+systemctl daemon-reload
+systemctl enable liquidsoap.service
