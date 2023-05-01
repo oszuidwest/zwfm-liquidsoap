@@ -74,7 +74,7 @@ fi
 # Download sample fallback file
 wget https://upload.wikimedia.org/wikipedia/commons/6/66/Aaron_Dunn_-_Sonata_No_1_-_Movement_2.ogg -O /var/audio/fallback.ogg
 
-# Download radio.liq or radio-experimental.liq based on user input
+# Download radio.liq or radio_micrompx.liq based on user input
 if [ "$USE_ST" == "y" ]; then
   wget https://raw.githubusercontent.com/oszuidwest/liquidsoap-ubuntu/main/radio_micrompx.liq -O /etc/liquidsoap/radio.liq
 else

@@ -10,7 +10,7 @@ icecastport = 8000
 stereotoolport = 90
 icecastpassword = "changeme"
 fallbackfile = "/var/audio/fallback.ogg"
-upstreampassword = "foxtrotuniformcharliekilo"
+upstreampassword = "foxtrot-uniform-charlie-kilo"
 
 # Fallback if there is no audio coming from the studio
 noodband = drop_metadata(single(fallbackfile))
