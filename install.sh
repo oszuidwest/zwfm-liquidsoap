@@ -68,6 +68,7 @@ if [ "$USE_ST" == "y" ]; then
   mkdir -p /opt/stereotool
   wget https://www.stereotool.com/download/stereo_tool_cmd_64 -O /opt/stereotool/stereotool
   chmod +x /opt/stereotool/stereotool
+  setcap CAP_NET_BIND_SERVICE=+eip /opt/stereotool/stereotool
 fi
 
 # Download sample fallback file
@@ -75,7 +76,7 @@ wget https://upload.wikimedia.org/wikipedia/commons/6/66/Aaron_Dunn_-_Sonata_No_
 
 # Download radio.liq or radio-experimental.liq based on user input
 if [ "$USE_ST" == "y" ]; then
-  wget https://raw.githubusercontent.com/oszuidwest/liquidsoap-ubuntu/main/radio-experimental.liq -O /etc/liquidsoap/radio.liq
+  wget https://raw.githubusercontent.com/oszuidwest/liquidsoap-ubuntu/main/radio_micrompx.liq -O /etc/liquidsoap/radio.liq
 else
   wget https://raw.githubusercontent.com/oszuidwest/liquidsoap-ubuntu/main/radio.liq -O /etc/liquidsoap/radio.liq
 fi
