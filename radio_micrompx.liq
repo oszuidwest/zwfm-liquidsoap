@@ -4,16 +4,31 @@ settings.init.daemon.change_user.group.set("liquidsoap")
 settings.init.daemon.change_user.user.set("liquidsoap")
 settings.init.daemon.pidfile.path.set("/dev/null")
 
+# Prometheus configuration (should not be changed)
+settings.prometheus.server.set(true)
+settings.prometheus.server.port.set(9090)
+
+
 # General configuration (do change this)
-icecastserver = "icecast.example.org"
-icecastport = 8000
-stereotoolport = 90
-icecastpassword = "changeme"
-fallbackfile = "/var/audio/fallback.ogg"
+
+## Input configuration
 upstreampassword = "foxtrot-uniform-charlie-kilo"
 
+# Stereotool configuration
+stereotoolport = 90
+
+# Output configuration
+icecastserver = "icecast.example.org"
+icecastport = 8000
+icecastpassword = "changeme"
+
+# General configuration
+fallbackfile = "/var/audio/fallback.ogg"
+
+
+
 # Fallback if there is no audio coming from the studio
-noodband = drop_metadata(single(fallbackfile))
+emergency_loop = drop_metadata(single(fallbackfile))
 
 # Input port for the studio stream
 studio = drop_metadata(input.harbor('studio',port=8080,buffer=8.,max=20.,password=upstreampassword))
@@ -22,15 +37,15 @@ studio = drop_metadata(input.harbor('studio',port=8080,buffer=8.,max=20.,passwor
 studio = mksafe(studio)
 
 # Combine fallback and live input
-radio = fallback(track_sensitive=false, [ blank.strip(max_blank=15.,min_noise=30.,studio), noodband ])
+radio = fallback(track_sensitive=false, [ blank.strip(max_blank=15.,min_noise=30.,studio), emergency_loop ])
 
 # Output a high quality ogg/flac stream
 output.icecast(%ogg(%flac),fallible=true,
-  host=icecastserver, port=icecastport, password=icecastpassword, mount='/zuidwest.stl', name='ZuidWest FM', description='Studio to Transmitter (ongecomprimeerde audio)', radio)
+  host=icecastserver, port=icecastport, password=icecastpassword, mount='/zuidwest.stl', name='ZuidWest FM', description='Studio to Transmitter (uncompressed audio)', radio)
 
 # Output a high quality mp3 stream
 output.icecast(%mp3(bitrate=192,samplerate=48000),fallible=true,
-  host=icecastserver, port=icecastport, password=icecastpassword, mount='/zuidwest.mp3', name='ZuidWest FM', description='Hoge Kwaliteit Stream (192kbit MP3)', radio)
+  host=icecastserver, port=icecastport, password=icecastpassword, mount='/zuidwest.mp3', name='ZuidWest FM', description='High Quality Stream (192kbit MP3)', radio)
 
 # Output a low quality HE-AACv2 stream
 output.icecast(%fdkaac(channels=2, samplerate=48000, bitrate=96, afterburner=true, aot='mpeg4_aac_lc', transmux='adts', sbr_mode=true),fallible=true,
