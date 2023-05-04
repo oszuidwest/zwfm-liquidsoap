@@ -71,6 +71,9 @@ if [ "$USE_ST" == "y" ]; then
   setcap CAP_NET_BIND_SERVICE=+eip /opt/stereotool/stereotool
 fi
 
+# Generate default preset
+stereotool -X /etc/liquidsoap/st.ini
+
 # Download sample fallback file
 wget https://upload.wikimedia.org/wikipedia/commons/6/66/Aaron_Dunn_-_Sonata_No_1_-_Movement_2.ogg -O /var/audio/fallback.ogg
 
