@@ -43,7 +43,7 @@ studio = mksafe(studio)
 radio = fallback(track_sensitive=false, [ blank.strip(max_blank=15.,min_noise=30.,studio), emergency_loop ])
 
 # Output a high quality ogg/flac stream
-output.icecast(%ffmpeg(format="ogg",%audio(codec="flac")),fallible=true,
+output.icecast(%ogg(%flac),fallible=true,
   host=icecastserver, port=icecastport, password=icecastpassword, mount='/zuidwest.stl', name='ZuidWest FM', description='Studio to Transmitter (uncompressed audio)', radio)
 
 # Output a high quality mp3 stream
