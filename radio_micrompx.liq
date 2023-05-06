@@ -1,12 +1,15 @@
 # Daemon configuration (should not be changed)
-settings.init.daemon.change_user.set(true)
-settings.init.daemon.change_user.group.set("liquidsoap")
-settings.init.daemon.change_user.user.set("liquidsoap")
-settings.init.daemon.pidfile.path.set("/dev/null")
+set("init.daemon.change_user", true)
+set("init.daemon.change_user.group", "liquidsoap")
+set("init.daemon.change_user.user", "liquidsoap")
+set("init.daemon.pidfile.path", "/dev/null")
+set("log.file", true)
+set("log.level", 4)
+set("log.file.path", "/var/log/liquidsoap/<script>.log")
 
 # Prometheus configuration (should not be changed)
-settings.prometheus.server.set(true)
-settings.prometheus.server.port.set(9090)
+set("prometheus.server", true)
+set("prometheus.server.port", 9090)
 
 
 # General configuration (do change this)
