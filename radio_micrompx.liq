@@ -1,12 +1,15 @@
 # Daemon configuration (should not be changed)
-settings.init.daemon.change_user.set(true)
-settings.init.daemon.change_user.group.set("liquidsoap")
-settings.init.daemon.change_user.user.set("liquidsoap")
-settings.init.daemon.pidfile.path.set("/dev/null")
+set("init.daemon.change_user", true)
+set("init.daemon.change_user.group", "liquidsoap")
+set("init.daemon.change_user.user", "liquidsoap")
+set("init.daemon.pidfile.path", "/dev/null")
+set("log.file", true)
+set("log.level", 4)
+set("log.file.path", "/var/log/liquidsoap/<script>.log")
 
 # Prometheus configuration (should not be changed)
-settings.prometheus.server.set(true)
-settings.prometheus.server.port.set(9090)
+set("prometheus.server", true)
+set("prometheus.server.port", 9090)
 
 
 # General configuration (do change this)
@@ -40,7 +43,7 @@ studio = mksafe(studio)
 radio = fallback(track_sensitive=false, [ blank.strip(max_blank=15.,min_noise=30.,studio), emergency_loop ])
 
 # Output a high quality ogg/flac stream
-output.icecast(%ogg(%flac),fallible=true,
+output.icecast(%ffmpeg(format="ogg",%audio(codec="flac")),fallible=true,
   host=icecastserver, port=icecastport, password=icecastpassword, mount='/zuidwest.stl', name='ZuidWest FM', description='Studio to Transmitter (uncompressed audio)', radio)
 
 # Output a high quality mp3 stream
