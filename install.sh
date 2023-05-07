@@ -42,6 +42,10 @@ PACKAGE_URL="${BASE_URL}-${OS_ID}-${OS_VERSION}-1_${OS_ARCH}.deb"
 read -rp "Do you want to perform all OS updates? (default: y): " -i "y" DO_UPDATES
 read -rp "Do you want to use StereoTool for sound processing? (default: n): " -i "n" USE_ST
 
+# Set the timezone to Europe/Amsterdam
+ln -fs /usr/share/zoneinfo/Europe/Amsterdam /etc/localtime
+dpkg-reconfigure -f noninteractive tzdata
+
 # Check if the DO_UPDATES variable is set to 'y'
 if [ "$DO_UPDATES" == "y" ]; then
   apt -qq -y update >/dev/null 2>&1
