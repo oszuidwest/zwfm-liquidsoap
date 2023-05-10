@@ -55,4 +55,4 @@ output.icecast(%fdkaac(channels=2, samplerate=48000, bitrate=96, afterburner=tru
   host=icecastserver, port=icecastport, password=icecastpassword, mount='/zuidwest.aac', name='ZuidWest FM', description='Mobile Stream (96kbit AAC)', radio)
 
 # Feed the audio to StereoTool too, which can generate MicroMPX
-output.external(%wav(channels=2, samplerate=48000), reopen_on_error=true, "#{'/opt/stereotool/stereotool - /dev/null -w '}#{stereotoolport}#{' -q -s /etc/liquidsoap/st.ini'}", radio)
+output.external(%wav, reopen_on_error=true, "#{'/opt/stereotool/stereotool - /dev/null -w '}#{stereotoolport}#{' -q -s /etc/liquidsoap/st.ini'}", radio)
