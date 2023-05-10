@@ -18,7 +18,7 @@ set("prometheus.server.port", 9090)
 upstreampassword = "foxtrot-uniform-charlie-kilo"
 
 # Stereotool configuration
-stereotoolport = 90
+stereotoolport = 9000
 
 # Output configuration
 icecastserver = "icecast.example.org"
