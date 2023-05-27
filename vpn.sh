@@ -27,9 +27,6 @@ else
     wg genkey | tee "$SERVER_PRIVATE_KEY" | wg pubkey > "$SERVER_PUBLIC_KEY"
 fi
 
-# Read private key
-PRIVATE_KEY="$(cat "$SERVER_PRIVATE_KEY")"
-
 # Configure the WireGuard interface
 cat > /etc/wireguard/wg0.conf << EOF
 [Interface]
