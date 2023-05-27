@@ -35,7 +35,7 @@ LINE="net.ipv4.ip_forward=1"
 
 if ! grep -Fxq "$LINE" $FILE
 then
-    echo "Line is not in the file or commented out, updating..."
+    echo "IP Forwarding is not enabled, updating configuration..."
     grep -Fxq "#$LINE" $FILE && sed -i "s/#[[:space:]]*$LINE/$LINE/g" $FILE || echo "$LINE" >> $FILE
     sysctl -p $FILE
 fi
