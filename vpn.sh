@@ -16,7 +16,6 @@ server_private_key=$(cat /etc/wireguard/server_private_key)
 cat << EOF > /etc/wireguard/wg0.conf
 [Interface]
 Address = 172.16.0.1/24
-SaveConfig = true
 PrivateKey = ${server_private_key}
 ListenPort = 51820
 
