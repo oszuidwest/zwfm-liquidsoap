@@ -1,10 +1,17 @@
 #!/bin/bash
 
-# Update the system
-apt update && apt upgrade -y
+# Only run as root
+if [ "$(id -u)" != "0" ]; then
+  printf "You must be root to execute the script. Exiting.\n"
+  exit 1
+fi
 
-# Install WireGuard
-apt install -y wireguard
+# Ensure wg command is available
+if ! command -v wg &> /dev/null; then
+  echo "WireGuard does not seem to be installed. Updating system and installing WireGuard..."
+  apt update -qq -y
+  apt install -qq -y wireguard
+fi
 
 # Generate the server private and public keys
 wg genkey | tee /etc/wireguard/server_private_key | wg pubkey > /etc/wireguard/server_public_key
