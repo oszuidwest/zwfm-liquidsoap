@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# Define the server private and public key paths
+SERVER_PRIVATE_KEY="/etc/wireguard/server_private_key"
+SERVER_PUBLIC_KEY="/etc/wireguard/server_public_key"
+
 # Only run as root
 if [ "$(id -u)" != "0" ]; then
   printf "You must be root to execute the script. Exiting.\n"
@@ -13,17 +17,21 @@ if ! command -v wg &> /dev/null; then
   apt install -qq -y wireguard
 fi
 
-# Generate the server private and public keys
-wg genkey | tee /etc/wireguard/server_private_key | wg pubkey > /etc/wireguard/server_public_key
-
-# Retrieve the server private key
-server_private_key=$(cat /etc/wireguard/server_private_key)
+# Check if server private and public keys exist
+if [[ -f "$SERVER_PRIVATE_KEY" ]] && [[ -f "$SERVER_PUBLIC_KEY" ]]; then
+    echo "Server private and public keys already exist. Not making new ones"
+else
+    echo "Server private and/or public key missing. Generating new key pair..."
+    rm -f "$SERVER_PRIVATE_KEY" "$SERVER_PUBLIC_KEY"
+    umask 077
+    wg genkey | tee "$SERVER_PRIVATE_KEY" | wg pubkey > "$SERVER_PUBLIC_KEY"
+fi
 
 # Configure the WireGuard interface
 cat << EOF > /etc/wireguard/wg0.conf
 [Interface]
 Address = 172.16.0.1/24
-PrivateKey = ${server_private_key}
+PrivateKey = ${SERVER_PRIVATE_KEY}
 ListenPort = 51820
 
 # Raspberry Pi client 1
