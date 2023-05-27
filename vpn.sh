@@ -34,7 +34,7 @@ PRIVATE_KEY="$(cat "$SERVER_PRIVATE_KEY")"
 cat > /etc/wireguard/wg0.conf << EOF
 [Interface]
 Address = 172.16.0.1/24
-PrivateKey = ${PRIVATE_KEY}
+PrivateKey = ${SERVER_PRIVATE_KEY}
 ListenPort = 51820
 
 # Raspberry Pi client 1
