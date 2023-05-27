@@ -1,37 +1,40 @@
 #!/bin/bash
+set -e
 
 # Define the server private and public key paths
-SERVER_PRIVATE_KEY="/etc/wireguard/server_private_key"
-SERVER_PUBLIC_KEY="/etc/wireguard/server_public_key"
+readonly SERVER_PRIVATE_KEY="/etc/wireguard/server_private_key"
+readonly SERVER_PUBLIC_KEY="/etc/wireguard/server_public_key"
 
-# Only run as root
-if [ "$(id -u)" != "0" ]; then
-  printf "You must be root to execute the script. Exiting.\n"
+# Ensure the script is being run as root
+if [ "$(id -u)" -ne 0 ]; then
+  echo "This script must be run as root" >&2
   exit 1
 fi
 
-# Ensure wg command is available
-if ! command -v wg &> /dev/null; then
-  echo "WireGuard does not seem to be installed. Updating system and installing WireGuard..."
-  apt update -qq -y
-  apt install -qq -y wireguard
+# Check if WireGuard is installed, if not, install it
+if ! command -v wg >/dev/null 2>&1; then
+  echo "WireGuard is not installed. Updating system and installing WireGuard..."
+  apt update -qq -y && apt install -qq -y wireguard
 fi
 
-# Check if server private and public keys exist
+# Check if the server keys exist. If not, generate them
 if [[ -f "$SERVER_PRIVATE_KEY" ]] && [[ -f "$SERVER_PUBLIC_KEY" ]]; then
-    echo "Server private and public keys already exist. Not making new ones"
+    echo "Server keys already exist. No action required."
 else
-    echo "Server private and/or public key missing. Generating new key pair..."
+    echo "Server keys are missing. Generating new keys..."
     rm -f "$SERVER_PRIVATE_KEY" "$SERVER_PUBLIC_KEY"
     umask 077
     wg genkey | tee "$SERVER_PRIVATE_KEY" | wg pubkey > "$SERVER_PUBLIC_KEY"
 fi
 
+# Read private key
+PRIVATE_KEY="$(cat "$SERVER_PRIVATE_KEY")"
+
 # Configure the WireGuard interface
-cat << EOF > /etc/wireguard/wg0.conf
+cat > /etc/wireguard/wg0.conf << EOF
 [Interface]
 Address = 172.16.0.1/24
-PrivateKey = ${SERVER_PRIVATE_KEY}
+PrivateKey = ${PRIVATE_KEY}
 ListenPort = 51820
 
 # Raspberry Pi client 1
@@ -45,14 +48,13 @@ EOF
 wg-quick up wg0
 
 # Setup IP Forwarding
-FILE="/etc/sysctl.d/99-sysctl.conf"
-LINE="net.ipv4.ip_forward=1"
+readonly SYSCTL_CONF="/etc/sysctl.d/99-sysctl.conf"
+readonly IP_FORWARD="net.ipv4.ip_forward=1"
 
-if ! grep -Fxq "$LINE" $FILE
-then
-    echo "IP Forwarding is not enabled, updating configuration..."
-    grep -Fxq "#$LINE" $FILE && sed -i "s/#[[:space:]]*$LINE/$LINE/g" $FILE || echo "$LINE" >> $FILE
-    sysctl -p $FILE
+if ! grep -Fxq "$IP_FORWARD" $SYSCTL_CONF; then
+    echo "IP Forwarding is not enabled. Updating configuration..."
+    grep -Fxq "#$IP_FORWARD" $SYSCTL_CONF && sed -i "s/#\s*${IP_FORWARD}/${IP_FORWARD}/" $SYSCTL_CONF || echo "$IP_FORWARD" >> $SYSCTL_CONF
+    sysctl -p $SYSCTL_CONF
 fi
 
 # Enable the WireGuard interface on boot
