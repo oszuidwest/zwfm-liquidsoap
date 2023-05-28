@@ -37,11 +37,11 @@ Address = 172.16.0.1/24
 PrivateKey = ${GENERATED_PRIVATE_KEY}
 ListenPort = 51820
 
-# Raspberry Pi client 1
-[Peer]
-PublicKey = your_client_public_key_1
-AllowedIPs = 172.16.0.2/32
-# Add more clients by duplicating this part
+# Client 1
+#[Peer]
+#PublicKey = your_client_public_key_1
+#AllowedIPs = 172.16.0.2/32
+# Add clients by uncommenting and duplicating this part
 EOF
 
 # Bring up the WireGuard interface
