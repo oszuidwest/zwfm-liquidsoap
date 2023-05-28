@@ -2,8 +2,8 @@
 set -e
 
 # Define the server private and public key paths
-readonly SERVER_PRIVATE_KEY="/etc/wireguard/server_private_key"
-readonly SERVER_PUBLIC_KEY="/etc/wireguard/server_public_key"
+readonly PRIVATE_KEY_PATH="/etc/wireguard/privatekey"
+readonly PUBLIC_KEY_PATH="/etc/wireguard/publickey"
 
 # Ensure the script is being run as root
 if [ "$(id -u)" -ne 0 ]; then
@@ -18,17 +18,17 @@ if ! command -v wg >/dev/null 2>&1; then
 fi
 
 # Check if the server keys exist. If not, generate them
-if [[ -f "$SERVER_PRIVATE_KEY" ]] && [[ -f "$SERVER_PUBLIC_KEY" ]]; then
+if [[ -f "$PRIVATE_KEY_PATH" ]] && [[ -f "$PUBLIC_KEY_PATH" ]]; then
     echo "Server keys already exist. No action required."
 else
     echo "Server keys are missing. Generating new keys..."
-    rm -f "$SERVER_PRIVATE_KEY" "$SERVER_PUBLIC_KEY"
+    rm -f "$PRIVATE_KEY_PATH" "$PUBLIC_KEY_PATH"
     umask 077
-    wg genkey | tee "$SERVER_PRIVATE_KEY" | wg pubkey > "$SERVER_PUBLIC_KEY"
+    wg genkey | tee "$PRIVATE_KEY_PATH" | wg pubkey > "$PUBLIC_KEY_PATH"
 fi
 
 # Read the generated private key
-GENERATED_PRIVATE_KEY="$(cat $SERVER_PRIVATE_KEY)"
+GENERATED_PRIVATE_KEY="$(cat $PRIVATE_KEY_PATH)"
 
 # Configure the WireGuard interface
 cat > /etc/wireguard/wg0.conf << EOF
