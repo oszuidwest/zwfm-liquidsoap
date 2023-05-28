@@ -27,11 +27,14 @@ else
     wg genkey | tee "$SERVER_PRIVATE_KEY" | wg pubkey > "$SERVER_PUBLIC_KEY"
 fi
 
+# Read the generated private key
+GENERATED_PRIVATE_KEY="$(cat $SERVER_PRIVATE_KEY)"
+
 # Configure the WireGuard interface
 cat > /etc/wireguard/wg0.conf << EOF
 [Interface]
 Address = 172.16.0.1/24
-PrivateKey = ${SERVER_PRIVATE_KEY}
+PrivateKey = ${GENERATED_PRIVATE_KEY}
 ListenPort = 51820
 
 # Raspberry Pi client 1
