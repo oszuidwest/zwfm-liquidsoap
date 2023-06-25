@@ -1,20 +1,31 @@
-#!/bin/bash
-set -e
+#!/usr/bin/env bash
+
+# Start with a clean terminal
+clear
+
+# Download the functions library
+curl -s -o /tmp/functions.sh https://raw.githubusercontent.com/oszuidwest/bash-functions/main/common-functions.sh
+
+# Source the functions file
+source /tmp/functions.sh
+
+# Set color variables
+set_colors
+
+# Check if we are root
+are_we_root
+
+# Check if this is Linux
+is_this_linux
 
 # Define the server private and public key paths
 readonly PRIVATE_KEY_PATH="/etc/wireguard/privatekey"
 readonly PUBLIC_KEY_PATH="/etc/wireguard/publickey"
 
-# Ensure the script is being run as root
-if [ "$(id -u)" -ne 0 ]; then
-  echo "This script must be run as root" >&2
-  exit 1
-fi
-
 # Check if WireGuard is installed, if not, install it
 if ! command -v wg >/dev/null 2>&1; then
   echo "WireGuard is not installed. Updating system and installing WireGuard..."
-  apt update -qq -y && apt install -qq -y wireguard
+  install_packages silent wireguard
 fi
 
 # Check if the server keys exist. If not, generate them
