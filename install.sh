@@ -45,8 +45,8 @@ BASE_URL="https://github.com/savonet/liquidsoap/releases/download/rolling-releas
 PACKAGE_URL="${BASE_URL}-${OS_ID}-${OS_VERSION}-1_${OS_ARCH}.deb"
 
 # Ask for input for variables
-read -rp "Do you want to perform all OS updates? (default: y): " -i "y" DO_UPDATES
-read -rp "Do you want to use StereoTool for sound processing? (default: n): " -i "n" USE_ST
+ask_user "DO_UPDATES" "y" "Do you want to perform all OS updates? (answer y or n)" "y/n"
+ask_user "USE_ST" "n" "Do you want to use StereoTool for sound processing?(answer y or n)" "y/n"
 
 # Check if the DO_UPDATES variable is set to 'y'
 if [ "$DO_UPDATES" == "y" ]; then
