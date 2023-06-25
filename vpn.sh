@@ -24,7 +24,7 @@ readonly PUBLIC_KEY_PATH="/etc/wireguard/publickey"
 
 # Check if WireGuard is installed, if not, install it
 if ! command -v wg >/dev/null 2>&1; then
-  echo "WireGuard is not installed. Updating system and installing WireGuard..."
+  echo "WireGuard is not installed. Installing it..."
   install_packages silent wireguard
 fi
 
