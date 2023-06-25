@@ -15,10 +15,8 @@ set_colors
 # Check if we are root
 are_we_root
 
-if [ "$(uname -s)" != "Linux" ]; then
-  printf "This script does not support '%s' Operating System. Exiting.\n" "$(uname -s)"
-  exit 1
-fi
+# Check if this is Linux
+is_this_linux
 
 # Detect OS version and architecture
 OS_ID=$(lsb_release -is | tr '[:upper:]' '[:lower:]')
