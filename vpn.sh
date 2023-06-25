@@ -17,6 +17,7 @@ are_we_root
 
 # Check if this is Linux
 is_this_linux
+is_this_os_64bit
 
 # Define the server private and public key paths
 readonly PRIVATE_KEY_PATH="/etc/wireguard/privatekey"

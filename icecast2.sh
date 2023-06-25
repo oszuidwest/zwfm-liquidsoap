@@ -17,6 +17,7 @@ are_we_root
 
 # Check if this is Linux
 is_this_linux
+is_this_os_64bit
 
 if [ "$(cat /etc/debian_version)" != "bookworm/sid" ]; then
     printf "This script only supports Ubuntu 22.04 LTS. Exiting."
