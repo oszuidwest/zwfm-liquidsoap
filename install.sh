@@ -17,6 +17,7 @@ are_we_root
 
 # Check if this is Linux
 is_this_linux
+is_this_os_64bit
 
 # Detect OS version and architecture
 OS_ID=$(lsb_release -is | tr '[:upper:]' '[:lower:]')
