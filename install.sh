@@ -1,12 +1,19 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Start with a clean terminal
 clear
 
-if [ "$(id -u)" != "0" ]; then
-  printf "You must be root to execute the script. Exiting.\n"
-  exit 1
-fi
+# Download the functions library
+curl -s -o /tmp/functions.sh https://raw.githubusercontent.com/oszuidwest/bash-functions/main/common-functions.sh
+
+# Source the functions file
+source /tmp/functions.sh
+
+# Set color variables
+set_colors
+
+# Check if we are root
+are_we_root
 
 if [ "$(uname -s)" != "Linux" ]; then
   printf "This script does not support '%s' Operating System. Exiting.\n" "$(uname -s)"
@@ -44,13 +51,11 @@ read -rp "Do you want to use StereoTool for sound processing? (default: n): " -i
 
 # Check if the DO_UPDATES variable is set to 'y'
 if [ "$DO_UPDATES" == "y" ]; then
-  apt -qq -y update >/dev/null 2>&1
-  apt -qq -y upgrade >/dev/null 2>&1
-  apt -qq -y autoremove >/dev/null 2>&1
+  update_os silent
 fi
 
 # Install FDKAAC and bindings
-apt update -qq -y && apt -qq -y install fdkaac libfdkaac-ocaml libfdkaac-ocaml-dynlink >/dev/null 2>&1
+install_packages silent fdkaac libfdkaac-ocaml libfdkaac-ocaml-dynlink
 
 # Get deb package
 wget "$PACKAGE_URL" -O /tmp/liq_2.2.0.deb
