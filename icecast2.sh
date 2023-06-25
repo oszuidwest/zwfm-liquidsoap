@@ -28,19 +28,13 @@ clear
 printf "********************************\n"
 printf "ICECAST 2 INSTALLER\n"
 printf "********************************\n"
-read -rp "Specify the host name (for example: icecast.zuidwestfm.nl. Enter it without http:// or www) please: " HOSTNAME
-read -rp "Specify the source and relay password: " SOURCEPASS
-read -rp "Specify the admin password: " ADMINPASS
-read -rp "Where is this server located (visible on admin pages)? " LOCATED
-read -rp "What's the admins e-mail (visible on admin pages and for let's encrypt)? " ADMINMAIL
-read -rp "Specify the port (default: 80): " PORT
-read -rp "Do you want Let's Encrypt to get a certificate for this server? (y/n): " SSL
-
-# Assume port is 80 if no port was entered
-if [ -z "$PORT" ]; then
-    PORT=80
-    printf "You didn't specify a port. We assume port 80.\n"
-fi
+ask_user "HOSTNAME" "localhost" "Specify the host name (for example: icecast.zuidwestfm.nl. Enter it without http:// or www) please" "str"
+ask_user "SOURCEPASS" "hackme" "Specify the source and relay password" "str"
+ask_user "ADMINPASS" "hackme" "Specify the admin password" "str"
+ask_user "LOCATED" "Earth" "Where is this server located (visible on admin pages)?" "str"
+ask_user "ADMINMAIL" "root@localhost" "What's the admins e-mail (visible on admin pages and for let's encrypt)?" "email"
+ask_user "PORT" "80" "Specify the port" "num"
+ask_user "SSL" "n" "Do you want Let's Encrypt to get a certificate for this server? (y/n)" "y/n"
 
 # If port is not 80 ssl is not possible
 if [ "$PORT" != "80" ]; then
