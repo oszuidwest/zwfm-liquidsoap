@@ -15,7 +15,7 @@ set_colors
 # Check if we are root
 are_we_root
 
-# Check if this is Linux
+# Check if this is Linux x64
 is_this_linux
 is_this_os_64bit
 
