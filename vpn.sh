@@ -56,9 +56,6 @@ ListenPort = 51820
 # Add clients by uncommenting and duplicating this part
 EOF
 
-# Bring up the WireGuard interface
-wg-quick up wg0
-
 # Setup IP Forwarding
 readonly SYSCTL_CONF="/etc/sysctl.d/99-sysctl.conf"
 readonly IP_FORWARD="net.ipv4.ip_forward=1"
@@ -71,3 +68,6 @@ fi
 
 # Enable the WireGuard interface on boot
 systemctl enable wg-quick@wg0
+
+# Bring up the WireGuard interface
+wg-quick up wg0
