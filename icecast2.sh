@@ -1,14 +1,19 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Start with a clean terminal
 clear
 
-set -e
+# Download the functions library
+curl -s -o /tmp/functions.sh https://raw.githubusercontent.com/oszuidwest/bash-functions/main/common-functions.sh
 
-if [ "$(id -u)" != "0" ]; then
-    printf "You must be root to execute the script. Exiting."
-    exit 1
-fi
+# Source the functions file
+source /tmp/functions.sh
+
+# Set color variables
+set_colors
+
+# Check if we are root
+are_we_root
 
 if [ "$(uname -s)" != "Linux" ]; then
     printf "This script does not support '%s' Operating System. Exiting.\n" "$(uname -s)"
@@ -56,15 +61,10 @@ icecast2 icecast2/icecast-setup boolean true
 EOF
 
 # Update OS
-apt -qq -y update >/dev/null 2>&1
-apt -qq -y upgrade >/dev/null 2>&1
-apt -qq -y autoremove >/dev/null 2>&1
+update_os silent
 
-# Remove old installs
-apt -qq -y remove icecast2 certbot
-
-# Install icecast2
-apt -qq -y install icecast2 certbot
+# Install packages
+install_packages silent icecast2 certbot
 
 # Post configuration
 sed -i 	-e "s|<location>[^<]*</location>|<location>$LOCATED</location>|" \
