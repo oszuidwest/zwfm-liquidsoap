@@ -15,10 +15,8 @@ set_colors
 # Check if we are root
 are_we_root
 
-if [ "$(uname -s)" != "Linux" ]; then
-    printf "This script does not support '%s' Operating System. Exiting.\n" "$(uname -s)"
-    exit 1
-fi
+# Check if this is Linux
+is_this_linux
 
 if [ "$(cat /etc/debian_version)" != "bookworm/sid" ]; then
     printf "This script only supports Ubuntu 22.04 LTS. Exiting."
