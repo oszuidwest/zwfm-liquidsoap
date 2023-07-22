@@ -22,11 +22,6 @@ are_we_root
 is_this_linux
 is_this_os_64bit
 
-if [ "$(cat /etc/debian_version)" != "bookworm/sid" ]; then
-    printf "This script only supports Ubuntu 22.04 LTS. Exiting."
-    exit 1
-fi
-
 clear
 printf "********************************\n"
 printf "ICECAST 2 INSTALLER\n"
