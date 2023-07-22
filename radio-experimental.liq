@@ -13,7 +13,7 @@ fallbackfile = "/var/audio/fallback.ogg"
 upstreampassword = "foxtrot-uniform-charlie-kilo"
 
 # Fallback if there is no audio coming from the studio
-noodband = drop_metadata(single(fallbackfile))
+noodband = source.drop.metadata(single(fallbackfile))
 
 # Input for the studio stream
 studio = input.srt(id="studio", port=9000, mode="listener", max=2.0, streamid="studio", passphrase=upstreampassword)
@@ -46,7 +46,7 @@ end
 #radioproc = stereotool(library_file="/opt/Stereo_Tool_Generic_plugin_1000/libStereoTool_64.so", license_key="1337", preset="/path/to/preset/file", radio)
 
 # Feed the audio to StereoTool too, which can generate MicroMPX
-output.external(fallible=true, %wav, "/opt/stereotool/stereotool - /dev/null -w 8888 -q -s /etc/liquidsoap/st.ini", radio)
+output.external(%wav, reopen_on_error=true, "/opt/stereotool/stereotool - /dev/null -w 9000 -q -s /etc/liquidsoap/st.ini -k '<xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx>'", radio)
 
 # Output a high bitrate mp3 stream
 output_icecast_stream(format=%mp3(bitrate=192, samplerate=48000), description="Hoge Kwaliteit Stream (192kbit MP3)", mount="/zuidwest.mp3", source=radio)
