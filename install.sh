@@ -28,7 +28,7 @@ OS_VERSION=$(lsb_release -cs)
 OS_ARCH=$(dpkg --print-architecture)
 
 # Check if the OS version is supported
-SUPPORTED_OS=("bookworm" "bullseye" "focal" "jammy")
+SUPPORTED_OS=("bullseye" "trixie" "focal" "jammy")
 OS_SUPPORTED=false
 
 for os in "${SUPPORTED_OS[@]}"; do
@@ -44,7 +44,7 @@ if [ "$OS_SUPPORTED" = false ]; then
 fi
 
 # Set the liquidsoap package download URL based on OS version and architecture
-BASE_URL="https://github.com/savonet/liquidsoap/releases/download/rolling-release-v2.2.x/liquidsoap-4d00610_2.2.0"
+BASE_URL="https://github.com/savonet/liquidsoap/releases/download/v2.2.0/liquidsoap-minimal_2.2.0"
 PACKAGE_URL="${BASE_URL}-${OS_ID}-${OS_VERSION}-1_${OS_ARCH}.deb"
 
 # Ask for input for variables
