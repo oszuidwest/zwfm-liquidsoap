@@ -13,7 +13,7 @@ fallbackfile = "/var/audio/fallback.ogg"
 upstreampassword = "foxtrot-uniform-charlie-kilo"
 
 # Fallback if there is no audio coming from the studio
-noodband = drop_metadata(single(fallbackfile))
+noodband = source.drop.metadata(single(fallbackfile))
 
 # Input for the studio stream
 studio = input.srt(id="studio", port=9000, mode="listener", max=2.0, passphrase=upstreampassword)
