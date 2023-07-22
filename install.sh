@@ -28,7 +28,7 @@ OS_VERSION=$(lsb_release -cs)
 OS_ARCH=$(dpkg --print-architecture)
 
 # Check if the OS version is supported
-SUPPORTED_OS=("bullseye" "trixie" "focal" "jammy")
+SUPPORTED_OS=("bullseye" "bookworm" "focal" "jammy")
 OS_SUPPORTED=false
 
 for os in "${SUPPORTED_OS[@]}"; do
