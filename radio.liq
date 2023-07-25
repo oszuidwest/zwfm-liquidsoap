@@ -42,9 +42,6 @@ def output_icecast_stream(~format, ~description, ~mount, ~source) =
   )
 end
 
-# Output a lossless ogg/flac stream
-output_icecast_stream(format=%ogg(%flac), description="Studio to Transmitter (ongecomprimeerde audio)", mount="/zuidwest.stl", source=radio)
-
 # Output a high bitrate mp3 stream
 output_icecast_stream(format=%mp3(bitrate=192, samplerate=48000), description="Hoge Kwaliteit Stream (192kbit MP3)", mount="/zuidwest.mp3", source=radio)
 
