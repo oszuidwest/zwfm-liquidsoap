@@ -44,7 +44,7 @@ if [ "$OS_SUPPORTED" = false ]; then
 fi
 
 # Set the liquidsoap package download URL based on OS version and architecture
-BASE_URL="https://github.com/savonet/liquidsoap/releases/download/v2.2.0/liquidsoap_2.2.0"
+BASE_URL="https://github.com/savonet/liquidsoap/releases/download/v2.2.1/liquidsoap_2.2.1"
 PACKAGE_URL="${BASE_URL}-${OS_ID}-${OS_VERSION}-1_${OS_ARCH}.deb"
 
 # Ask for input for variables
@@ -60,10 +60,10 @@ fi
 install_packages silent fdkaac libfdkaac-ocaml libfdkaac-ocaml-dynlink
 
 # Get deb package
-wget "$PACKAGE_URL" -O /tmp/liq_2.2.0.deb
+wget "$PACKAGE_URL" -O /tmp/liq_2.2.1.deb
 
 # Install deb package 
-apt -qq -y install /tmp/liq_2.2.0.deb --fix-broken
+apt -qq -y install /tmp/liq_2.2.1.deb --fix-broken
 
 # Make dirs for files
 mkdir /etc/liquidsoap
