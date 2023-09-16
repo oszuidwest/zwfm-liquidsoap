@@ -1,9 +1,9 @@
 # Daemon configuration (should not be changed)
-set("init.daemon.change_user.set", true)
-set("init.daemon.change_user.group", "liquidsoap")
-set("init.daemon.change_user.user", "liquidsoap")
-set("init.daemon.pidfile.path", "/dev/null")
-set("log.file.path", "/var/log/liquidsoap/<script>.log")
+settings.init.daemon.change_user := true
+settings.init.daemon.change_user.user := "liquidsoap"
+settings.init.daemon.change_user.group := "liquidsoap"
+settings.init.daemon.pidfile := false
+settings.log.file.path := "/var/log/liquidsoap/<script>.log"
 
 # General configuration (do change this)
 icecastserver = "icecast.example.org"
