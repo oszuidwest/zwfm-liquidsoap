@@ -82,13 +82,13 @@ if [ "$USE_ST" == "y" ]; then
 
   # Check the system architecture and copy the correct plugin
   if [ "$OS_ARCH" == "amd64" ]; then
-    cp "${EXTRACTED_DIR}libStereoTool_intel64.so" /opt/stereotool/plugin.so
+    cp "${EXTRACTED_DIR}/libStereoTool_intel64.so" /opt/stereotool/plugin.so
   elif [ "$OS_ARCH" == "i386" ]; then
-    cp "${EXTRACTED_DIR}libStereoTool_intel32.so" /opt/stereotool/plugin.so
+    cp "${EXTRACTED_DIR}/libStereoTool_intel32.so" /opt/stereotool/plugin.so
   elif [ "$OS_ARCH" == "arm64" ]; then
-    cp "${EXTRACTED_DIR}libStereoTool_arm64.so" /opt/stereotool/plugin.so
+    cp "${EXTRACTED_DIR}/libStereoTool_arm64.so" /opt/stereotool/plugin.so
   elif [ "$OS_ARCH" == "armhf" ]; then
-    cp "${EXTRACTED_DIR}libStereoTool_arm32.so" /opt/stereotool/plugin.so
+    cp "${EXTRACTED_DIR}/libStereoTool_arm32.so" /opt/stereotool/plugin.so
   fi
 fi
 
