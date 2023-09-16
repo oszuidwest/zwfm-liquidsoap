@@ -72,7 +72,7 @@ chown -R liquidsoap:liquidsoap /etc/liquidsoap /var/audio
 
 # Download StereoTool plug-in
 if [ "$USE_ST" == "y" ]; then
-  apt -qq -y install unzip
+  install_packages silent unzip
   mkdir -p /opt/stereotool
   wget https://download.thimeo.com/Stereo_Tool_Generic_plugin.zip -O /tmp/st.zip
   unzip -o /tmp/st.zip -d /tmp/
