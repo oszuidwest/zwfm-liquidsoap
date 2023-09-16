@@ -82,33 +82,31 @@ if [ "$USE_ST" == "y" ]; then
 
   # Check the system architecture and copy the correct plugin
   if [ "$OS_ARCH" == "amd64" ]; then
-    cp "${EXTRACTED_DIR}/libStereoTool_intel64.so" /opt/stereotool/plugin.so
-  elif [ "$OS_ARCH" == "i386" ]; then
-    cp "${EXTRACTED_DIR}/libStereoTool_intel32.so" /opt/stereotool/plugin.so
+    cp "${EXTRACTED_DIR}/libStereoTool_intel64.so" /opt/stereotool/st_plugin.so
   elif [ "$OS_ARCH" == "arm64" ]; then
-    cp "${EXTRACTED_DIR}/libStereoTool_arm64.so" /opt/stereotool/plugin.so
-  elif [ "$OS_ARCH" == "armhf" ]; then
-    cp "${EXTRACTED_DIR}/libStereoTool_arm32.so" /opt/stereotool/plugin.so
+    cp "${EXTRACTED_DIR}/libStereoTool_arm64.so" /opt/stereotool/st_plugin.so
   fi
 fi
 
+# Download StereoTool standalone
+if [ "$USE_ST" == "y" ]; then
+  mkdir -p /opt/stereotool
+  
+  # Check the system architecture and download the correct file
+  if [ "$OS_ARCH" == "amd64" ]; then
+    wget https://download.thimeo.com/stereo_tool_cmd_64 -O /opt/stereotool/st_standalone
+  elif [ "$OS_ARCH" == "arm64" ]; then
+    wget https://www.stereotool.com/download/stereo_tool_pi2_64 -O /opt/stereotool/st_standalone
+  fi
 
-# Download StereoTool 
-#if [ "$USE_ST" == "y" ]; then
-#  mkdir -p /opt/stereotool
-#  wget https://download.thimeo.com/stereo_tool_cmd_64 -O /opt/stereotool/stereotool
-#  chmod +x /opt/stereotool/stereotool
-#fi
+  chmod +x /opt/stereotool/st_standalone
+fi
 
 # Download sample fallback file
 wget https://upload.wikimedia.org/wikipedia/commons/6/66/Aaron_Dunn_-_Sonata_No_1_-_Movement_2.ogg -O /var/audio/fallback.ogg
 
-# Download radio.liq or radio-experimental.liq based on user input
-if [ "$USE_ST" == "y" ]; then
-  wget https://raw.githubusercontent.com/oszuidwest/liquidsoap-ubuntu/srt/radio-experimental.liq -O /etc/liquidsoap/radio.liq
-else
-  wget https://raw.githubusercontent.com/oszuidwest/liquidsoap-ubuntu/srt/radio.liq -O /etc/liquidsoap/radio.liq
-fi
+# Download radio.liq
+wget https://raw.githubusercontent.com/oszuidwest/liquidsoap-ubuntu/srt/radio.liq -O /etc/liquidsoap/radio.liq
 
 # Install and enable service
 rm -f /etc/systemd/system/liquidsoap.service

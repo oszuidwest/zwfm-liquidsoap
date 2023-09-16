@@ -17,7 +17,7 @@ upstreampassword = "foxtrot-uniform-charlie-kilo"
 noodband = source.drop.metadata(single(fallbackfile))
 
 # Input for the studio stream
-studio = input.srt(id="studio", port=9000, mode="listener", max=2.0, passphrase=upstreampassword)
+studio = input.srt(id="studio", port=9000, mode="listener", max=2.0, streamid="studio", passphrase=upstreampassword)
 
 # Insert silence when there is no data from input
 # studio = mksafe(studio) # This causes the ogg/flac stream to disconnect when switching between the fallback and studio?
@@ -42,6 +42,12 @@ def output_icecast_stream(~format, ~description, ~mount, ~source) =
     source
   )
 end
+
+# Test stereotool implementation (There's no working MicroMPX in libStereoTool yet) 
+#radioproc = stereotool(library_file="/opt/stereotool/st_plugin.so", license_key="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx", preset="/etc/liquidsoap/st.ini", radio)
+
+# Feed the audio to StereoTool too, which can generate MicroMPX
+#output.external(%wav, reopen_on_error=true, "/opt/stereotool/st_standalone - /dev/null -w 9000 -q -s /etc/liquidsoap/st.ini -k '<xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx>'", radio)
 
 # Output a high bitrate mp3 stream
 output_icecast_stream(format=%mp3(bitrate=192, samplerate=48000), description="Hoge Kwaliteit Stream (192kbit MP3)", mount="/zuidwest.mp3", source=radio)
