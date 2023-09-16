@@ -1,5 +1,5 @@
 # Daemon configuration (should not be changed)
-settings.init.daemon.set(true)
+settings.init.daemon := true
 settings.init.daemon.change_user := true
 settings.init.daemon.change_user.user := "liquidsoap"
 settings.init.daemon.change_user.group := "liquidsoap"
