@@ -1,19 +1,21 @@
 # liquidsoap-ubuntu
-Liquidsoap + fdkaac + Icecast2 + StereoTool on Ubuntu 22.04 LTS or Debian 12. Used for internet streaming and feeding transmitters a source that's never silent.
+This repository provides a comprehensive audio streaming stack tailored for [ZuidWest FM](https://www.zuidwestfm.nl/) in the Netherlands. Powered by [Liquidsoap](https://www.liquidsoap.info), this setup ensures seamless internet streaming and a continuous source for transmitters.
 
-## What's here?
-This repository contains the audio streaming stack for [ZuidWest FM](https://www.zuidwestfm.nl/) in the Netherlands. It uses [Liquidsoap](https://www.liquidsoap.info) as audio router and transcoder, [Icecast](https://www.icecast.org) as public server and recently [StereoTool](https://www.thimeo.com/stereo-tool/) for feeding [MicroMPX](https://www.thimeo.com/micrompx/) to transmitters.
+## Components:
+1. **Liquidsoap**: The core audio router and transcoder.
+2. **Icecast**: A public server for distributing the audio stream.
+3. **StereoTool**: An optional integration for feeding [MicroMPX](https://www.thimeo.com/micrompx/) to transmitters.
 
-### Scripts
-`icecast2.sh` Script that installs Icecast 2 with optional SSL via Let's Encrypt/Certbot.
+## Scripts:
+- **icecast2.sh**: Installs Icecast 2. Provides an option to use SSL via Let's Encrypt/Certbot.
+- **install.sh**: Handles the installation of Liquidsoap 2.2.1 with fdkaac support. Enables Liquidsoap as a service that starts automatically.
 
-`install.sh` Script that installs Liquidsoap 2.2.1 with fdkaac support. It also enables Liquidsoap as service that automatically starts. The configuration is in `/etc/liquidsoap/radio.liq`.
+## Configurations:
+- **radio.liq**: A production-ready configuration for Liquidsoap. It integrates StereoTool as an audio processor (commented out by default).
+- **liquidsoap.service**: A systemd service configuration for Liquidsoap.
 
-### Liquidsoap configurations
-`radio.liq` Production ready Liquidsoap transcoder. Accepts a high quality (preferably ogg/flac) stream over SRT and transcodes it to mp3, aac and ogg/flac. Also integrates a silence detector that fires after 15 seconds of silence. Integrates StereoTool as audio processor (commented out by default)
-
-## A word on ARM platforms
-This system should be able to run on an ARM platform, like Ampere Altra of Raspberry Pi. We will eventually run this on an ARM instance, but it's not tested very thorough.
+## Compatibility:
+This system is designed to run on Ubuntu 22.04 or Debian 12. It's made to be compatible with ARM platforms, including devices like Ampere Altra or Raspberry Pi. However, thorough testing on ARM is pending.
 
 # MIT License
 
