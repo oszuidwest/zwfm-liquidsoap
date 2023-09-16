@@ -43,10 +43,10 @@ if [ "$OS_SUPPORTED" = false ]; then
   exit 1
 fi
 
-# Add non-free if the OS is bookworm
+# Add non-free if the OS is bookworm (we need this for fdkaac)
 if [ "$OS_VERSION" == "bookworm" ]; then
   cp /etc/apt/sources.list "/etc/apt/sources.list.backup.$(date +%F)"
-  sed -i '/^deb\|^deb-src/ { / non-free/!s/$/ non-free/ }' /etc/apt/sources.list
+  sed -i '/^deb\|^deb-src/ { / non-free \| non-free$/!s/$/ non-free/ }' /etc/apt/sources.list
 fi
 
 # Set the liquidsoap package download URL based on OS version and architecture
