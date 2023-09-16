@@ -17,6 +17,7 @@ set_colors
 are_we_root
 is_this_linux
 is_this_os_64bit
+set_timezone Europe/Amsterdam
 
 # Print introduction
 clear
