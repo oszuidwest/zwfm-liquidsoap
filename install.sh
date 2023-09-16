@@ -112,7 +112,7 @@ fi
 
 # Install and enable service
 rm -f /etc/systemd/system/liquidsoap.service
-wget https://raw.githubusercontent.com/oszuidwest/liquidsoap-ubuntu/srt/liquidsoap.service -O /etc/systemd/system/liquidsoap.service
+wget https://raw.githubusercontent.com/oszuidwest/liquidsoap-ubuntu/srt/liquidsoap.service -O /lib/systemd/system/liquidsoap.service
 systemctl daemon-reload
 if ! systemctl is-enabled liquidsoap.service; then
     systemctl enable liquidsoap.service
