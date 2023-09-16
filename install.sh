@@ -78,7 +78,7 @@ if [ "$USE_ST" == "y" ]; then
   unzip -o /tmp/st.zip -d /tmp/
   
   # Detect the most recently created directory under /tmp/
-  EXTRACTED_DIR=$(ls -td /tmp/*/ | head -n 1)
+  EXTRACTED_DIR=$(find /tmp/* -maxdepth 0 -type d -print0 | xargs -0 ls -td | head -n 1)
 
   # Check the system architecture and copy the correct plugin
   if [ "$OS_ARCH" == "amd64" ]; then
