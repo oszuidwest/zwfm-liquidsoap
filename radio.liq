@@ -1,51 +1,56 @@
 # Daemon configuration (should not be changed)
-set("init.daemon.change_user", true)
-set("init.daemon.change_user.group", "liquidsoap")
-set("init.daemon.change_user.user", "liquidsoap")
-set("init.daemon.pidfile.path", "/dev/null")
-set("log.file", true)
-set("log.level", 4)
-set("log.file.path", "/var/log/liquidsoap/<script>.log")
-
-# Prometheus configuration (should not be changed)
-set("prometheus.server", true)
-set("prometheus.server.port", 9090)
-
+settings.init.daemon := true
+settings.init.daemon.change_user := true
+settings.init.daemon.change_user.user := "liquidsoap"
+settings.init.daemon.change_user.group := "liquidsoap"
+settings.init.daemon.pidfile := false
+settings.log.file.path := "/var/log/liquidsoap/<script>.log"
 
 # General configuration (do change this)
-
-## Input configuration
-upstreampassword = "foxtrot-uniform-charlie-kilo"
-
-
-# Output configuration
 icecastserver = "icecast.example.org"
 icecastport = 8000
-icecastpassword = "changeme"
-
-# General configuration
+icecastpassword = "hackme"
 fallbackfile = "/var/audio/fallback.ogg"
+upstreampassword = "foxtrot-uniform-charlie-kilo"
 
 # Fallback if there is no audio coming from the studio
-emergency_loop = drop_metadata(single(fallbackfile))
+noodband = source.drop.metadata(single(fallbackfile))
 
-# Input port for the studio stream
-studio = drop_metadata(input.harbor('studio',port=8080,buffer=8.,max=20.,password=upstreampassword))
+# Input for the studio stream
+studio = input.srt(id="studio", port=9000, mode="listener", max=2.0, streamid="studio", passphrase=upstreampassword)
 
 # Insert silence when there is no data from input
-studio = mksafe(studio)
+# studio = mksafe(studio) # This causes the ogg/flac stream to disconnect when switching between the fallback and studio?
+
+# Wrap it in a buffer to prevent latency from connection/disconnection to impact downstream operators/output
+studio = buffer(fallible=true, studio)
 
 # Combine fallback and live input
-radio = fallback(track_sensitive=false, [ blank.strip(max_blank=15.,min_noise=30.,studio), emergency_loop ])
+radio = fallback(track_sensitive=false, [ blank.strip(max_blank=15.,min_noise=30.,studio), noodband ])
 
-# Output a high quality ogg/flac stream
-output.icecast(%ogg(%flac),fallible=true,
-  host=icecastserver, port=icecastport, password=icecastpassword, mount='/zuidwest.stl', name='ZuidWest FM', description='Studio to Transmitter (uncompressed audio)', radio)
+# Function to output an icecast stream with common parameters
+def output_icecast_stream(~format, ~description, ~mount, ~source) =
+  output.icecast(
+    format,
+    fallible=false,
+    host=icecastserver,
+    port=icecastport,
+    password=icecastpassword,
+    name="ZuidWest FM",
+    description=description,
+    mount=mount,
+    source
+  )
+end
 
-# Output a high quality mp3 stream
-output.icecast(%mp3(bitrate=192,samplerate=48000),fallible=true,
-  host=icecastserver, port=icecastport, password=icecastpassword, mount='/zuidwest.mp3', name='ZuidWest FM', description='High Quality Stream (192kbit MP3)', radio)
+# Test stereotool implementation (There's no working MicroMPX in libStereoTool yet) 
+#radioproc = stereotool(library_file="/opt/stereotool/st_plugin.so", license_key="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx", preset="/etc/liquidsoap/st.ini", radio)
 
-# Output a low quality HE-AACv2 stream
-output.icecast(%fdkaac(channels=2, samplerate=48000, bitrate=96, afterburner=true, aot='mpeg4_aac_lc', transmux='adts', sbr_mode=true),fallible=true,
-  host=icecastserver, port=icecastport, password=icecastpassword, mount='/zuidwest.aac', name='ZuidWest FM', description='Mobile Stream (96kbit AAC)', radio)
+# Feed the audio to StereoTool too, which can generate MicroMPX
+#output.external(%wav, reopen_on_error=true, "/opt/stereotool/st_standalone - /dev/null -w 9000 -q -s /etc/liquidsoap/st.ini -k '<xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx>'", radio)
+
+# Output a high bitrate mp3 stream
+output_icecast_stream(format=%mp3(bitrate=192, samplerate=48000), description="Hoge Kwaliteit Stream (192kbit MP3)", mount="/zuidwest.mp3", source=radio)
+
+# Output a low bitrate AAC stream
+output_icecast_stream(format=%fdkaac(channels=2, samplerate=48000, bitrate=96, afterburner=true, aot='mpeg4_aac_lc', transmux='adts', sbr_mode=true), description="Mobile Stream (96kbit AAC)", mount="/zuidwest.aac", source=radio)
