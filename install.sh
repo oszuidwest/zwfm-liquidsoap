@@ -44,8 +44,10 @@ if [ "$OS_SUPPORTED" = false ]; then
 fi
 
 # Add non-free if the OS is bookworm
-cp /etc/apt/sources.list /etc/apt/sources.list.backup.$(date +%F)
-sed -i '/^deb\|^deb-src/ { / non-free \| non-free$/!s/$/ non-free/ }' /etc/apt/sources.list
+if [ "$OS_VERSION" == "bookworm" ]; then
+  cp /etc/apt/sources.list /etc/apt/sources.list.backup.$(date +%F)
+  sed -i '/^deb\|^deb-src/ { / non-free/!s/$/ non-free/ }' /etc/apt/sources.list
+fi
 
 # Set the liquidsoap package download URL based on OS version and architecture
 BASE_URL="https://github.com/savonet/liquidsoap/releases/download/v2.2.1/liquidsoap_2.2.1"
