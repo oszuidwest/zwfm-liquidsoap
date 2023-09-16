@@ -71,18 +71,35 @@ mkdir /var/audio
 chown -R liquidsoap:liquidsoap /etc/liquidsoap /var/audio
 
 # Download StereoTool plug-in
-#if [ "$USE_ST" == "y" ]; then
-#  apt -qq -y install unzip
-#  wget https://download.thimeo.com/Stereo_Tool_Generic_plugin.zip -O /tmp/st.zip
-#  unzip -o /tmp/st.zip -d /opt/
-#fi
+if [ "$USE_ST" == "y" ]; then
+  OS_ARCH=$(dpkg --print-architecture)
+  apt -qq -y install unzip
+  mkdir -p /opt/stereotool
+  wget https://download.thimeo.com/Stereo_Tool_Generic_plugin.zip -O /tmp/st.zip
+  unzip -o /tmp/st.zip -d /tmp/
+  
+  # Detect the most recently created directory under /tmp/
+  EXTRACTED_DIR=$(ls -td /tmp/*/ | head -n 1)
+
+  # Check the system architecture and copy the correct plugin
+  if [ "$OS_ARCH" == "amd64" ]; then
+    cp "${EXTRACTED_DIR}libStereoTool_intel64.so" /opt/stereotool/plugin.so
+  elif [ "$OS_ARCH" == "i386" ]; then
+    cp "${EXTRACTED_DIR}libStereoTool_intel32.so" /opt/stereotool/plugin.so
+  elif [ "$OS_ARCH" == "arm64" ]; then
+    cp "${EXTRACTED_DIR}libStereoTool_arm64.so" /opt/stereotool/plugin.so
+  elif [ "$OS_ARCH" == "armhf" ]; then
+    cp "${EXTRACTED_DIR}libStereoTool_arm32.so" /opt/stereotool/plugin.so
+  fi
+fi
+
 
 # Download StereoTool 
-if [ "$USE_ST" == "y" ]; then
-  mkdir -p /opt/stereotool
-  wget https://download.thimeo.com/stereo_tool_cmd_64 -O /opt/stereotool/stereotool
-  chmod +x /opt/stereotool/stereotool
-fi
+#if [ "$USE_ST" == "y" ]; then
+#  mkdir -p /opt/stereotool
+#  wget https://download.thimeo.com/stereo_tool_cmd_64 -O /opt/stereotool/stereotool
+#  chmod +x /opt/stereotool/stereotool
+#fi
 
 # Download sample fallback file
 wget https://upload.wikimedia.org/wikipedia/commons/6/66/Aaron_Dunn_-_Sonata_No_1_-_Movement_2.ogg -O /var/audio/fallback.ogg
