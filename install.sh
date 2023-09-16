@@ -28,7 +28,7 @@ OS_VERSION=$(lsb_release -cs)
 OS_ARCH=$(dpkg --print-architecture)
 
 # Check if the OS version is supported
-SUPPORTED_OS=("bullseye" "bookworm" "focal" "jammy")
+SUPPORTED_OS=("bookworm" "jammy")
 OS_SUPPORTED=false
 
 for os in "${SUPPORTED_OS[@]}"; do
@@ -42,6 +42,10 @@ if [ "$OS_SUPPORTED" = false ]; then
   printf "This script does not support '%s' OS version. Exiting.\n" "$OS_VERSION"
   exit 1
 fi
+
+# Add non-free if the OS is bookworm
+cp /etc/apt/sources.list /etc/apt/sources.list.backup.$(date +%F)
+sed -i '/^deb\|^deb-src/ { / non-free \| non-free$/!s/$/ non-free/ }' /etc/apt/sources.list
 
 # Set the liquidsoap package download URL based on OS version and architecture
 BASE_URL="https://github.com/savonet/liquidsoap/releases/download/v2.2.1/liquidsoap_2.2.1"
