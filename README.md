@@ -15,7 +15,9 @@ This repository provides a comprehensive audio streaming stack tailored for [Zui
 - **liquidsoap.service**: A systemd service configuration for Liquidsoap.
 
 ## Compatibility:
-This system is designed to run on Ubuntu 22.04 or Debian 12. It's made to be compatible with ARM platforms, including devices like Ampere Altra or Raspberry Pi. However, thorough testing on ARM is pending.
+1. Ubuntu 22.04 or Debian 12.
+2. System architecture: x86_64 or ARM64 (Ampere Altra, Raspberry Pi). Note: ARM testing is still ongoing.
+3. Internet connection (for script dependencies).
 
 # MIT License
 
