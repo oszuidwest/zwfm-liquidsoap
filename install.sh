@@ -9,10 +9,11 @@ fi
 source /tmp/functions.sh
 set_colors
 
-# Environment checks
+# Configure environment
 are_we_root
 is_this_linux
 is_this_os_64bit
+set_timezone Europe/Amsterdam
 
 # Detect OS details
 OS_ID=$(lsb_release -is | tr '[:upper:]' '[:lower:]')
