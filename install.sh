@@ -45,7 +45,7 @@ fi
 
 # Add non-free if the OS is bookworm
 if [ "$OS_VERSION" == "bookworm" ]; then
-  cp /etc/apt/sources.list /etc/apt/sources.list.backup.$(date +%F)
+  cp /etc/apt/sources.list "/etc/apt/sources.list.backup.$(date +%F)"
   sed -i '/^deb\|^deb-src/ { / non-free/!s/$/ non-free/ }' /etc/apt/sources.list
 fi
 
