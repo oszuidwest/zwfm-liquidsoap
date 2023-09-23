@@ -72,7 +72,7 @@ if [ "$USE_ST" == "y" ]; then
     EXTRACTED_DIR=$(find /tmp/* -maxdepth 0 -type d -print0 | xargs -0 ls -td | head -n 1)
     
     if [ "$OS_ARCH" == "amd64" ]; then
-        cp "${EXTRACTED_DIR}/libStereoTool_intel64.so" /opt/stereotool/st_plugin.so
+        cp "${EXTRACTED_DIR}/libStereoToolX11_intel64.so" /opt/stereotool/st_plugin.so
         wget https://download.thimeo.com/stereo_tool_cmd_64 -O /opt/stereotool/st_standalone
     elif [ "$OS_ARCH" == "arm64" ]; then
         cp "${EXTRACTED_DIR}/libStereoTool_arm64.so" /opt/stereotool/st_plugin.so
