@@ -30,7 +30,7 @@ ask_user "HOSTNAME" "localhost" "Specify the host name (for example: icecast.zui
 ask_user "SOURCEPASS" "hackme" "Specify the source and relay password" "str"
 ask_user "ADMINPASS" "hackme" "Specify the admin password" "str"
 ask_user "LOCATED" "Earth" "Where is this server located (visible on admin pages)?" "str"
-ask_user "ADMINMAIL" "root@localhost" "What's the admins e-mail (visible on admin pages and for let's encrypt)?" "email"
+ask_user "ADMINMAIL" "root@localhost.local" "What's the admins e-mail (visible on admin pages and for let's encrypt)?" "email"
 ask_user "PORT" "80" "Specify the port" "num"
 ask_user "SSL" "n" "Do you want Let's Encrypt to get a certificate for this server? (y/n)" "y/n"
 
