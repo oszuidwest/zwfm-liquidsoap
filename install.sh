@@ -90,11 +90,11 @@ sed -i 's/^\(Whitelist=\).*$/\1\/0/' /etc/liquidsoap/st.ini
 
 # Fetch fallback sample and configuration files
 wget https://upload.wikimedia.org/wikipedia/commons/6/66/Aaron_Dunn_-_Sonata_No_1_-_Movement_2.ogg -O /var/audio/fallback.ogg
-wget https://raw.githubusercontent.com/oszuidwest/liquidsoap-ubuntu/update-st/radio.liq -O /etc/liquidsoap/radio.liq
+wget https://raw.githubusercontent.com/oszuidwest/liquidsoap-ubuntu/main/radio.liq -O /etc/liquidsoap/radio.liq
 
 # Install and set up service
 rm -f /etc/systemd/system/liquidsoap.service
-wget https://raw.githubusercontent.com/oszuidwest/liquidsoap-ubuntu/update-st/liquidsoap.service -O /lib/systemd/system/liquidsoap.service
+wget https://raw.githubusercontent.com/oszuidwest/liquidsoap-ubuntu/main/liquidsoap.service -O /lib/systemd/system/liquidsoap.service
 systemctl daemon-reload
 if ! systemctl is-enabled liquidsoap.service; then
     systemctl enable liquidsoap.service
