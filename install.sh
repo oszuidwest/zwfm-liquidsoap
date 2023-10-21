@@ -58,10 +58,13 @@ install_packages silent fdkaac libfdkaac-ocaml libfdkaac-ocaml-dynlink
 wget "$PACKAGE_URL" -O /tmp/liq_2.2.1.deb
 apt -qq -y install /tmp/liq_2.2.1.deb --fix-broken
 
-# Configure directories
-mkdir /etc/liquidsoap
-mkdir /var/audio
-chown -R liquidsoap:liquidsoap /etc/liquidsoap /var/audio
+# Create directories and configure them
+dirs=(/etc/liquidsoap /var/audio)
+for dir in "${dirs[@]}"; do
+    mkdir -p "$dir" && \
+    chown liquidsoap:liquidsoap "$dir" && \
+    chmod g+s "$dir"
+done
 
 # Download and install StereoTool if desired by user
 if [ "$USE_ST" == "y" ]; then
@@ -80,6 +83,9 @@ if [ "$USE_ST" == "y" ]; then
     fi
     chmod +x /opt/stereotool/st_standalone
 fi
+
+# Generate StereoTool config file
+/opt/stereotool/st_standalone -X /etc/liquidsoap/st.ini
 
 # Fetch fallback sample and configuration files
 wget https://upload.wikimedia.org/wikipedia/commons/6/66/Aaron_Dunn_-_Sonata_No_1_-_Movement_2.ogg -O /var/audio/fallback.ogg
