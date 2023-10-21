@@ -75,25 +75,26 @@ if [ "$USE_ST" == "y" ]; then
     EXTRACTED_DIR=$(find /tmp/* -maxdepth 0 -type d -print0 | xargs -0 ls -td | head -n 1)
     
     if [ "$OS_ARCH" == "amd64" ]; then
-        cp "${EXTRACTED_DIR}/libStereoToolX11_intel64.so" /opt/stereotool/st_plugin.so
+        cp "${EXTRACTED_DIR}/lib/Linux/IntelAMD/64/libStereoToolX11_intel64.so" /opt/stereotool/st_plugin.so
         wget https://download.thimeo.com/stereo_tool_cmd_64_1011 -O /opt/stereotool/st_standalone
     elif [ "$OS_ARCH" == "arm64" ]; then
-        cp "${EXTRACTED_DIR}/libStereoTool_arm64.so" /opt/stereotool/st_plugin.so
+        cp "${EXTRACTED_DIR}/lib/Linux/ARM/64/libStereoTool_arm64.so" /opt/stereotool/st_plugin.so
         wget https://download.thimeo.com/stereo_tool_pi2_64_1011 -O /opt/stereotool/st_standalone
     fi
     chmod +x /opt/stereotool/st_standalone
 fi
 
-# Generate StereoTool config file
+# Generate and patch StereoTool config file
 /opt/stereotool/st_standalone -X /etc/liquidsoap/st.ini
+sed -i 's/^\(Whitelist=\).*$/\1\/0/' /etc/liquidsoap/st.ini
 
 # Fetch fallback sample and configuration files
 wget https://upload.wikimedia.org/wikipedia/commons/6/66/Aaron_Dunn_-_Sonata_No_1_-_Movement_2.ogg -O /var/audio/fallback.ogg
-wget https://raw.githubusercontent.com/oszuidwest/liquidsoap-ubuntu/main/radio.liq -O /etc/liquidsoap/radio.liq
+wget https://raw.githubusercontent.com/oszuidwest/liquidsoap-ubuntu/update-st/radio.liq -O /etc/liquidsoap/radio.liq
 
 # Install and set up service
 rm -f /etc/systemd/system/liquidsoap.service
-wget https://raw.githubusercontent.com/oszuidwest/liquidsoap-ubuntu/main/liquidsoap.service -O /lib/systemd/system/liquidsoap.service
+wget https://raw.githubusercontent.com/oszuidwest/liquidsoap-ubuntu/update-st/liquidsoap.service -O /lib/systemd/system/liquidsoap.service
 systemctl daemon-reload
 if ! systemctl is-enabled liquidsoap.service; then
     systemctl enable liquidsoap.service
