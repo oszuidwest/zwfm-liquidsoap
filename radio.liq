@@ -28,7 +28,7 @@ studio =
   )
 
 # Insert silence when there is no data from input
-# studio = mksafe(studio) # This causes the ogg/flac stream to disconnect when switching between the fallback and studio?
+studio = mksafe(studio)
 
 # Wrap it in a buffer to prevent latency from connection/disconnection to impact downstream operators/output
 studio = buffer(fallible=true, studio)

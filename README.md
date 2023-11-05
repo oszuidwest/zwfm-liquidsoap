@@ -8,7 +8,7 @@ This repository provides a comprehensive audio streaming stack tailored for [Zui
 
 ## Scripts:
 - **icecast2.sh**: Installs Icecast 2. Provides an option to use SSL via Let's Encrypt/Certbot.
-- **install.sh**: Handles the installation of Liquidsoap 2.2.1 with fdkaac support. Enables Liquidsoap as a service that starts automatically.
+- **install.sh**: Handles the installation of Liquidsoap 2.2.2 with fdkaac support. Enables Liquidsoap as a service that starts automatically.
 
 ## Configurations:
 - **radio.liq**: A production-ready configuration for Liquidsoap. It integrates StereoTool as an audio processor (commented out by default).
