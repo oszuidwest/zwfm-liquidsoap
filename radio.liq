@@ -24,6 +24,7 @@ studio =
     mode="listener",
     max=2.0,
     streamid="studio",
+    enforced_encryption=true,
     passphrase=upstreampassword
   )
 
