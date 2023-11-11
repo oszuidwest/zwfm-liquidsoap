@@ -1,5 +1,5 @@
 # liquidsoap-ubuntu
-This repository offers an audio streaming solution specifically designed for [ZuidWest FM](https://www.zuidwestfm.nl/) in the Netherlands. Utilizing [Liquidsoap](https://www.liquidsoap.info), it provides internet streaming with a never silent fallback and is able to push MPX to broadcast transmitters using MicroMPX.
+This repository contains an audio streaming solution specifically designed for [ZuidWest FM](https://www.zuidwestfm.nl/) in the Netherlands. Utilizing [Liquidsoap](https://www.liquidsoap.info), it provides internet streaming with a never silent fallback and is able to push MPX to broadcast transmitters using MicroMPX.
 
 ## Components:
 1. **Liquidsoap**: Serves as the core audio router and transcoder.
@@ -11,7 +11,7 @@ This repository offers an audio streaming solution specifically designed for [Zu
 - **install.sh**: Facilitates the installation of Liquidsoap 2.2.2 with fdkaac support and configures it as an auto-start service.
 
 ## Configurations:
-- **radio.liq**: A ready-to-use Liquidsoap configuration, incorporating StereoTool as MicroMPX encoder (disabled by default).
+- **radio.liq**: Production ready Liquidsoap configuration, incorporating StereoTool as MicroMPX encoder (disabled by default).
 - **liquidsoap.service**: A systemd service file for managing Liquidsoap.
 
 ## Compatibility:
