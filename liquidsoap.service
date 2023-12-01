@@ -1,17 +1,13 @@
 [Unit]
-Description=Liquidsoap
+Description=Liquidsoap daemon
 After=network.target
-Documentation=http://liquidsoap.fm/
+Documentation=https://www.liquidsoap.info/
 
 [Service]
-Type=forking
+Type=simple
 User=liquidsoap
-WorkingDirectory=/etc/liquidsoap/
-ExecStart=/usr/bin/liquidsoap /etc/liquidsoap/radio.liq -d
+ExecStart=/usr/bin/liquidsoap /etc/liquidsoap/radio.liq
 Restart=always
-RestartSec=15
-KillSignal=SIGKILL
 
 [Install]
 WantedBy=multi-user.target
-Alias=liquidsoap.service
