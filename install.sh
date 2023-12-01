@@ -94,7 +94,7 @@ wget https://raw.githubusercontent.com/oszuidwest/liquidsoap-ubuntu/main/radio.l
 
 # Install and set up service
 rm -f /etc/systemd/system/liquidsoap.service
-wget https://raw.githubusercontent.com/oszuidwest/liquidsoap-ubuntu/main/liquidsoap.service -O /lib/systemd/system/liquidsoap.service
+wget https://raw.githubusercontent.com/oszuidwest/liquidsoap-ubuntu/main/liquidsoap.service -O /etc/systemd/system/liquidsoap.service
 systemctl daemon-reload
 if ! systemctl is-enabled liquidsoap.service; then
     systemctl enable liquidsoap.service

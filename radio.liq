@@ -1,9 +1,4 @@
-# Daemon configuration (should not be changed)
-settings.init.daemon := true
-settings.init.daemon.change_user := true
-settings.init.daemon.change_user.user := "liquidsoap"
-settings.init.daemon.change_user.group := "liquidsoap"
-settings.init.daemon.pidfile := false
+# Log (should not be changed)
 settings.log.file.path := "/var/log/liquidsoap/<script>.log"
 
 # General configuration (do change this)
