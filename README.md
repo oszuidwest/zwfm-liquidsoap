@@ -16,7 +16,7 @@ This repository contains an audio streaming solution specifically designed for [
 
 ## Compatibility:
 1. Compatible with Ubuntu 22.04 or Debian 12.
-2. Supports x86_64 or ARM64 system architectures (e.g., Ampere Altra, Raspberry Pi). Note: ARM compatibility is currently under evaluation.
+2. Supports x86_64 or ARM64 system architectures (e.g., Ampere Altra, Raspberry Pi). Note: StereoTool MicroMPX currenly doesn't work on ARM.
 3. Requires an internet connection for script dependencies.
 
 # MIT License
