@@ -1,5 +1,5 @@
 [Unit]
-Description=Liquidsoap daemon for %I
+Description=Liquidsoap daemon
 After=network.target
 Documentation=https://www.liquidsoap.info/
 
