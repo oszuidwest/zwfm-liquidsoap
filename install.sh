@@ -59,7 +59,7 @@ wget "$PACKAGE_URL" -O /tmp/liq_2.2.3.deb
 apt -qq -y install /tmp/liq_2.2.3.deb --fix-broken
 
 # Create directories and configure them
-dirs=(/etc/liquidsoap /var/audio)
+dirs=(/etc/liquidsoap /var/audio /home/liquidsoap)
 for dir in "${dirs[@]}"; do
     mkdir -p "$dir" && \
     chown liquidsoap:liquidsoap "$dir" && \
@@ -84,9 +84,11 @@ if [ "$USE_ST" == "y" ]; then
     chmod +x /opt/stereotool/st_standalone
 fi
 
+if [ "$USE_ST" == "y" ]; then
 # Generate and patch StereoTool config file
-/opt/stereotool/st_standalone -X /etc/liquidsoap/st.ini
-sed -i 's/^\(Whitelist=\).*$/\1\/0/' /etc/liquidsoap/st.ini
+    /opt/stereotool/st_standalone -X /home/liquidsoap/stereo_tool
+    sed -i 's/^\(Whitelist=\).*$/\1\/0/' /home/liquidsoap/stereo_tool
+fi
 
 # Fetch fallback sample and configuration files
 wget https://upload.wikimedia.org/wikipedia/commons/6/66/Aaron_Dunn_-_Sonata_No_1_-_Movement_2.ogg -O /var/audio/fallback.ogg

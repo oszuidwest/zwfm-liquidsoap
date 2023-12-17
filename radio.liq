@@ -56,7 +56,7 @@ end
 #radioproc = stereotool(library_file="/opt/stereotool/st_plugin.so", license_key="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx", preset="/etc/liquidsoap/st.ini", radio)
 
 # Feed the audio to StereoTool too, which generates MicroMPX
-#output.external(%wav, "/opt/stereotool/st_standalone - /dev/null -w 9000 -r 48000 -q -s /etc/liquidsoap/st.ini", radio)
+#output.external(%wav, "/opt/stereotool/st_standalone - /dev/null -w 9000 -r 48000 -q", radio)
 
 # Output a high bitrate mp3 stream
 output_icecast_stream(
