@@ -41,7 +41,7 @@ if [ "$OS_VERSION" == "bookworm" ]; then
 fi
 
 # Set package URLs
-BASE_URL="https://github.com/savonet/liquidsoap/releases/download/v2.2.2/liquidsoap_2.2.2"
+BASE_URL="https://github.com/savonet/liquidsoap/releases/download/v2.2.3/liquidsoap_2.2.3"
 PACKAGE_URL="${BASE_URL}-${OS_ID}-${OS_VERSION}-1_${OS_ARCH}.deb"
 
 # User input for script execution
@@ -55,8 +55,8 @@ fi
 
 # Install necessary packages
 install_packages silent fdkaac libfdkaac-ocaml libfdkaac-ocaml-dynlink
-wget "$PACKAGE_URL" -O /tmp/liq_2.2.2.deb
-apt -qq -y install /tmp/liq_2.2.2.deb --fix-broken
+wget "$PACKAGE_URL" -O /tmp/liq_2.2.3.deb
+apt -qq -y install /tmp/liq_2.2.3.deb --fix-broken
 
 # Create directories and configure them
 dirs=(/etc/liquidsoap /var/audio)
