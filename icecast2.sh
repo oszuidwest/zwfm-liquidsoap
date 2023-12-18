@@ -124,10 +124,10 @@ if [ "$SSL" = "y" ] && [ "$PORT" = "80" ]; then
         echo -e "${BLUE}►► Restarting Icecast with SSL support${NC}"
 		systemctl restart icecast2
     else
-        echo -e "${YELLOW} !! SSL certificate acquisition failed. Icecast will continue running on port 80.${NC}"
+        echo -e "${YELLOW} !! SSL certificate acquisition failed. Icecast will continue running on port ${PORT}.${NC}"
     fi
 else
     if [ "$SSL" = "y" ]; then
-        echo -e "${YELLOW} !! SSL setup is only possible when Icecast is running on port 80. Skipping SSL configuration.${NC}"
+        echo -e "${YELLOW} !! SSL setup is only possible when Icecast is running on port 80. You entered port ${PORT}. Skipping SSL configuration.${NC}"
     fi
 fi
