@@ -5,8 +5,8 @@ clear
 
 # Download the functions library
 if ! curl -s -o /tmp/functions.sh https://raw.githubusercontent.com/oszuidwest/bash-functions/main/common-functions.sh; then
-    echo -e  "*** Failed to download functions library. Please check your network connection! ***"
-    exit 1
+  echo -e  "*** Failed to download functions library. Please check your network connection! ***"
+  exit 1
 fi
 
 # Source the functions file
@@ -24,7 +24,7 @@ cat << "EOF"
                ********************************
                       ICECAST 2 INSTALLER
                ********************************
-			   
+
 EOF
 
 # Configure environment
@@ -54,43 +54,43 @@ install_packages silent icecast2 certbot
 ICECAST_XML="/etc/icecast2/icecast.xml"
 cat <<EOF > "$ICECAST_XML"
 <icecast>
-    <location>$LOCATED</location>
-    <admin>$ADMINMAIL</admin>
-    <hostname>$HOSTNAME</hostname>
+  <location>$LOCATED</location>
+  <admin>$ADMINMAIL</admin>
+  <hostname>$HOSTNAME</hostname>
 
-    <limits>
-        <clients>1000</clients>
-        <sources>10</sources>
-    </limits>
+  <limits>
+    <clients>1000</clients>
+    <sources>10</sources>
+  </limits>
 
-    <authentication>
-        <source-password>$SOURCEPASS</source-password>
-        <relay-password>$SOURCEPASS</relay-password>
-        <admin-user>admin</admin-user>
-        <admin-password>$ADMINPASS</admin-password>
-    </authentication>
+  <authentication>
+    <source-password>$SOURCEPASS</source-password>
+    <relay-password>$SOURCEPASS</relay-password>
+    <admin-user>admin</admin-user>
+    <admin-password>$ADMINPASS</admin-password>
+  </authentication>
 
-    <listen-socket>
-        <port>$PORT</port>
-    </listen-socket>
+  <listen-socket>
+    <port>$PORT</port>
+  </listen-socket>
 
-    <http-headers>
-        <header name="Access-Control-Allow-Origin" value="*" />
-        <header name="X-Robots-Tag" value="noindex, noarchive" />
-    </http-headers>
+  <http-headers>
+    <header name="Access-Control-Allow-Origin" value="*" />
+    <header name="X-Robots-Tag" value="noindex, noarchive" />
+  </http-headers>
 
-    <paths>
-        <basedir>/usr/share/icecast2</basedir>
-        <logdir>/var/log/icecast2</logdir>
-        <webroot>/usr/share/icecast2/web</webroot>
-        <adminroot>/usr/share/icecast2/admin</adminroot>
-        <alias source="/zuidwest.stl" destination="/zuidwest.mp3"/>
-        <alias source="/" destination="/status.xsl"/>
-    </paths>
+  <paths>
+    <basedir>/usr/share/icecast2</basedir>
+    <logdir>/var/log/icecast2</logdir>
+    <webroot>/usr/share/icecast2/web</webroot>
+    <adminroot>/usr/share/icecast2/admin</adminroot>
+    <alias source="/zuidwest.stl" destination="/zuidwest.mp3"/>
+    <alias source="/" destination="/status.xsl"/>
+  </paths>
 
-    <logging>
-        <logsize>10000</logsize>
-    </logging>
+  <logging>
+    <logsize>10000</logsize>
+  </logging>
 </icecast>
 EOF
 
@@ -104,30 +104,30 @@ systemctl restart icecast2
 
 # SSL configuration
 if [ "$SSL" = "y" ] && [ "$PORT" = "80" ]; then
-    # Run Certbot to obtain SSL certificate
-	echo -e "${BLUE}►► Running Certbot to obtain SSL certificate...${NC}"
-    certbot --text --agree-tos --email "$ADMINMAIL" --noninteractive --no-eff-email --webroot --webroot-path="/usr/share/icecast2/web" -d "$HOSTNAME" --deploy-hook "cat /etc/letsencrypt/live/$HOSTNAME/fullchain.pem /etc/letsencrypt/live/$HOSTNAME/privkey.pem > /usr/share/icecast2/icecast.pem && systemctl restart icecast2" certonly
+  # Run Certbot to obtain SSL certificate
+  echo -e "${BLUE}►► Running Certbot to obtain SSL certificate...${NC}"
+  certbot --text --agree-tos --email "$ADMINMAIL" --noninteractive --no-eff-email --webroot --webroot-path="/usr/share/icecast2/web" -d "$HOSTNAME" --deploy-hook "cat /etc/letsencrypt/live/$HOSTNAME/fullchain.pem /etc/letsencrypt/live/$HOSTNAME/privkey.pem > /usr/share/icecast2/icecast.pem && systemctl restart icecast2" certonly
 
-    # Check if Certbot was successful
-    if [ -f "/usr/share/icecast2/icecast.pem" ]; then
-        # Update icecast.xml with SSL settings
-        sed -i "/<paths>/a \
-        \    <ssl-certificate>/usr/share/icecast2/icecast.pem</ssl-certificate>" "$ICECAST_XML"
-        
-        sed -i "/<\/listen-socket>/a \
-        <listen-socket>\n\
-            <port>443</port>\n\
-            <ssl>1</ssl>\n\
-        </listen-socket>" "$ICECAST_XML"
+  # Check if Certbot was successful
+  if [ -f "/usr/share/icecast2/icecast.pem" ]; then
+    # Update icecast.xml with SSL settings
+    sed -i "/<paths>/a \
+    \    <ssl-certificate>/usr/share/icecast2/icecast.pem</ssl-certificate>" "$ICECAST_XML"
+    
+    sed -i "/<\/listen-socket>/a \
+    <listen-socket>\n\
+        <port>443</port>\n\
+        <ssl>1</ssl>\n\
+    </listen-socket>" "$ICECAST_XML"
 
-        # Restart Icecast to apply new configuration
-        echo -e "${BLUE}►► Restarting Icecast with SSL support${NC}"
-		systemctl restart icecast2
-    else
-        echo -e "${YELLOW} !! SSL certificate acquisition failed. Icecast will continue running on port ${PORT}.${NC}"
-    fi
+    # Restart Icecast to apply new configuration
+    echo -e "${BLUE}►► Restarting Icecast with SSL support${NC}"
+    systemctl restart icecast2
+  else
+    echo -e "${YELLOW} !! SSL certificate acquisition failed. Icecast will continue running on port ${PORT}.${NC}"
+  fi
 else
-    if [ "$SSL" = "y" ]; then
-        echo -e "${YELLOW} !! SSL setup is only possible when Icecast is running on port 80. You entered port ${PORT}. Skipping SSL configuration.${NC}"
-    fi
+  if [ "$SSL" = "y" ]; then
+    echo -e "${YELLOW} !! SSL setup is only possible when Icecast is running on port 80. You entered port ${PORT}. Skipping SSL configuration.${NC}"
+  fi
 fi
