@@ -67,7 +67,7 @@ cat <<EOF > "$ICECAST_XML"
 
     <http-headers>
         <header name="Access-Control-Allow-Origin" value="*" />
-        <header name="X-Robots-Tag" value="noindex, noarchive" status="200" />
+        <header name="X-Robots-Tag" value="noindex, noarchive" />
     </http-headers>
 
     <paths>
