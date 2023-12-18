@@ -96,7 +96,7 @@ systemctl restart icecast2
 # SSL configuration
 if [ "$SSL" = "y" ] && [ "$PORT" = "80" ]; then
     # Run Certbot to obtain SSL certificate
-    certbot --quiet --text --agree-tos --email $ADMINMAIL --noninteractive --no-eff-email --webroot --webroot-path="/usr/share/icecast2/web" -d "$HOSTNAME" --deploy-hook "cat /etc/letsencrypt/live/$HOSTNAME/fullchain.pem /etc/letsencrypt/live/$HOSTNAME/privkey.pem > /usr/share/icecast2/icecast.pem && systemctl restart icecast2" certonly
+    certbot --quiet --text --agree-tos --email "$ADMINMAIL" --noninteractive --no-eff-email --webroot --webroot-path="/usr/share/icecast2/web" -d "$HOSTNAME" --deploy-hook "cat /etc/letsencrypt/live/$HOSTNAME/fullchain.pem /etc/letsencrypt/live/$HOSTNAME/privkey.pem > /usr/share/icecast2/icecast.pem && systemctl restart icecast2" certonly
 
     # Check if Certbot was successful
     if [ -f "/usr/share/icecast2/icecast.pem" ]; then
