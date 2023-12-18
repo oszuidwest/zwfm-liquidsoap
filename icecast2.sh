@@ -12,18 +12,27 @@ fi
 # Source the functions file
 source /tmp/functions.sh
 
+# Something fancy for the sysadmin
+cat << "EOF"
+ ______     _     ___          __       _     ______ __  __ 
+|___  /    (_)   | \ \        / /      | |   |  ____|  \/  |
+   / /_   _ _  __| |\ \  /\  / /__  ___| |_  | |__  | \  / |
+  / /| | | | |/ _` | \ \/  \/ / _ \/ __| __| |  __| | |\/| |
+ / /_| |_| | | (_| |  \  /\  /  __/\__ \ |_  | |    | |  | |
+/_____\__,_|_|\__,_|   \/  \/ \___||___/\__| |_|    |_|  |_|
+
+               ********************************
+                      ICECAST 2 INSTALLER
+               ********************************
+			   
+EOF
+
 # Configure environment
 set_colors
 are_we_root
 is_this_linux
 is_this_os_64bit
 set_timezone Europe/Amsterdam
-
-# Print introduction
-clear
-printf "********************************\n"
-printf "ICECAST 2 INSTALLER\n"
-printf "********************************\n"
 
 # Collect user inputs
 ask_user "HOSTNAME" "localhost" "Specify the host name (for example: icecast.zuidwestfm.nl. Enter it without http:// or www) please" "str"
@@ -96,6 +105,7 @@ systemctl restart icecast2
 # SSL configuration
 if [ "$SSL" = "y" ] && [ "$PORT" = "80" ]; then
     # Run Certbot to obtain SSL certificate
+	echo -e "${BLUE}►► Running Certbot to obtain SSL certificate...${NC}"
     certbot --text --agree-tos --email "$ADMINMAIL" --noninteractive --no-eff-email --webroot --webroot-path="/usr/share/icecast2/web" -d "$HOSTNAME" --deploy-hook "cat /etc/letsencrypt/live/$HOSTNAME/fullchain.pem /etc/letsencrypt/live/$HOSTNAME/privkey.pem > /usr/share/icecast2/icecast.pem && systemctl restart icecast2" certonly
 
     # Check if Certbot was successful
@@ -111,12 +121,13 @@ if [ "$SSL" = "y" ] && [ "$PORT" = "80" ]; then
         </listen-socket>" "$ICECAST_XML"
 
         # Restart Icecast to apply new configuration
-        systemctl restart icecast2
+        echo -e "${BLUE}►► Restarting Icecast with SSL support${NC}"
+		systemctl restart icecast2
     else
-        echo "SSL certificate acquisition failed. Icecast will continue running on port 80."
+        echo -e "${YELLOW} !! SSL certificate acquisition failed. Icecast will continue running on port 80.${NC}"
     fi
 else
     if [ "$SSL" = "y" ]; then
-        echo "SSL setup is only possible when Icecast is running on port 80. Skipping SSL configuration."
+        echo -e "${YELLOW} !! SSL setup is only possible when Icecast is running on port 80. Skipping SSL configuration.${NC}"
     fi
 fi
