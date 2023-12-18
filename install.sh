@@ -24,14 +24,7 @@ OS_ARCH=$(dpkg --print-architecture)
 
 # Validate OS version
 SUPPORTED_OS=("bookworm" "jammy")
-OS_SUPPORTED=false
-for os in "${SUPPORTED_OS[@]}"; do
-  if [ "$OS_VERSION" == "$os" ]; then
-    OS_SUPPORTED=true
-    break
-  fi
-done
-if [ "$OS_SUPPORTED" = false ]; then
+if [[ ! " ${SUPPORTED_OS[*]} " =~ " ${OS_VERSION} " ]]; then
   printf "This script does not support '%s' OS version. Exiting.\n" "$OS_VERSION"
   exit 1
 fi
