@@ -8,7 +8,7 @@ This repository contains an audio streaming solution specifically designed for [
 
 ## Scripts:
 - **icecast2.sh**: Installs Icecast 2 and offers SSL support through Let's Encrypt/Certbot. Run it with `/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/oszuidwest/liquidsoap-ubuntu/main/icecast2.sh)"`
-- **install.sh**: Facilitates the installation of Liquidsoap 2.2.2 with fdkaac support and configures it as an auto-start service. Run it with `/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/oszuidwest/liquidsoap-ubuntu/main/install.sh)"`
+- **install.sh**: Facilitates the installation of Liquidsoap 2.2.3 with fdkaac support and configures it as an auto-start service. Run it with `/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/oszuidwest/liquidsoap-ubuntu/main/install.sh)"`
 
 ## Configurations:
 - **radio.liq**: Production ready Liquidsoap configuration, incorporating StereoTool as MicroMPX encoder (disabled by default).
@@ -21,7 +21,7 @@ This repository contains an audio streaming solution specifically designed for [
 
 # MIT License
 
-Copyright 2023 Streekomroep ZuidWest
+Copyright 2024 Streekomroep ZuidWest
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the “Software”), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
 
