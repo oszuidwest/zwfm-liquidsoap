@@ -82,5 +82,8 @@ output_icecast_stream(
   source=radio
 )
 
+# DAB+ encoder
+# output.external(%wav(channels=2,samplerate=48000), "odr-audioenc -i - -b 96 --edi tcp://localhost:7000", radio)
+
 # Output StereoTool sound to a dummy output since we only use it for MicroMPX
 output.dummy(radioproc)
