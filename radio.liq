@@ -52,7 +52,7 @@ def output_icecast_stream(~format, ~description, ~mount, ~source) =
   )
 end
 
-Stereotool implementation (There's no working MicroMPX in libStereoTool ARM64 yet!)
+#Stereotool implementation (There's no working MicroMPX in libStereoTool ARM64 yet!)
 radioproc = stereotool(library_file="/opt/stereotool/st_plugin.so", license_key="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx", preset="/etc/liquidsoap/st.ini", radio)
 
 # Output a high bitrate mp3 stream
