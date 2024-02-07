@@ -50,8 +50,8 @@ fi
 
 # Install necessary packages
 install_packages silent fdkaac libfdkaac-ocaml libfdkaac-ocaml-dynlink
-wget "$PACKAGE_URL" -O /tmp/liq_2.2.3.deb
-apt -qq -y install /tmp/liq_2.2.3.deb --fix-broken
+wget "$PACKAGE_URL" -O /tmp/liq_2.2.4.deb
+apt -qq -y install /tmp/liq_2.2.4.deb --fix-broken
 
 # Create directories and configure them
 dirs=(/etc/liquidsoap /var/audio)
