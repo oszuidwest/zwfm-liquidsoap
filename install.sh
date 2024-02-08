@@ -89,6 +89,11 @@ fi
 wget https://upload.wikimedia.org/wikipedia/commons/6/66/Aaron_Dunn_-_Sonata_No_1_-_Movement_2.ogg -O /var/audio/fallback.ogg
 wget https://raw.githubusercontent.com/oszuidwest/liquidsoap-ubuntu/main/radio.liq -O /etc/liquidsoap/radio.liq
 
+# Comment out the StereoTool implementation if not enabled
+if [ "$USE_ST" == "y" ]; then
+  sed -i '/# StereoTool implementation/,/output.dummy(radioproc)/ s/^/#/' "/etc/liquidsoap/radio.liq"
+fi
+
 # Install and set up service
 rm -f /etc/systemd/system/liquidsoap.service
 wget https://raw.githubusercontent.com/oszuidwest/liquidsoap-ubuntu/main/liquidsoap.service -O /etc/systemd/system/liquidsoap.service
