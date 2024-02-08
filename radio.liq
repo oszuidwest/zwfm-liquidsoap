@@ -52,11 +52,18 @@ def output_icecast_stream(~format, ~description, ~mount, ~source) =
   )
 end
 
-# Test stereotool implementation (There's no working MicroMPX in libStereoTool yet)
-#radioproc = stereotool(library_file="/opt/stereotool/st_plugin.so", license_key="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx", preset="/etc/liquidsoap/st.ini", radio)
+# StereoTool implementation (There's no working MicroMPX in libStereoTool ARM64 yet!)
+radioproc =
+  stereotool(
+    library_file="/opt/stereotool/st_plugin.so",
+    license_key=
+      "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    preset="/etc/liquidsoap/st.ini",
+    radio
+  )
 
-# Feed the audio to StereoTool too, which generates MicroMPX
-#output.external(%wav(channels=2,samplerate=48000), "/opt/stereotool/st_standalone - /dev/null -w 9000 -r 48000 -q -s /etc/liquidsoap/st.ini", radio)
+# Output StereoTool sound to a dummy output since we only use it for MicroMPX
+output.dummy(radioproc)
 
 # Output a high bitrate mp3 stream
 output_icecast_stream(
@@ -84,3 +91,7 @@ output_icecast_stream(
   mount="/zuidwest.aac",
   source=radio
 )
+
+
+# DAB+ encoder
+# output.external(%wav(channels=2,samplerate=48000), "odr-audioenc -i - -b 96 --edi tcp://localhost:7000", radio)
