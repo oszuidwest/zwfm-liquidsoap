@@ -4,9 +4,6 @@ on:
   push:
     paths:
       - '**.liq'
-  pull_request:
-    paths:
-      - '**.liq'
 
 jobs:
   format:
