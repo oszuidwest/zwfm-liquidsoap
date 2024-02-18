@@ -61,6 +61,7 @@ cat <<EOF > "$ICECAST_XML"
   <limits>
     <clients>1000</clients>
     <sources>10</sources>
+    <burst-size>65536</burst-size>
   </limits>
 
   <authentication>
