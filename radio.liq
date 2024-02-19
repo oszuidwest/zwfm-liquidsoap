@@ -66,7 +66,13 @@ radioproc =
 output.dummy(radioproc)
 
 # Output a lossless ogg/flac stream
-output_icecast_stream(format=%ogg(%flac), description="Studio to Transmitter (ongecomprimeerde audio)", mount="/zuidwest.stl", source=radio)
+output_icecast_stream(
+  format=%ogg(%flac),
+  description=
+    "Studio to Transmitter (ongecomprimeerde audio)",
+  mount="/zuidwest.stl",
+  source=radio
+)
 
 # Output a high bitrate mp3 stream
 output_icecast_stream(
