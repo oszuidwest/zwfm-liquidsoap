@@ -1,7 +1,7 @@
 # Log (should not be changed)
 settings.log.file.path := "/var/log/liquidsoap/<script>.log"
 
-# Audio defaults    
+# Audio defaults
 settings.frame.audio.channels := 2
 settings.frame.audio.samplerate := 48000
 
