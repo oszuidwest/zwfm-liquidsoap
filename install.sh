@@ -36,7 +36,7 @@ if [ "$OS_VERSION" == "bookworm" ]; then
 fi
 
 # Set package URLs
-BASE_URL="https://github.com/savonet/liquidsoap/releases/download/v2.2.3/liquidsoap_2.2.3"
+BASE_URL="https://github.com/savonet/liquidsoap/releases/download/v2.2.4/liquidsoap_2.2.4"
 PACKAGE_URL="${BASE_URL}-${OS_ID}-${OS_VERSION}-1_${OS_ARCH}.deb"
 
 # User input for script execution
