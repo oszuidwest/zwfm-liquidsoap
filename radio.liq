@@ -52,7 +52,7 @@ def output_icecast_stream(~format, ~description, ~mount, ~source) =
   )
 end
 
-# StereoTool implementation (There's no working MicroMPX in libStereoTool ARM64 yet!)
+# StereoTool implementation
 radioproc =
   stereotool(
     library_file="/opt/stereotool/st_plugin.so",
