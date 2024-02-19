@@ -37,7 +37,7 @@ fi
 
 # Set package URLs
 BASE_URL="https://github.com/savonet/liquidsoap/releases/download/v2.2.4/liquidsoap_2.2.4"
-PACKAGE_URL="${BASE_URL}-${OS_ID}-${OS_VERSION}-1_${OS_ARCH}.deb"
+PACKAGE_URL="${BASE_URL}-${OS_ID}-${OS_VERSION}-2_${OS_ARCH}.deb"
 
 # User input for script execution
 ask_user "DO_UPDATES" "y" "Do you want to perform all OS updates? (y/n)" "y/n"
@@ -91,7 +91,7 @@ wget https://raw.githubusercontent.com/oszuidwest/liquidsoap-ubuntu/main/radio.l
 
 # Comment out the StereoTool implementation if not enabled
 if [ "$USE_ST" == "y" ]; then
-  sed -i '/# StereoTool implementation/,/output.dummy(radioproc)/ s/^/#/' "/etc/liquidsoap/radio.liq"
+  sed -i '/# StereoTool implementation/,/output.dummy(radioproc)/ s/^#//' "/etc/liquidsoap/radio.liq"
 fi
 
 # Install and set up service
