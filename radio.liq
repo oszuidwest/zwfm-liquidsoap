@@ -1,7 +1,11 @@
 # Log (should not be changed)
 settings.log.file.path := "/var/log/liquidsoap/<script>.log"
 
-# General configuration (do change this)
+# Audio defaults
+settings.frame.audio.channels := 2
+settings.frame.audio.samplerate := 48000
+
+# Streaming configuration (do change this)
 icecastserver = "icecast.example.org"
 icecastport = 8000
 icecastpassword = "hackme"
@@ -52,7 +56,7 @@ def output_icecast_stream(~format, ~description, ~mount, ~source) =
   )
 end
 
-# StereoTool implementation (There's no working MicroMPX in libStereoTool ARM64 yet!)
+# StereoTool implementation
 radioproc =
   stereotool(
     library_file="/opt/stereotool/st_plugin.so",
