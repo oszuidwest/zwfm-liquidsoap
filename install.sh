@@ -31,8 +31,8 @@ fi
 
 # OS-specific configurations
 if [ "$OS_VERSION" == "bookworm" ]; then
-  cp /etc/apt/sources.list "/etc/apt/sources.list.backup.$(date +%F)"
-  sed -i '/^deb\|^deb-src/ { / non-free \| non-free$/!s/$/ non-free/ }' /etc/apt/sources.list
+  install_packages software-properties-common
+  apt-add-repository -y non-free
 fi
 
 # Set package URLs
