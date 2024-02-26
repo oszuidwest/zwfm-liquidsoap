@@ -31,7 +31,7 @@ fi
 
 # OS-specific configurations
 if [ "$OS_VERSION" == "bookworm" ]; then
-  install_packages software-properties-common
+  install_packages silent software-properties-common
   apt-add-repository -y non-free
 fi
 
