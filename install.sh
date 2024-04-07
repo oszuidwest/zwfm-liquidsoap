@@ -65,7 +65,7 @@ done
 if [ "$USE_ST" == "y" ]; then
   install_packages silent unzip
   mkdir -p /opt/stereotool
-  wget https://download.thimeo.com/Stereo_Tool_Generic_plugin.zip -O /tmp/st.zip
+  wget https://download.thimeo.com/Stereo_Tool_Generic_plugin_1021.zip -O /tmp/st.zip
   unzip -o /tmp/st.zip -d /tmp/
   EXTRACTED_DIR=$(find /tmp/* -maxdepth 0 -type d -print0 | xargs -0 ls -td | head -n 1)
   
