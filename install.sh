@@ -71,10 +71,10 @@ if [ "$USE_ST" == "y" ]; then
   
   if [ "$OS_ARCH" == "amd64" ]; then
     cp "${EXTRACTED_DIR}/lib/Linux/IntelAMD/64/libStereoToolX11_intel64.so" /opt/stereotool/st_plugin.so
-    wget https://download.thimeo.com/stereo_tool_cmd_64_1021 -O /opt/stereotool/st_standalone
+    wget https://download.thimeo.com/stereo_tool_cmd_64_1030 -O /opt/stereotool/st_standalone
   elif [ "$OS_ARCH" == "arm64" ]; then
     cp "${EXTRACTED_DIR}/lib/Linux/ARM/64/libStereoTool_arm64.so" /opt/stereotool/st_plugin.so
-    wget https://download.thimeo.com/stereo_tool_pi2_64_1021 -O /opt/stereotool/st_standalone
+    wget https://download.thimeo.com/stereo_tool_pi2_64_1030 -O /opt/stereotool/st_standalone
   fi
   chmod +x /opt/stereotool/st_standalone
 fi
