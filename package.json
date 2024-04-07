@@ -1,6 +1,0 @@
-{
-  "devDependencies": {
-    "liquidsoap-prettier": "^1.5.0",
-    "prettier": "^3.2.5"
-  }
-}
