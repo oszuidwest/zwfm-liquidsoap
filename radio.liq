@@ -27,17 +27,31 @@ studio =
     passphrase=upstreampassword
   )
 
-# Insert silence when there is no data from input
-studio = mksafe(studio)
+# Input for the backup studio stream
+studiobackup =
+  input.srt(
+    id="studiobackup",
+    port=8888,
+    mode="listener",
+    max=2.0,
+    streamid="studiobackup",
+    enforced_encryption=true,
+    passphrase=upstreampassword
+  )
 
 # Wrap it in a buffer to prevent latency from connection/disconnection to impact downstream operators/output
 studio = buffer(fallible=true, studio)
+studiobackup = buffer(fallible=true, studiobackup)
 
 # Combine fallback and live input
 radio =
   fallback(
     track_sensitive=false,
-    [blank.strip(max_blank=15., min_noise=30., studio), noodband]
+    [
+      blank.strip(max_blank=10., min_noise=30., studio),
+      blank.strip(max_blank=10., min_noise=30., studiobackup),
+      noodband
+    ]
   )
 
 # Function to output an icecast stream with common parameters
@@ -104,7 +118,3 @@ output_icecast_stream(
   mount="/zuidwest.aac",
   source=radio
 )
-
-
-# DAB+ encoder
-# output.external(%wav(channels=2,samplerate=48000), "odr-audioenc -i - -b 96 --edi tcp://localhost:7000", radio)
