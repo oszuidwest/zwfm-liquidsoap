@@ -16,26 +16,28 @@ upstreampassword = "foxtrot-uniform-charlie-kilo"
 noodband = source.drop.metadata(single(fallbackfile))
 
 # Input for primary studio stream
-studio = input.srt(
-  id="studio",
-  port=8888,
-  mode="listener",
-  max=2.0,
-  streamid="studio",
-  enforced_encryption=true,
-  passphrase=upstreampassword
-)
+studio =
+  input.srt(
+    id="studio",
+    port=8888,
+    mode="listener",
+    max=2.0,
+    streamid="studio",
+    enforced_encryption=true,
+    passphrase=upstreampassword
+  )
 
 # Input for backup studio stream
-studio = input.srt(
-  id="studio",
-  port=9999,
-  mode="listener",
-  max=2.0,
-  streamid="studio",
-  enforced_encryption=true,
-  passphrase=upstreampassword
-)
+studio =
+  input.srt(
+    id="studio",
+    port=9999,
+    mode="listener",
+    max=2.0,
+    streamid="studio",
+    enforced_encryption=true,
+    passphrase=upstreampassword
+  )
 
 # Consider inputs unavailable when it's silent
 studio = blank.strip(max_blank=10., min_noise=30., studio)
@@ -46,15 +48,7 @@ studio = buffer(fallible=true, studio)
 studiobackup = buffer(fallible=true, studiobackup)
 
 # Combine fallback and live input
-radio =
-  fallback(
-    track_sensitive=false,
-    [
-      studio,
-      studiobackup,
-      noodband
-    ]
-  )
+radio = fallback(track_sensitive=false, [studio, studiobackup, noodband])
 
 # Function to output an icecast stream with common parameters
 def output_icecast_stream(~format, ~description, ~mount, ~source) =
