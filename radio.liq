@@ -28,7 +28,7 @@ studio =
   )
 
 # Input for backup studio stream
-studio =
+studiobackup =
   input.srt(
     id="studio",
     port=9999,
