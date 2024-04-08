@@ -15,7 +15,7 @@ upstreampassword = "foxtrot-uniform-charlie-kilo"
 # Fallback if there is no audio coming from the studio
 noodband = source.drop.metadata(single(fallbackfile))
 
-# Input for the studio stream
+# Input for primary studio stream
 studio =
   input.srt(
     id="studio",
@@ -27,32 +27,28 @@ studio =
     passphrase=upstreampassword
   )
 
-# Input for the backup studio stream
+# Input for backup studio stream
 studiobackup =
   input.srt(
-    id="studiobackup",
-    port=8888,
+    id="studio",
+    port=9999,
     mode="listener",
     max=2.0,
-    streamid="studiobackup",
+    streamid="studio",
     enforced_encryption=true,
     passphrase=upstreampassword
   )
+
+# Consider inputs unavailable when it's silent
+studio = blank.strip(max_blank=10., min_noise=30., studio)
+studiobackup = blank.strip(max_blank=10., min_noise=30., studiobackup)
 
 # Wrap it in a buffer to prevent latency from connection/disconnection to impact downstream operators/output
 studio = buffer(fallible=true, studio)
 studiobackup = buffer(fallible=true, studiobackup)
 
 # Combine fallback and live input
-radio =
-  fallback(
-    track_sensitive=false,
-    [
-      blank.strip(max_blank=10., min_noise=30., studio),
-      blank.strip(max_blank=10., min_noise=30., studiobackup),
-      noodband
-    ]
-  )
+radio = fallback(track_sensitive=false, [studio, studiobackup, noodband])
 
 # Function to output an icecast stream with common parameters
 def output_icecast_stream(~format, ~description, ~mount, ~source) =
