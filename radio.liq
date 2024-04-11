@@ -81,7 +81,7 @@ output.dummy(radioproc)
 
 # Output a high bitrate mp3 stream
 output_icecast_stream(
-  format=%mp3(bitrate = 192, samplerate = 48000,internal_quality=0),
+  format=%mp3(bitrate = 192, samplerate = 48000, internal_quality = 0),
   description=
     "Hoge Kwaliteit Stream (192kbit MP3)",
   mount="/zuidwest.mp3",
