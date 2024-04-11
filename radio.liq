@@ -30,16 +30,16 @@ studio =
 # Input for backup studio stream
 studiobackup =
   input.srt(
-    id="studio",
+    id="studiobackup",
     port=9999,
     mode="listener",
     max=2.0,
-    streamid="studio",
+    streamid="studiobackup",
     enforced_encryption=true,
     passphrase=upstreampassword
   )
 
-# Consider inputs unavailable when it's silent
+# Consider inputs unavailable when silent
 studio = blank.strip(max_blank=10., min_noise=30., studio)
 studiobackup = blank.strip(max_blank=10., min_noise=30., studiobackup)
 
@@ -47,7 +47,7 @@ studiobackup = blank.strip(max_blank=10., min_noise=30., studiobackup)
 studio = buffer(fallible=true, studio)
 studiobackup = buffer(fallible=true, studiobackup)
 
-# Combine fallback and live input
+# Combine live inputs and fallback
 radio = fallback(track_sensitive=false, [studio, studiobackup, noodband])
 
 # Function to output an icecast stream with common parameters
@@ -81,7 +81,7 @@ output.dummy(radioproc)
 
 # Output a high bitrate mp3 stream
 output_icecast_stream(
-  format=%mp3(bitrate = 192, samplerate = 48000),
+  format=%mp3(bitrate = 192, samplerate = 48000, internal_quality = 0),
   description=
     "Hoge Kwaliteit Stream (192kbit MP3)",
   mount="/zuidwest.mp3",
@@ -103,5 +103,23 @@ output_icecast_stream(
   description=
     "Mobile Stream (96kbit AAC)",
   mount="/zuidwest.aac",
+  source=radio
+)
+
+# Output a high bitrate AAC stream
+output_icecast_stream(
+  format=
+    %fdkaac(
+      channels = 2,
+      samplerate = 48000,
+      bitrate = 576,
+      afterburner = true,
+      aot = 'mpeg4_aac_lc',
+      transmux = 'adts',
+      sbr_mode = true
+    ),
+  description=
+    "Transport Stream (576kbit AAC)",
+  mount="/zuidwest.stl",
   source=radio
 )
