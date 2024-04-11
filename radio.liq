@@ -34,7 +34,7 @@ studiobackup =
     port=9999,
     mode="listener",
     max=2.0,
-    streamid="studiobackup"
+    streamid="studiobackup",
     enforced_encryption=true,
     passphrase=upstreampassword
   )
