@@ -7,8 +7,8 @@ FUNCTIONS_LIB_URL="https://raw.githubusercontent.com/oszuidwest/bash-functions/m
 # Set-up Liquidsoap
 LIQUIDSOAP_VERSION="2.2.4"
 LIQUIDSOAP_PACKAGE_BASE_URL="https://github.com/savonet/liquidsoap/releases/download/v$LIQUIDSOAP_VERSION"
-LIQUIDSOAP_CONFIG_URL="https://raw.githubusercontent.com/oszuidwest/liquidsoap-ubuntu/main/radio.liq"
-LIQUIDSOAP_SERVICE_URL="https://raw.githubusercontent.com/oszuidwest/liquidsoap-ubuntu/main/liquidsoap.service"
+LIQUIDSOAP_CONFIG_URL="https://raw.githubusercontent.com/oszuidwest/zwfm-liquidsoap/main/radio.liq"
+LIQUIDSOAP_SERVICE_URL="https://raw.githubusercontent.com/oszuidwest/zwfm-liquidsoap/main/liquidsoap.service"
 AUDIO_FALLBACK_URL="https://upload.wikimedia.org/wikipedia/commons/6/66/Aaron_Dunn_-_Sonata_No_1_-_Movement_2.ogg"
 
 # Set-up StereoTool
