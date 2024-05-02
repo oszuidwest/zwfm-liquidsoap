@@ -1,24 +1,27 @@
 # zwfm-liquidsoap
-This repository contains an audio streaming solution specifically designed for [ZuidWest FM](https://www.zuidwestfm.nl/) in the Netherlands. Utilizing [Liquidsoap](https://www.liquidsoap.info), it provides internet streaming with a never silent fallback and is able to push MPX to broadcast transmitters using MicroMPX.
+This repository contains an audio streaming solution tailored for [ZuidWest FM](https://www.zuidwestfm.nl/) in the Netherlands. Leveraging [Liquidsoap](https://www.liquidsoap.info), it facilitates internet streaming with a reliable fallback mechanism and is capable of pushing MPX to broadcast transmitters via MicroMPX.
 
 ![liq flow public](https://github.com/oszuidwest/zwfm-liquidsoap/assets/6742496/8cbd66e9-7ab2-4f00-b723-fb7f91060769)
 
-## Components:
-1. **Liquidsoap**: Serves as the core audio router and transcoder.
-2. **Icecast**: A public server for distributing the audio stream.
-3. **StereoTool**: An optional component for integrating [MicroMPX](https://www.thimeo.com/micrompx/) with transmitters.
+## Components
+1. **Liquidsoap**: Acts as the primary audio router and transcoder.
+2. **Icecast**: Functions as a public server for distributing the audio stream.
+3. **StereoTool**: Used as [MicroMPX](https://www.thimeo.com/micrompx/) encoder for feeding FM transmitters.
 
-## Scripts:
-- **icecast2.sh**: Installs Icecast 2 and offers SSL support through Let's Encrypt/Certbot. Run it with `/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/oszuidwest/zwfm-liquidsoap/main/icecast2.sh)"`
-- **install.sh**: Facilitates the installation of Liquidsoap 2.2.4 with fdkaac support and configures it as an auto-start service. Run it with `/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/oszuidwest/zwfm-liquidsoap/main/install.sh)"`
+## System design
+The system design involves delivering the broadcast through two pathways. Liquidsoap uses the main input (SRT 1) as much as possible. If it becomes unavailable or silent, the system switches to SRT 2. Should SRT 2 also become unavailable or silent, it then switches to an emergency track. Ideally, the broadcast is delivered synchronously over the two inputs via separate pathways.
 
-## Configurations:
-- **radio.liq**: Production ready Liquidsoap configuration, incorporating StereoTool as MicroMPX encoder (disabled by default).
+## Scripts
+- **icecast2.sh**: This script installs Icecast 2 and provides SSL support via Let's Encrypt/Certbot. Execute it using `/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/oszuidwest/zwfm-liquidsoap/main/icecast2.sh)"`
+- **install.sh**: Installs Liquidsoap 2.2.5 with fdkaac support and sets it up as an auto-start service. Execute it using `/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/oszuidwest/zwfm-liquidsoap/main/install.sh)"`
+
+## Configurations
+- **radio.liq**: A production-ready Liquidsoap configuration that incorporates StereoTool as a MicroMPX encoder.
 - **liquidsoap.service**: A systemd service file for managing Liquidsoap.
 
-## Compatibility:
-1. Compatible with Ubuntu 22.04 or Debian 12.
-2. Supports x86_64 or ARM64 system architectures (e.g., Ampere Altra, Raspberry Pi). Note: StereoTool MicroMPX currenly isn't well supported on ARM.
+## Compatibility
+1. Tested with Ubuntu 22.04 or Debian 12.
+2. Supports x86_64 or ARM64 system architectures (e.g., Ampere Altra, Raspberry Pi). Note: StereoTool MicroMPX is currently not well-supported on ARM architectures.
 3. Requires an internet connection for script dependencies.
 
 # MIT License
