@@ -5,7 +5,7 @@ FUNCTIONS_LIB_PATH="/tmp/functions.sh"
 FUNCTIONS_LIB_URL="https://raw.githubusercontent.com/oszuidwest/bash-functions/main/common-functions.sh"
 
 # Set-up Liquidsoap
-LIQUIDSOAP_VERSION="2.2.4"
+LIQUIDSOAP_VERSION="2.2.5"
 LIQUIDSOAP_PACKAGE_BASE_URL="https://github.com/savonet/liquidsoap/releases/download/v$LIQUIDSOAP_VERSION"
 LIQUIDSOAP_CONFIG_URL="https://raw.githubusercontent.com/oszuidwest/zwfm-liquidsoap/main/radio.liq"
 LIQUIDSOAP_SERVICE_URL="https://raw.githubusercontent.com/oszuidwest/zwfm-liquidsoap/main/liquidsoap.service"
@@ -80,7 +80,7 @@ fi
 # Liquidsoap installation
 install_packages silent fdkaac libfdkaac-ocaml libfdkaac-ocaml-dynlink
 echo -e "${BLUE}►► Installing Liquidsoap...${NC}"
-package_url="${LIQUIDSOAP_PACKAGE_BASE_URL}/liquidsoap_${LIQUIDSOAP_VERSION}-${os_id}-${os_version}-2_${os_arch}.deb"
+package_url="${LIQUIDSOAP_PACKAGE_BASE_URL}/liquidsoap_${LIQUIDSOAP_VERSION}-${os_id}-${os_version}-1_${os_arch}.deb"
 liquidsoap_package="/tmp/liquidsoap_${LIQUIDSOAP_VERSION}.deb"
 curl -sLo  "$liquidsoap_package" "$package_url"
 apt -qq -y install "$liquidsoap_package" --fix-broken
