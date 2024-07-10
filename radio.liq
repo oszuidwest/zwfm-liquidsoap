@@ -13,7 +13,7 @@ fallbackfile = "/var/audio/fallback.ogg"
 upstreampassword = "foxtrot-uniform-charlie-kilo"
 
 # Fallback if there is no audio coming from the studio
-noodband = source.drop.metadata(single(fallbackfile))
+noodband = source.drop.metadata(id="noodband", single(fallbackfile))
 
 # Input for primary studio stream
 studio =
@@ -40,15 +40,15 @@ studiobackup =
   )
 
 # Consider inputs unavailable when silent
-studio = blank.strip(max_blank=10., min_noise=30., studio)
-studiobackup = blank.strip(max_blank=10., min_noise=30., studiobackup)
+studio = blank.strip(id="stripped_studio", max_blank=10., min_noise=30., studio)
+studiobackup = blank.strip(id="stripped_studiobackup", max_blank=10., min_noise=30., studiobackup)
 
 # Wrap it in a buffer to prevent latency from connection/disconnection to impact downstream operators/output
-studio = buffer(fallible=true, studio)
-studiobackup = buffer(fallible=true, studiobackup)
+studio = buffer(id="buffered_studio", fallible=true, studio)
+studiobackup = buffer(id="buffered_studiobackup", fallible=true, studiobackup)
 
 # Combine live inputs and fallback
-radio = fallback(track_sensitive=false, [studio, studiobackup, noodband])
+radio = fallback(id="radio_prod", track_sensitive=false, [studio, studiobackup, noodband])
 
 # Function to output an icecast stream with common parameters
 def output_icecast_stream(~format, ~description, ~mount, ~source) =
