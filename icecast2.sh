@@ -29,7 +29,7 @@ EOF
 
 # Configure environment
 set_colors
-are_we_root
+check_user_privileges privileged
 is_this_linux
 is_this_os_64bit
 set_timezone Europe/Amsterdam
@@ -61,7 +61,7 @@ cat <<EOF > "$ICECAST_XML"
   <limits>
     <clients>1000</clients>
     <sources>10</sources>
-    <burst-size>65536</burst-size>
+    <burst-size>265536</burst-size>
   </limits>
 
   <authentication>
