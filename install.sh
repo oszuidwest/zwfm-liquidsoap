@@ -33,7 +33,7 @@ source "$FUNCTIONS_LIB_PATH"
 
 # Basic environment configuration
 set_colors
-are_we_root
+check_user_privileges privileged
 is_this_linux
 is_this_os_64bit
 set_timezone "$TIMEZONE"
