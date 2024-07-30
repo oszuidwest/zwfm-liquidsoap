@@ -40,15 +40,20 @@ studio_b =
   )
 
 # Consider inputs unavailable when silent
-studio_a = blank.strip(id="stripped_studio_a", max_blank=10., min_noise=30., studio_a)
-studio_b = blank.strip(id="stripped_studio_b", max_blank=10., min_noise=30., studio_b)
+studio_a =
+  blank.strip(id="stripped_studio_a", max_blank=10., min_noise=30., studio_a)
+studio_b =
+  blank.strip(id="stripped_studio_b", max_blank=10., min_noise=30., studio_b)
 
 # Wrap it in a buffer to prevent latency from connection/disconnection to impact downstream operators/output
 studio_a = buffer(id="buffered_studio", fallible=true, studio_a)
 studio_b = buffer(id="buffered_studiobackup", fallible=true, studio_b)
 
 # Combine live inputs and fallback
-radio = fallback(id="radio_prod", track_sensitive=false, [studio_a, studio_b, noodband])
+radio =
+  fallback(
+    id="radio_prod", track_sensitive=false, [studio_a, studio_b, noodband]
+  )
 
 # Function to output an icecast stream with common parameters
 def output_icecast_stream(~format, ~description, ~mount, ~source) =
