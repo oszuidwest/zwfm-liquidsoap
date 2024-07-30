@@ -55,6 +55,17 @@ radio =
     id="radio_prod", track_sensitive=false, [studio_a, studio_b, noodband]
   )
 
+##############################################################################
+#                             WARNING                                        #
+#                       OUTPUTTING TO MULTIPLE                               #
+#                          ICECAST SERVERS                                   #
+#                                                                            #
+# When outputting to multiple distinct Icecast servers, be aware that the    #
+# instability of one server will affect all other streams. To ensure         #
+# stability, each Icecast server output requires its own clock.              #
+#                                                                            #
+##############################################################################
+
 # Function to output an icecast stream with common parameters
 def output_icecast_stream(~format, ~description, ~mount, ~source) =
   output.icecast(
