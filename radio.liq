@@ -66,6 +66,10 @@ radio =
 #                                                                            #
 ##############################################################################
 
+# Create a clock for output to Icecast
+stream_to_icecast = mksafe(buffer(radio))
+clock.assign_new(id="icecast_clock", [stream_to_icecast])
+
 # Function to output an icecast stream with common parameters
 def output_icecast_stream(~format, ~description, ~mount, ~source) =
   output.icecast(
@@ -101,7 +105,7 @@ output_icecast_stream(
   description=
     "Hoge Kwaliteit Stream (192kbit MP3)",
   mount="/zuidwest.mp3",
-  source=radio
+  source=stream_to_icecast
 )
 
 # Output a low bitrate AAC stream
@@ -119,7 +123,7 @@ output_icecast_stream(
   description=
     "Mobile Stream (96kbit AAC)",
   mount="/zuidwest.aac",
-  source=radio
+  source=stream_to_icecast
 )
 
 # Output a high bitrate AAC stream
@@ -137,5 +141,5 @@ output_icecast_stream(
   description=
     "Transport Stream (576kbit AAC)",
   mount="/zuidwest.stl",
-  source=radio
+  source=stream_to_icecast
 )
