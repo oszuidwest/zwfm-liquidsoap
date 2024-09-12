@@ -12,7 +12,7 @@ LIQUIDSOAP_SERVICE_URL="https://raw.githubusercontent.com/oszuidwest/zwfm-liquid
 AUDIO_FALLBACK_URL="https://upload.wikimedia.org/wikipedia/commons/6/66/Aaron_Dunn_-_Sonata_No_1_-_Movement_2.ogg"
 
 # Set-up StereoTool
-STEREOTOOL_VERSION="1021"
+STEREOTOOL_VERSION="1040"
 STEREOTOOL_BASE_URL="https://download.thimeo.com"
 
 # General options
