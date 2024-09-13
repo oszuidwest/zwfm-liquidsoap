@@ -20,16 +20,6 @@ SUPPORTED_OS=("bookworm" "jammy")
 TIMEZONE="Europe/Amsterdam"
 DIRECTORIES=("/etc/liquidsoap" "/var/audio")
 
-# Function to backup a file if it exists
-backup_file() {
-  local file="$1"
-  if [ -f "$file" ]; then
-    local backup_path="${file}.bak.$(date +%Y%m%d%H%M%S)"
-    cp "$file" "$backup_path"
-    echo -e "${YELLOW}Backup of '$file' created at '$backup_path'.${NC}"
-  fi
-}
-
 # Remove old functions library and download the latest version
 rm -f "$FUNCTIONS_LIB_PATH"
 if ! curl -sLo "$FUNCTIONS_LIB_PATH" "$FUNCTIONS_LIB_URL"; then
