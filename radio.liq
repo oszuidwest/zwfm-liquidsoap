@@ -12,49 +12,63 @@ icecastpassword = "hackme"
 fallbackfile = "/var/audio/fallback.ogg"
 upstreampassword = "foxtrot-uniform-charlie-kilo"
 
-# Fallback if there is no audio coming from the studio
+# Backup file to be played when no audio is coming from the studio
 noodband = source.drop.metadata(id="noodband", single(fallbackfile))
 
 # Input for primary studio stream
-studio =
+studio_a =
   input.srt(
-    id="studio",
+    id="studio_a",
     port=8888,
     mode="listener",
     max=10.0,
-    streamid="studio",
+    streamid="studio_a",
     enforced_encryption=true,
     passphrase=upstreampassword
   )
 
 # Input for backup studio stream
-studiobackup =
+studio_b =
   input.srt(
-    id="studiobackup",
+    id="studio_b",
     port=9999,
     mode="listener",
     max=10.0,
-    streamid="studiobackup",
+    streamid="studio_b",
     enforced_encryption=true,
     passphrase=upstreampassword
   )
 
 # Consider inputs unavailable when silent
-studio = blank.strip(id="stripped_studio", max_blank=10., min_noise=30., studio)
-studiobackup =
-  blank.strip(
-    id="stripped_studiobackup", max_blank=10., min_noise=30., studiobackup
-  )
+studio_a =
+  blank.strip(id="stripped_studio_a", max_blank=10., min_noise=30., studio_a)
+studio_b =
+  blank.strip(id="stripped_studio_b", max_blank=10., min_noise=30., studio_b)
 
 # Wrap it in a buffer to prevent latency from connection/disconnection to impact downstream operators/output
-studio = buffer(id="buffered_studio", fallible=true, studio)
-studiobackup = buffer(id="buffered_studiobackup", fallible=true, studiobackup)
+studio_a = buffer(id="buffered_studio_a", fallible=true, studio_a)
+studio_b = buffer(id="buffered_studio_b", fallible=true, studio_b)
 
 # Combine live inputs and fallback
 radio =
   fallback(
-    id="radio_prod", track_sensitive=false, [studio, studiobackup, noodband]
+    id="radio_prod", track_sensitive=false, [studio_a, studio_b, noodband]
   )
+
+##############################################################################
+#                             WARNING                                        #
+#                       OUTPUTTING TO MULTIPLE                               #
+#                          ICECAST SERVERS                                   #
+#                                                                            #
+# When outputting to multiple distinct Icecast servers, be aware that the    #
+# instability of one server will affect all other streams. To ensure         #
+# stability, each Icecast server output requires its own clock.              #
+#                                                                            #
+##############################################################################
+
+# Create a clock for output to Icecast
+audio_to_icecast = mksafe(buffer(radio))
+clock.assign_new(id="icecast_clock", [audio_to_icecast])
 
 # Function to output an icecast stream with common parameters
 def output_icecast_stream(~format, ~description, ~mount, ~source) =
@@ -91,7 +105,7 @@ output_icecast_stream(
   description=
     "Hoge Kwaliteit Stream (192kbit MP3)",
   mount="/zuidwest.mp3",
-  source=radio
+  source=audio_to_icecast
 )
 
 # Output a low bitrate AAC stream
@@ -109,7 +123,7 @@ output_icecast_stream(
   description=
     "Mobile Stream (96kbit AAC)",
   mount="/zuidwest.aac",
-  source=radio
+  source=audio_to_icecast
 )
 
 # Output a high bitrate AAC stream
@@ -127,5 +141,5 @@ output_icecast_stream(
   description=
     "Transport Stream (576kbit AAC)",
   mount="/zuidwest.stl",
-  source=radio
+  source=audio_to_icecast
 )
