@@ -117,6 +117,7 @@ if [ "$USE_ST" == "y" ]; then
   # Generate and patch StereoTool config file
   /opt/stereotool/st_standalone -X /etc/liquidsoap/st.ini
   sed -i 's/^\(Whitelist=\).*$/\1\/0/' /etc/liquidsoap/st.ini
+  sed -i 's/^\(Enable web interface=\).*$/\11/' /etc/liquidsoap/st.ini
 else
   # If StereoTool is not used, remove its configuration from the liquidsoap script
   sed -i '/# StereoTool implementation/,/output.dummy(radioproc)/d' /etc/liquidsoap/radio.liq
