@@ -20,9 +20,19 @@ SUPPORTED_OS=("bookworm" "jammy")
 TIMEZONE="Europe/Amsterdam"
 DIRECTORIES=("/etc/liquidsoap" "/var/audio")
 
+# Function to backup a file if it exists
+backup_file() {
+  local file="$1"
+  if [ -f "$file" ]; then
+    local backup_path="${file}.bak.$(date +%Y%m%d%H%M%S)"
+    cp "$file" "$backup_path"
+    echo -e "${YELLOW}Backup of '$file' created at '$backup_path'.${NC}"
+  fi
+}
+
 # Remove old functions library and download the latest version
 rm -f "$FUNCTIONS_LIB_PATH"
-if ! curl -sLo  "$FUNCTIONS_LIB_PATH" "$FUNCTIONS_LIB_URL"; then
+if ! curl -sLo "$FUNCTIONS_LIB_PATH" "$FUNCTIONS_LIB_URL"; then
   echo -e "*** Failed to download functions library. Please check your network connection! ***"
   exit 1
 fi
@@ -82,7 +92,7 @@ install_packages silent fdkaac libfdkaac-ocaml libfdkaac-ocaml-dynlink
 echo -e "${BLUE}►► Installing Liquidsoap...${NC}"
 package_url="${LIQUIDSOAP_PACKAGE_BASE_URL}/liquidsoap_${LIQUIDSOAP_VERSION}-${os_id}-${os_version}-1_${os_arch}.deb"
 liquidsoap_package="/tmp/liquidsoap_${LIQUIDSOAP_VERSION}.deb"
-curl -sLo  "$liquidsoap_package" "$package_url"
+curl -sLo "$liquidsoap_package" "$package_url"
 apt -qq -y install "$liquidsoap_package" --fix-broken
 
 # Directory setup
@@ -91,28 +101,34 @@ for dir in "${DIRECTORIES[@]}"; do
   mkdir -p "$dir" && chown liquidsoap:liquidsoap "$dir" && chmod g+s "$dir"
 done
 
+# Backup existing configuration file before downloading new ones
+backup_file "/etc/liquidsoap/radio.liq"
+
 # Download configuration and sample files
 echo -e "${BLUE}►► Downloading files...${NC}"
-curl -sLo  /var/audio/fallback.ogg "$AUDIO_FALLBACK_URL"
-curl -sLo  /etc/liquidsoap/radio.liq "$LIQUIDSOAP_CONFIG_URL"
+curl -sLo /var/audio/fallback.ogg "$AUDIO_FALLBACK_URL"
+curl -sLo /etc/liquidsoap/radio.liq "$LIQUIDSOAP_CONFIG_URL"
 
 # StereoTool setup
 if [ "$USE_ST" == "y" ]; then
   install_packages silent unzip
   echo -e "${BLUE}►► Installing StereoTool...${NC}"
   mkdir -p /opt/stereotool
-  curl -sLo  /tmp/st.zip "${STEREOTOOL_BASE_URL}/Stereo_Tool_Generic_plugin_${STEREOTOOL_VERSION}.zip"
+  curl -sLo /tmp/st.zip "${STEREOTOOL_BASE_URL}/Stereo_Tool_Generic_plugin_${STEREOTOOL_VERSION}.zip"
   unzip -o /tmp/st.zip -d /tmp/
   extracted_dir=$(find /tmp/* -maxdepth 0 -type d -print0 | xargs -0 ls -td | head -n 1)
   
   if [ "$os_arch" == "amd64" ]; then
     cp "${extracted_dir}/lib/Linux/IntelAMD/64/libStereoToolX11_intel64.so" /opt/stereotool/st_plugin.so
-    curl -sLo  /opt/stereotool/st_standalone "${STEREOTOOL_BASE_URL}/stereo_tool_cmd_64_${STEREOTOOL_VERSION}"
+    curl -sLo /opt/stereotool/st_standalone "${STEREOTOOL_BASE_URL}/stereo_tool_cmd_64_${STEREOTOOL_VERSION}"
   elif [ "$os_arch" == "arm64" ]; then
     cp "${extracted_dir}/lib/Linux/ARM/64/libStereoTool_arm64.so" /opt/stereotool/st_plugin.so
-    curl -sLo  /opt/stereotool/st_standalone "${STEREOTOOL_BASE_URL}/stereo_tool_pi2_64_${STEREOTOOL_VERSION}"
+    curl -sLo /opt/stereotool/st_standalone "${STEREOTOOL_BASE_URL}/stereo_tool_pi2_64_${STEREOTOOL_VERSION}"
   fi
   chmod +x /opt/stereotool/st_standalone
+
+  # Backup existing st.ini before modifying
+  backup_file "/etc/liquidsoap/st.ini"
 
   # Generate and patch StereoTool config file
   /opt/stereotool/st_standalone -X /etc/liquidsoap/st.ini
@@ -126,8 +142,10 @@ fi
 # Liquidsoap service installation
 echo -e "${BLUE}►► Setting up Liquidsoap service${NC}"
 rm -f /etc/systemd/system/liquidsoap.service
-curl -sLo  /etc/systemd/system/liquidsoap.service "$LIQUIDSOAP_SERVICE_URL"
+curl -sLo /etc/systemd/system/liquidsoap.service "$LIQUIDSOAP_SERVICE_URL"
 systemctl daemon-reload
 if ! systemctl is-enabled liquidsoap.service; then
   systemctl enable liquidsoap.service
 fi
+
+echo -e "${GREEN}Setup completed successfully!${NC}"
