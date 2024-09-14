@@ -51,6 +51,29 @@ studio_b =
     on_disconnect=fun () -> log_event("studio_b", "disconnected")
   )
 
+# Log silence detection and resumption
+studio_a = 
+  blank.detect(
+    id="detect_studio_a",
+    max_blank=10.0,
+    min_noise=30.0,
+    threshold=-40.0,
+    fun () -> log_event("studio_a", "silence detected"), # Handler when silence is detected
+    on_noise=fun () -> log_event("studio_a", "audio resumed"), # Handler when noise is detected
+    studio_a
+  )
+
+studio_b = 
+  blank.detect(
+    id="detect_studio_b",
+    max_blank=10.0,
+    min_noise=30.0,
+    threshold=-40.0,
+    fun () -> log_event("studio_b", "silence detected"), # Handler when silence is detected
+    on_noise=fun () -> log_event("studio_b", "audio resumed"), # Handler when noise is detected
+    studio_b
+  )
+
 # Consider inputs unavailable when silent
 studio_a =
   blank.strip(id="stripped_studio_a", max_blank=10., min_noise=30., studio_a)
