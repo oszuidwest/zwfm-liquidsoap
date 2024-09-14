@@ -12,6 +12,11 @@ icecastpassword = "hackme"
 fallbackfile = "/var/audio/fallback.ogg"
 upstreampassword = "foxtrot-uniform-charlie-kilo"
 
+# Logging function for various events
+def log_event(input_name, event) =
+  log("#{input_name} #{event}", level=3)
+end
+
 # Backup file to be played when no audio is coming from the studio
 noodband = source.drop.metadata(id="noodband", single(fallbackfile))
 
@@ -24,7 +29,9 @@ studio_a =
     max=10.0,
     streamid="studio_a",
     enforced_encryption=true,
-    passphrase=upstreampassword
+    passphrase=upstreampassword,
+    on_connect=fun () -> log_event("studio_a", "connected"),
+    on_disconnect=fun () -> log_event("studio_a", "disconnected")
   )
 
 # Input for backup studio stream
@@ -36,7 +43,9 @@ studio_b =
     max=10.0,
     streamid="studio_b",
     enforced_encryption=true,
-    passphrase=upstreampassword
+    passphrase=upstreampassword,
+    on_connect=fun () -> log_event("studio_b", "connected"),
+    on_disconnect=fun () -> log_event("studio_b", "disconnected")
   )
 
 # Consider inputs unavailable when silent
