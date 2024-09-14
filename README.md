@@ -14,6 +14,7 @@ The system design involves delivering the broadcast through two pathways. Liquid
 ## Scripts
 - **icecast2.sh**: This script installs Icecast 2 and provides SSL support via Let's Encrypt/Certbot. Execute it using `/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/oszuidwest/zwfm-liquidsoap/main/icecast2.sh)"`
 - **install.sh**: Installs Liquidsoap 2.2.5 with fdkaac support and sets it up as an auto-start service. Execute it using `/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/oszuidwest/zwfm-liquidsoap/main/install.sh)"`
+- **monitor.sh**: Experimental log parser/dashboard for Liquidsoap status. Not installed by default. Work in progress.
 
 ## Configurations
 - **radio.liq**: A production-ready Liquidsoap configuration that incorporates StereoTool as a MicroMPX encoder.
