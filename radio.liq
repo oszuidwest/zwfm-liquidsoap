@@ -57,15 +57,12 @@ studio_a =
     id="detect_studio_a",
     max_blank=10.0,
     min_noise=30.0,
-    threshold=-40.0,
-    # Handler when silence is detected
     fun () ->
       log_event(
         "studio_a",
         "silence detected"
       ),
     on_noise=
-      # Handler when noise is detected
       fun () ->
         log_event(
           "studio_a",
@@ -79,15 +76,12 @@ studio_b =
     id="detect_studio_b",
     max_blank=10.0,
     min_noise=30.0,
-    threshold=-40.0,
-    # Handler when silence is detected
     fun () ->
       log_event(
         "studio_b",
         "silence detected"
       ),
     on_noise=
-      # Handler when noise is detected
       fun () ->
         log_event(
           "studio_b",
