@@ -14,7 +14,10 @@ upstreampassword = "foxtrot-uniform-charlie-kilo"
 
 # Logging function for various events
 def log_event(input_name, event) =
-  log("#{input_name} #{event}", level=3)
+  log(
+    "#{input_name} #{event}",
+    level=3
+  )
 end
 
 # Backup file to be played when no audio is coming from the studio
