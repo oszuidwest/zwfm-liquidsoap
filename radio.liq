@@ -52,25 +52,47 @@ studio_b =
   )
 
 # Log silence detection and resumption
-studio_a = 
+studio_a =
   blank.detect(
     id="detect_studio_a",
     max_blank=10.0,
     min_noise=30.0,
     threshold=-40.0,
-    fun () -> log_event("studio_a", "silence detected"), # Handler when silence is detected
-    on_noise=fun () -> log_event("studio_a", "audio resumed"), # Handler when noise is detected
+    # Handler when silence is detected
+    fun () ->
+      log_event(
+        "studio_a",
+        "silence detected"
+      ),
+    on_noise=
+      # Handler when noise is detected
+      fun () ->
+        log_event(
+          "studio_a",
+          "audio resumed"
+        ),
     studio_a
   )
 
-studio_b = 
+studio_b =
   blank.detect(
     id="detect_studio_b",
     max_blank=10.0,
     min_noise=30.0,
     threshold=-40.0,
-    fun () -> log_event("studio_b", "silence detected"), # Handler when silence is detected
-    on_noise=fun () -> log_event("studio_b", "audio resumed"), # Handler when noise is detected
+    # Handler when silence is detected
+    fun () ->
+      log_event(
+        "studio_b",
+        "silence detected"
+      ),
+    on_noise=
+      # Handler when noise is detected
+      fun () ->
+        log_event(
+          "studio_b",
+          "audio resumed"
+        ),
     studio_b
   )
 
