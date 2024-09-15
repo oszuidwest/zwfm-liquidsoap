@@ -149,7 +149,7 @@ if [ "$USE_ST" == "y" ]; then
   fi
   chmod +x /opt/stereotool/st_standalone
 
-  # Backup and generate StereoTool settings
+  # Backup, generate and patch StereoTool settings file
   backup_file "/etc/liquidsoap/st.ini"
   /opt/stereotool/st_standalone -X /etc/liquidsoap/st.ini
   sed -i 's/^\(Whitelist=\).*$/\1\/0/' /etc/liquidsoap/st.ini
