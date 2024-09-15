@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# Load functions library from remote source
+# Load functions library
 FUNCTIONS_LIB_PATH="/tmp/functions.sh"
 FUNCTIONS_LIB_URL="https://raw.githubusercontent.com/oszuidwest/bash-functions/main/common-functions.sh"
 
