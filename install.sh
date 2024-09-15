@@ -69,7 +69,31 @@ ask_user "DO_UPDATES" "y" "Do you want to perform all OS updates? (y/n)" "y/n"
 # OS-specific configurations for Debian Bookworm
 if [ "$os_version" == "bookworm" ]; then
   install_packages silent software-properties-common
-  apt-add-repository -y non-free
+
+  # Check if any deb822 format sources files exist
+  deb822_files=($(find /etc/apt/sources.list.d/ -type f -name "*.sources"))
+  if [ "${#deb822_files[@]}" -gt 0 ]; then
+    # System is using deb822 format, modify relevant sources files
+    echo -e "${BLUE}►► Adding non-free and contrib components to the sources list (deb822 format)...${NC}"
+    for source_file in "${deb822_files[@]}"; do
+      # Check if the source file is for Debian repositories
+      if grep -qE '^Types:.*deb' "$source_file" && \
+         grep -qE "^Suites:.*$os_version" "$source_file" && \
+         grep -qE '^Components:.*main' "$source_file"; then
+        backup_file "$source_file"
+        # Modify the Components line to include contrib and non-free if missing
+        sed -i '/^Components:/ {
+          /contrib/! s/$/ contrib/;
+          /non-free/! s/$/ non-free/;
+        }' "$source_file"
+      fi
+    done
+  else
+    # System is using traditional sources.list, use apt-add-repository
+    echo -e "${BLUE}►► Adding non-free component using apt-add-repository...${NC}"
+    apt-add-repository -y non-free
+  fi
+  apt update
 fi
 
 # Update OS
@@ -113,7 +137,7 @@ if [ "$USE_ST" == "y" ]; then
   curl -sLo /tmp/st.zip "${STEREOTOOL_BASE_URL}/Stereo_Tool_Generic_plugin_${STEREOTOOL_VERSION}.zip"
   unzip -o /tmp/st.zip -d /tmp/
   extracted_dir=$(find /tmp/* -maxdepth 0 -type d -print0 | xargs -0 ls -td | head -n 1)
-  
+
   if [ "$os_arch" == "amd64" ]; then
     cp "${extracted_dir}/lib/Linux/IntelAMD/64/libStereoToolX11_intel64.so" /opt/stereotool/st_plugin.so
     curl -sLo /opt/stereotool/st_standalone "${STEREOTOOL_BASE_URL}/stereo_tool_cmd_64_${STEREOTOOL_VERSION}"
