@@ -1,37 +1,37 @@
 #!/usr/bin/env bash
 
-# Set-up the functions library
+# Load functions library from remote source
 FUNCTIONS_LIB_PATH="/tmp/functions.sh"
 FUNCTIONS_LIB_URL="https://raw.githubusercontent.com/oszuidwest/bash-functions/main/common-functions.sh"
 
-# Set-up Liquidsoap
+# Liquidsoap configuration
 LIQUIDSOAP_VERSION="2.2.5"
 LIQUIDSOAP_PACKAGE_BASE_URL="https://github.com/savonet/liquidsoap/releases/download/v$LIQUIDSOAP_VERSION"
 LIQUIDSOAP_CONFIG_URL="https://raw.githubusercontent.com/oszuidwest/zwfm-liquidsoap/main/radio.liq"
 LIQUIDSOAP_SERVICE_URL="https://raw.githubusercontent.com/oszuidwest/zwfm-liquidsoap/main/liquidsoap.service"
 AUDIO_FALLBACK_URL="https://upload.wikimedia.org/wikipedia/commons/6/66/Aaron_Dunn_-_Sonata_No_1_-_Movement_2.ogg"
 
-# Set-up StereoTool
+# StereoTool configuration
 STEREOTOOL_VERSION="1040"
 STEREOTOOL_BASE_URL="https://download.thimeo.com"
 
-# General options
+# General settings
 SUPPORTED_OS=("bookworm" "jammy")
 TIMEZONE="Europe/Amsterdam"
 DIRECTORIES=("/etc/liquidsoap" "/var/audio")
 
-# Remove old functions library and download the latest version
+# Download the latest version of the functions library
 rm -f "$FUNCTIONS_LIB_PATH"
 if ! curl -sLo "$FUNCTIONS_LIB_PATH" "$FUNCTIONS_LIB_URL"; then
-  echo -e "*** Failed to download functions library. Please check your network connection! ***"
+  echo "*** Failed to download functions library. Please check your network connection! ***"
   exit 1
 fi
 
-# Source the functions file
+# Source the functions library
 # shellcheck source=/tmp/functions.sh
 source "$FUNCTIONS_LIB_PATH"
 
-# Basic environment configuration
+# Environment setup
 set_colors
 check_user_privileges privileged
 is_this_linux
@@ -43,15 +43,13 @@ os_id=$(lsb_release -is | tr '[:upper:]' '[:lower:]')
 os_version=$(lsb_release -cs)
 os_arch=$(dpkg --print-architecture)
 
-if [[ ! " ${SUPPORTED_OS[*]} " =~ ${os_version} ]]; then
+if [[ ! " ${SUPPORTED_OS[*]} " =~ " ${os_version} " ]]; then
   printf "This script does not support '%s' OS version. Exiting.\n" "$os_version"
   exit 1
 fi
 
-# Start with a clean terminal
+# Clear the terminal and display the banner
 clear
-
-# Banner
 cat << "EOF"
  ______     _     ___          __       _     ______ __  __ 
 |___  /    (_)   | \ \        / /      | |   |  ____|  \/  |
@@ -61,31 +59,30 @@ cat << "EOF"
 /_____\__,_|_|\__,_|   \/  \/ \___||___/\__| |_|    |_|  |_|
 EOF
 
-# Greeting
-echo -e "${GREEN}⎎ Liquidsoap and StereoTool setup${NC}\n\n"
+# Greeting and user input
+echo -e "${GREEN}⎎ Liquidsoap and StereoTool setup${NC}\n"
 ask_user "USE_ST" "n" "Do you want to use StereoTool for sound processing? (y/n)" "y/n"
 ask_user "DO_UPDATES" "y" "Do you want to perform all OS updates? (y/n)" "y/n"
 
-# OS-specific configurations for Debian Bookworm
+# Configure repositories on Debian Bookworm
 if [ "$os_version" == "bookworm" ]; then
   install_packages silent software-properties-common
 
-  # Use find with -print0 and read the output safely into the array using readarray
+  # Identify deb822 format source files
   deb822_files=()
   readarray -d '' deb822_files < <(find /etc/apt/sources.list.d/ -type f -name "*.sources" -print0)
 
   if [ "${#deb822_files[@]}" -gt 0 ]; then
-    echo -e "${BLUE}►► Adding non-free and contrib components to the sources list (deb822 format)...${NC}"
+    echo -e "${BLUE}►► Adding 'contrib' and 'non-free' components to the sources list (deb822 format)...${NC}"
     for source_file in "${deb822_files[@]}"; do
-      # Remove any trailing null characters from the filenames
+      # Remove trailing null character from filename
       source_file="${source_file%$'\0'}"
 
-      # Check if the source file is for Debian repositories
+      # Modify Debian repository sources to include 'contrib' and 'non-free'
       if grep -qE '^Types:.*deb' "$source_file" && \
          grep -qE "^Suites:.*$os_version" "$source_file" && \
          grep -qE '^Components:.*main' "$source_file"; then
         backup_file "$source_file"
-        # Modify the Components line to include contrib and non-free if missing
         sed -i '/^Components:/ {
           /contrib/! s/$/ contrib/;
           /non-free/! s/$/ non-free/;
@@ -93,46 +90,48 @@ if [ "$os_version" == "bookworm" ]; then
       fi
     done
   else
-    echo -e "${BLUE}►► Adding non-free component using apt-add-repository...${NC}"
+    echo -e "${BLUE}►► Adding 'non-free' component using apt-add-repository...${NC}"
     apt-add-repository -y non-free
   fi
   apt update
 fi
 
-# Update OS
+# Perform OS updates if requested
 if [ "$DO_UPDATES" == "y" ]; then
   update_os silent
 fi
 
-# Liquidsoap installation
+# Install Liquidsoap dependencies
 install_packages silent fdkaac libfdkaac-ocaml libfdkaac-ocaml-dynlink
+
+# Install Liquidsoap
 echo -e "${BLUE}►► Installing Liquidsoap...${NC}"
 package_url="${LIQUIDSOAP_PACKAGE_BASE_URL}/liquidsoap_${LIQUIDSOAP_VERSION}-${os_id}-${os_version}-1_${os_arch}.deb"
 liquidsoap_package="/tmp/liquidsoap_${LIQUIDSOAP_VERSION}.deb"
 curl -sLo "$liquidsoap_package" "$package_url"
 apt -qq -y install "$liquidsoap_package" --fix-broken
 
-# Check if Liquidsoap was installed successfully
+# Verify Liquidsoap installation
 if ! command -v liquidsoap >/dev/null 2>&1; then
-  echo -e "${RED}*** Error: Liquidsoap installation failed. Check for errors above. Exiting. ***${NC}"
+  echo -e "${RED}*** Error: Liquidsoap installation failed. Exiting. ***${NC}"
   exit 1
 fi
 
-# Directory setup
+# Create necessary directories
 echo -e "${BLUE}►► Creating directories...${NC}"
 for dir in "${DIRECTORIES[@]}"; do
-  mkdir -p "$dir" && chown liquidsoap:liquidsoap "$dir" && chmod g+s "$dir"
+  mkdir -p "$dir"
+  chown liquidsoap:liquidsoap "$dir"
+  chmod g+s "$dir"
 done
 
-# Backup existing configuration file before downloading new ones
+# Backup existing configuration and download new configuration files
 backup_file "/etc/liquidsoap/radio.liq"
-
-# Download configuration and sample files
-echo -e "${BLUE}►► Downloading files...${NC}"
+echo -e "${BLUE}►► Downloading configuration files...${NC}"
 curl -sLo /var/audio/fallback.ogg "$AUDIO_FALLBACK_URL"
 curl -sLo /etc/liquidsoap/radio.liq "$LIQUIDSOAP_CONFIG_URL"
 
-# StereoTool setup
+# Install and configure StereoTool if selected
 if [ "$USE_ST" == "y" ]; then
   install_packages silent unzip
   echo -e "${BLUE}►► Installing StereoTool...${NC}"
@@ -150,25 +149,21 @@ if [ "$USE_ST" == "y" ]; then
   fi
   chmod +x /opt/stereotool/st_standalone
 
-  # Backup existing st.ini before modifying
+  # Backup and generate StereoTool settings
   backup_file "/etc/liquidsoap/st.ini"
-
-  # Generate and patch StereoTool config file
   /opt/stereotool/st_standalone -X /etc/liquidsoap/st.ini
   sed -i 's/^\(Whitelist=\).*$/\1\/0/' /etc/liquidsoap/st.ini
   sed -i 's/^\(Enable web interface=\).*$/\11/' /etc/liquidsoap/st.ini
 else
-  # If StereoTool is not used, remove its configuration from the liquidsoap script
+  # Remove StereoTool configuration from Liquidsoap script if not used
   sed -i '/# StereoTool implementation/,/output.dummy(radioproc)/d' /etc/liquidsoap/radio.liq
 fi
 
-# Liquidsoap service installation
-echo -e "${BLUE}►► Setting up Liquidsoap service${NC}"
+# Set up Liquidsoap as a system service
+echo -e "${BLUE}►► Setting up Liquidsoap service...${NC}"
 rm -f /etc/systemd/system/liquidsoap.service
 curl -sLo /etc/systemd/system/liquidsoap.service "$LIQUIDSOAP_SERVICE_URL"
 systemctl daemon-reload
-if ! systemctl is-enabled liquidsoap.service; then
-  systemctl enable liquidsoap.service
-fi
+systemctl enable liquidsoap.service
 
 echo -e "${GREEN}Setup completed successfully!${NC}"
