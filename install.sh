@@ -85,6 +85,12 @@ liquidsoap_package="/tmp/liquidsoap_${LIQUIDSOAP_VERSION}.deb"
 curl -sLo "$liquidsoap_package" "$package_url"
 apt -qq -y install "$liquidsoap_package" --fix-broken
 
+# Check if Liquidsoap was installed successfully
+if ! command -v liquidsoap >/dev/null 2>&1; then
+  echo -e "${RED}*** Error: Liquidsoap installation failed. Check for errors above. Exiting. ***${NC}"
+  exit 1
+fi
+
 # Directory setup
 echo -e "${BLUE}►► Creating directories...${NC}"
 for dir in "${DIRECTORIES[@]}"; do
