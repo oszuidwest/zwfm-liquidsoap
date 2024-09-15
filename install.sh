@@ -23,7 +23,7 @@ DIRECTORIES=("/etc/liquidsoap" "/var/audio")
 # Download the latest version of the functions library
 rm -f "$FUNCTIONS_LIB_PATH"
 if ! curl -sLo "$FUNCTIONS_LIB_PATH" "$FUNCTIONS_LIB_URL"; then
-  echo "*** Failed to download functions library. Please check your network connection! ***"
+  echo -e "*** Failed to download functions library. Please check your network connection! ***"
   exit 1
 fi
 
