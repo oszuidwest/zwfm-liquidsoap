@@ -70,12 +70,16 @@ ask_user "DO_UPDATES" "y" "Do you want to perform all OS updates? (y/n)" "y/n"
 if [ "$os_version" == "bookworm" ]; then
   install_packages silent software-properties-common
 
-  # Check if any deb822 format sources files exist
-  deb822_files=($(find /etc/apt/sources.list.d/ -type f -name "*.sources"))
+  # Use find with -print0 and read the output safely into the array using readarray
+  deb822_files=()
+  readarray -d '' deb822_files < <(find /etc/apt/sources.list.d/ -type f -name "*.sources" -print0)
+
   if [ "${#deb822_files[@]}" -gt 0 ]; then
-    # System is using deb822 format, modify relevant sources files
     echo -e "${BLUE}►► Adding non-free and contrib components to the sources list (deb822 format)...${NC}"
     for source_file in "${deb822_files[@]}"; do
+      # Remove any trailing null characters from the filenames
+      source_file="${source_file%$'\0'}"
+
       # Check if the source file is for Debian repositories
       if grep -qE '^Types:.*deb' "$source_file" && \
          grep -qE "^Suites:.*$os_version" "$source_file" && \
@@ -89,7 +93,6 @@ if [ "$os_version" == "bookworm" ]; then
       fi
     done
   else
-    # System is using traditional sources.list, use apt-add-repository
     echo -e "${BLUE}►► Adding non-free component using apt-add-repository...${NC}"
     apt-add-repository -y non-free
   fi
