@@ -92,7 +92,7 @@ if [ "$os_version" == "bookworm" ]; then
     done
   else
     echo -e "${BLUE}►► Adding 'non-free' component using apt-add-repository...${NC}"
-    apt-add-repository -y non-free
+    apt-add-repository -y contrib non-free non-free-firmware
   fi
   apt update
 fi
