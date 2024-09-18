@@ -78,7 +78,7 @@ if [ "$os_version" == "bookworm" ]; then
       # Remove trailing null character from filename
       source_file="${source_file%$'\0'}"
 
-      # Modify Debian repository sources to include 'contrib' and 'non-free'
+      # Modify Debian repository sources to include 'contrib', 'non-free', and 'non-free-firmware'
       if grep -qE '^Types:.*deb' "$source_file" && \
          grep -qE "^Suites:.*$os_version" "$source_file" && \
          grep -qE '^Components:.*main' "$source_file"; then
@@ -86,6 +86,7 @@ if [ "$os_version" == "bookworm" ]; then
         sed -i '/^Components:/ {
           /contrib/! s/$/ contrib/;
           /non-free/! s/$/ non-free/;
+          /non-free-firmware/! s/$/ non-free-firmware/;
         }' "$source_file"
       fi
     done
