@@ -12,7 +12,7 @@ LIQUIDSOAP_SERVICE_URL="https://raw.githubusercontent.com/oszuidwest/zwfm-liquid
 AUDIO_FALLBACK_URL="https://upload.wikimedia.org/wikipedia/commons/6/66/Aaron_Dunn_-_Sonata_No_1_-_Movement_2.ogg"
 
 # StereoTool configuration
-STEREOTOOL_VERSION="1040"
+STEREOTOOL_VERSION="1041"
 STEREOTOOL_BASE_URL="https://download.thimeo.com"
 
 # General settings
@@ -142,7 +142,7 @@ if [ "$USE_ST" == "y" ]; then
   extracted_dir=$(find /tmp/* -maxdepth 0 -type d -print0 | xargs -0 ls -td | head -n 1)
 
   if [ "$os_arch" == "amd64" ]; then
-    cp "${extracted_dir}/lib/Linux/IntelAMD/64/libStereoToolX11_intel64.so" /opt/stereotool/st_plugin.so
+    cp "${extracted_dir}/lib/Linux/IntelAMD/64/libStereoTool_intel64.so" /opt/stereotool/st_plugin.so
     curl -sLo /opt/stereotool/st_standalone "${STEREOTOOL_BASE_URL}/stereo_tool_cmd_64_${STEREOTOOL_VERSION}"
   elif [ "$os_arch" == "arm64" ]; then
     cp "${extracted_dir}/lib/Linux/ARM/64/libStereoTool_arm64.so" /opt/stereotool/st_plugin.so
