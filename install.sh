@@ -18,7 +18,9 @@ STEREOTOOL_BASE_URL="https://download.thimeo.com"
 # General settings
 SUPPORTED_OS=("bookworm" "jammy")
 TIMEZONE="Europe/Amsterdam"
-DIRECTORIES=("/etc/liquidsoap" "/var/audio" "/usr/share/liquidsoap/.liquidsoap.presets/")
+DIRECTORIES=("/etc/liquidsoap" "/var/audio" "/usr/share/liquidsoap/.liquidsoap.presets/") 
+#   Remove liquidsoap.presets after bug is resolved. 
+#   It's a hotfix for https://github.com/savonet/liquidsoap/issues/4161 (saving presets fails)
 
 # Download the latest version of the functions library
 rm -f "$FUNCTIONS_LIB_PATH"
