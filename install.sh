@@ -18,7 +18,7 @@ STEREOTOOL_BASE_URL="https://download.thimeo.com"
 # General settings
 SUPPORTED_OS=("bookworm" "jammy")
 TIMEZONE="Europe/Amsterdam"
-DIRECTORIES=("/etc/liquidsoap" "/var/audio")
+DIRECTORIES=("/etc/liquidsoap" "/var/audio" "/usr/share/liquidsoap/.liquidsoap.presets/")
 
 # Download the latest version of the functions library
 rm -f "$FUNCTIONS_LIB_PATH"
