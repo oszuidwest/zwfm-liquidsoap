@@ -16,7 +16,7 @@ STEREOTOOL_VERSION="1041"
 STEREOTOOL_BASE_URL="https://download.thimeo.com"
 
 # General settings
-SUPPORTED_OS=("bookworm" "jammy")
+SUPPORTED_OS=("bookworm" "jammy" "noble")
 TIMEZONE="Europe/Amsterdam"
 DIRECTORIES=("/etc/liquidsoap" "/var/audio" "/usr/share/liquidsoap/.liquidsoap.presets/") 
 #   Remove liquidsoap.presets after bug is resolved. 
