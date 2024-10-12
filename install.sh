@@ -43,7 +43,7 @@ os_id=$(lsb_release -is | tr '[:upper:]' '[:lower:]')
 os_version=$(lsb_release -cs)
 os_arch=$(dpkg --print-architecture)
 
-if [[ ! " ${SUPPORTED_OS[*]} " =~ " ${os_version} " ]]; then
+if [[ ! " ${SUPPORTED_OS[*]} " =~ (^|[[:space:]])${os_version}($|[[:space:]]) ]]; then
   printf "This script does not support '%s' OS version. Exiting.\n" "${os_version}"
   exit 1
 fi
