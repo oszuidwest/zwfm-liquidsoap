@@ -143,7 +143,7 @@ radioproc =
     library_file="/opt/stereotool/st_plugin.so",
     license_key=
       "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
-    preset="/etc/liquidsoap/st.ini",
+    preset="/usr/share/liquidsoap/.liquidsoap.rc",
     radio
   )
 
