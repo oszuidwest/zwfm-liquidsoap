@@ -18,7 +18,7 @@ STEREOTOOL_BASE_URL="https://download.thimeo.com"
 # General settings
 SUPPORTED_OS=("bookworm" "jammy")
 TIMEZONE="Europe/Amsterdam"
-DIRECTORIES=("/etc/liquidsoap" "/var/audio" "/usr/share/liquidsoap/.liquidsoap.presets/") 
+DIRECTORIES=("/etc/liquidsoap" "/var/audio") 
 #   Remove liquidsoap.presets after bug is resolved. 
 #   It's a hotfix for https://github.com/savonet/liquidsoap/issues/4161 (saving presets fails)
 
@@ -153,7 +153,6 @@ if [ "$USE_ST" == "y" ]; then
   chmod +x /opt/stereotool/st_standalone
 
   # Backup, generate and patch StereoTool settings file
-  backup_file "/etc/liquidsoap/st.ini"
   /opt/stereotool/st_standalone -X /etc/liquidsoap/st.ini
   sed -i 's/^\(Whitelist=\).*$/\1\/0/' /etc/liquidsoap/st.ini
   sed -i 's/^\(Enable web interface=\).*$/\11/' /etc/liquidsoap/st.ini
@@ -161,6 +160,10 @@ else
   # Remove StereoTool configuration from Liquidsoap script if not used
   sed -i '/# StereoTool implementation/,/output.dummy(radioproc)/d' /etc/liquidsoap/radio.liq
 fi
+
+# Hotfix preset saving
+chmod 777 /usr/share/liquidsoap/
+#   It's a hotfix for https://github.com/savonet/liquidsoap/issues/4161 (saving presets fails)
 
 # Set up Liquidsoap as a system service
 echo -e "${BLUE}►► Setting up Liquidsoap service...${NC}"
