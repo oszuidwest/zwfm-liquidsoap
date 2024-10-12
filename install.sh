@@ -5,7 +5,7 @@ FUNCTIONS_LIB_PATH="/tmp/functions.sh"
 FUNCTIONS_LIB_URL="https://raw.githubusercontent.com/oszuidwest/bash-functions/main/common-functions.sh"
 
 # Liquidsoap configuration
-LIQUIDSOAP_VERSION="2.2.5"
+LIQUIDSOAP_VERSION="2.2.5" # @TODO: on 2.3.0 check preset saving again!
 LIQUIDSOAP_PACKAGE_BASE_URL="https://github.com/savonet/liquidsoap/releases/download/v$LIQUIDSOAP_VERSION"
 LIQUIDSOAP_CONFIG_URL="https://raw.githubusercontent.com/oszuidwest/zwfm-liquidsoap/main/radio.liq"
 LIQUIDSOAP_SERVICE_URL="https://raw.githubusercontent.com/oszuidwest/zwfm-liquidsoap/main/liquidsoap.service"
@@ -134,35 +134,50 @@ echo -e "${BLUE}►► Downloading configuration files...${NC}"
 curl -sLo /var/audio/fallback.ogg "$AUDIO_FALLBACK_URL"
 curl -sLo /etc/liquidsoap/radio.liq "$LIQUIDSOAP_CONFIG_URL"
 
-# Install and configure StereoTool if selected
 if [ "$USE_ST" == "y" ]; then
   install_packages silent unzip
   echo -e "${BLUE}►► Installing StereoTool...${NC}"
   mkdir -p /opt/stereotool
+
+  # Download and extract StereoTool
   curl -sLo /tmp/st.zip "${STEREOTOOL_BASE_URL}/Stereo_Tool_Generic_plugin_${STEREOTOOL_VERSION}.zip"
-  unzip -o /tmp/st.zip -d /tmp/
-  extracted_dir=$(find /tmp/* -maxdepth 0 -type d -print0 | xargs -0 ls -td | head -n 1)
+  stereotool_tmp_dir=$(mktemp -d); unzip -o /tmp/st.zip -d "$stereotool_tmp_dir"
 
-  if [ "$os_arch" == "amd64" ]; then
-    cp "${extracted_dir}/lib/Linux/IntelAMD/64/libStereoTool_intel64.so" /opt/stereotool/st_plugin.so
-    curl -sLo /opt/stereotool/st_standalone "${STEREOTOOL_BASE_URL}/stereo_tool_cmd_64_${STEREOTOOL_VERSION}"
-  elif [ "$os_arch" == "arm64" ]; then
-    cp "${extracted_dir}/lib/Linux/ARM/64/libStereoTool_arm64.so" /opt/stereotool/st_plugin.so
-    curl -sLo /opt/stereotool/st_standalone "${STEREOTOOL_BASE_URL}/stereo_tool_pi2_64_${STEREOTOOL_VERSION}"
-  fi
-  chmod +x /opt/stereotool/st_standalone
+  # Find the extracted versioned directory
+  stereotool_extracted_dir=$(find "$stereotool_tmp_dir" -maxdepth 1 -type d -name "libStereoTool_*" | head -n 1)
 
-  # Backup, generate and patch StereoTool settings file
-  /opt/stereotool/st_standalone -X /etc/liquidsoap/st.ini
-  sed -i 's/^\(Whitelist=\).*$/\1\/0/' /etc/liquidsoap/st.ini
-  sed -i 's/^\(Enable web interface=\).*$/\11/' /etc/liquidsoap/st.ini
+  # Check if the directory was found
+  [ -d "$stereotool_extracted_dir" ] || { echo "Error: Could not find the extracted StereoTool directory."; exit 1; }
+
+  # Copy the appropriate library based on architecture
+  case "$os_arch" in
+    amd64) stereotool_lib_path="$stereotool_extracted_dir/lib/Linux/IntelAMD/64/libStereoTool_intel64.so" ;;
+    arm64) stereotool_lib_path="$stereotool_extracted_dir/lib/Linux/ARM/64/libStereoTool_arm64.so" ;;
+    *) echo "Unsupported architecture: $os_arch"; exit 1 ;;
+  esac
+
+  # Check if the library file exists
+  [ -f "$stereotool_lib_path" ] || { echo "Error: StereoTool library not found at $stereotool_lib_path"; exit 1; }
+
+  cp "$stereotool_lib_path" /opt/stereotool/st_plugin.so
+
+  # Clean up temporary files
+  rm -rf "$stereotool_tmp_dir" /tmp/st.zip
 else
   # Remove StereoTool configuration from Liquidsoap script if not used
   sed -i '/# StereoTool implementation/,/output.dummy(radioproc)/d' /etc/liquidsoap/radio.liq
 fi
 
+# Write mininal StereoTool configuration
+cat <<EOL > /usr/share/liquidsoap/.liquidsoap.rc
+[Stereo Tool Configuration]
+Enable web interface=1
+Whitelist=/0
+EOL
+
 # Hotfix preset saving
 chmod 777 /usr/share/liquidsoap/
+chown liquidsoap:liquidsoap /usr/share/liquidsoap/.liquidsoap.rc
 #   It's a hotfix for https://github.com/savonet/liquidsoap/issues/4161 (saving presets fails)
 
 # Set up Liquidsoap as a system service
