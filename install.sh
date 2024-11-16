@@ -15,7 +15,7 @@ STEREOTOOL_BASE_URL="https://download.thimeo.com"
 
 # General settings
 TIMEZONE="Europe/Amsterdam"
-DIRECTORIES=("/opt/liquidsoap")
+DIRECTORIES=("/opt/liquidsoap/scripts")
 
 # Download the latest version of the functions library
 rm -f "${FUNCTIONS_LIB_PATH}"

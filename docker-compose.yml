@@ -1,0 +1,11 @@
+name: zwfm-liquidsoap
+services:
+  liquidsoap:
+    image: savonet/liquidsoap:v2.3.0-rc2
+    container_name: liquidsoap
+    volumes:
+      - ./scripts:/scripts
+    ports:
+      - '9000:9000'
+    command: /scripts/radio.liq
+    restart: unless-stopped
