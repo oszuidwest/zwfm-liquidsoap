@@ -16,6 +16,7 @@ STEREOTOOL_BASE_URL="https://download.thimeo.com"
 # General settings
 TIMEZONE="Europe/Amsterdam"
 DIRECTORIES=("/opt/liquidsoap/scripts")
+OS_ARCH=$(dpkg --print-architecture)
 
 # Download the latest version of the functions library
 rm -f "${FUNCTIONS_LIB_PATH}"
@@ -93,7 +94,7 @@ if [ "${USE_ST}" == "y" ]; then
   fi
 
   # Copy the appropriate library based on architecture
-  case "${os_arch}" in
+  case "${OS_ARCH}" in
     amd64)
       stereotool_lib_path="${stereotool_extracted_dir}/lib/Linux/IntelAMD/64/libStereoTool_intel64.so"
       ;;
@@ -101,7 +102,7 @@ if [ "${USE_ST}" == "y" ]; then
       stereotool_lib_path="${stereotool_extracted_dir}/lib/Linux/ARM/64/libStereoTool_arm64.so"
       ;;
     *)
-      echo "Unsupported architecture: ${os_arch}"
+      echo "Unsupported architecture: ${OS_ARCH}"
       exit 1
       ;;
   esac
