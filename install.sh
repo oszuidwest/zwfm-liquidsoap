@@ -6,9 +6,7 @@ FUNCTIONS_LIB_URL="https://raw.githubusercontent.com/oszuidwest/bash-functions/m
 
 # Liquidsoap configuration
 LIQUIDSOAP_VERSION="2.3.0-rc2"  # TODO: On 2.3.0 check preset saving again!
-LIQUIDSOAP_PACKAGE_BASE_URL="https://github.com/savonet/liquidsoap/releases/download/v${LIQUIDSOAP_VERSION}"
 LIQUIDSOAP_CONFIG_URL="https://raw.githubusercontent.com/oszuidwest/zwfm-liquidsoap/main/radio.liq"
-LIQUIDSOAP_SERVICE_URL="https://raw.githubusercontent.com/oszuidwest/zwfm-liquidsoap/main/liquidsoap.service"
 AUDIO_FALLBACK_URL="https://upload.wikimedia.org/wikipedia/commons/6/66/Aaron_Dunn_-_Sonata_No_1_-_Movement_2.ogg"
 
 # StereoTool configuration
@@ -38,16 +36,6 @@ is_this_linux
 is_this_os_64bit
 set_timezone "${TIMEZONE}"
 
-# Detect and validate the operating system
-os_id=$(lsb_release -is | tr '[:upper:]' '[:lower:]')
-os_version=$(lsb_release -cs)
-os_arch=$(dpkg --print-architecture)
-
-if [[ ! " ${SUPPORTED_OS[*]} " =~ (^|[[:space:]])${os_version}($|[[:space:]]) ]]; then
-  printf "This script does not support '%s' OS version. Exiting.\n" "${os_version}"
-  exit 1
-fi
-
 # Clear the terminal and display the banner
 clear
 cat << "EOF"
@@ -64,55 +52,9 @@ echo -e "${GREEN}⎎ Liquidsoap and StereoTool setup${NC}\n"
 ask_user "USE_ST" "n" "Do you want to use StereoTool for sound processing? (y/n)" "y/n"
 ask_user "DO_UPDATES" "y" "Do you want to perform all OS updates? (y/n)" "y/n"
 
-# Configure repositories on Debian Bookworm
-if [ "${os_version}" == "bookworm" ]; then
-  install_packages silent software-properties-common
-
-  # Identify deb822 format source files
-  deb822_files=()
-  readarray -d '' deb822_files < <(find /etc/apt/sources.list.d/ -type f -name "*.sources" -print0)
-
-  if [ "${#deb822_files[@]}" -gt 0 ]; then
-    echo -e "${BLUE}►► Adding 'contrib' and 'non-free' components to the sources list (deb822 format)...${NC}"
-    for source_file in "${deb822_files[@]}"; do
-      # Modify Debian repository sources to include 'contrib', 'non-free', and 'non-free-firmware'
-      if grep -qE '^Types:.*deb' "${source_file}" && \
-         grep -qE "^Suites:.*${os_version}" "${source_file}" && \
-         grep -qE '^Components:.*main' "${source_file}"; then
-        backup_file "${source_file}"
-        sed -i '/^Components:/ {
-          /contrib/! s/$/ contrib/;
-          /non-free/! s/$/ non-free/;
-          /non-free-firmware/! s/$/ non-free-firmware/;
-        }' "${source_file}"
-      fi
-    done
-  else
-    echo -e "${BLUE}►► Adding 'non-free' component using apt-add-repository...${NC}"
-    apt-add-repository -y contrib non-free non-free-firmware
-  fi
-  apt update
-fi
-
 # Perform OS updates if requested
 if [ "${DO_UPDATES}" == "y" ]; then
   update_os silent
-fi
-
-# Install Liquidsoap dependencies
-install_packages silent fdkaac libfdkaac-ocaml libfdkaac-ocaml-dynlink
-
-# Install Liquidsoap
-echo -e "${BLUE}►► Installing Liquidsoap...${NC}"
-LIQUIDSOAP_PACKAGE_URL="${LIQUIDSOAP_PACKAGE_BASE_URL}/liquidsoap_${LIQUIDSOAP_VERSION}-${os_id}-${os_version}-1_${os_arch}.deb"
-LIQUIDSOAP_PACKAGE_PATH="/tmp/liquidsoap_${LIQUIDSOAP_VERSION}.deb"
-curl -sLo "${LIQUIDSOAP_PACKAGE_PATH}" "${LIQUIDSOAP_PACKAGE_URL}"
-apt -qq -y install "${LIQUIDSOAP_PACKAGE_PATH}" --fix-broken
-
-# Verify Liquidsoap installation
-if ! command -v liquidsoap >/dev/null 2>&1; then
-  echo -e "${RED}*** Error: Liquidsoap installation failed. Exiting. ***${NC}"
-  exit 1
 fi
 
 # Create necessary directories
@@ -183,16 +125,5 @@ cat <<EOL > /var/cache/liquidsoap/.liquidsoap.rc
 Enable web interface=1
 Whitelist=/0
 EOL
-
-# Hotfix for preset saving issue (https://github.com/savonet/liquidsoap/discussions/4171)
-chmod 777 /var/cache/liquidsoap/
-chown liquidsoap:liquidsoap /var/cache/liquidsoap/.liquidsoap.rc
-
-# Set up Liquidsoap as a system service
-echo -e "${BLUE}►► Setting up Liquidsoap service...${NC}"
-rm -f "/etc/systemd/system/liquidsoap.service"
-curl -sLo "/etc/systemd/system/liquidsoap.service" "${LIQUIDSOAP_SERVICE_URL}"
-systemctl daemon-reload
-systemctl enable liquidsoap.service
 
 echo -e "${GREEN}Setup completed successfully!${NC}"
