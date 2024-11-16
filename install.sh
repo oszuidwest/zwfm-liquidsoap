@@ -5,7 +5,7 @@ FUNCTIONS_LIB_PATH="/tmp/functions.sh"
 FUNCTIONS_LIB_URL="https://raw.githubusercontent.com/oszuidwest/bash-functions/main/common-functions.sh"
 
 # Liquidsoap configuration
-LIQUIDSOAP_VERSION="2.2.5"  # TODO: On 2.3.0 check preset saving again!
+LIQUIDSOAP_VERSION="2.3.0-rc2"  # TODO: On 2.3.0 check preset saving again!
 LIQUIDSOAP_PACKAGE_BASE_URL="https://github.com/savonet/liquidsoap/releases/download/v${LIQUIDSOAP_VERSION}"
 LIQUIDSOAP_CONFIG_URL="https://raw.githubusercontent.com/oszuidwest/zwfm-liquidsoap/main/radio.liq"
 LIQUIDSOAP_SERVICE_URL="https://raw.githubusercontent.com/oszuidwest/zwfm-liquidsoap/main/liquidsoap.service"
