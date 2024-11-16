@@ -1,0 +1,28 @@
+name: Docker Compose linter
+on:
+  push:
+    paths:
+      - 'docker-compose.yml'
+  pull_request:
+    paths:
+      - 'docker-compose.yml'
+
+jobs:
+  lint:
+    name: lint
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install DCLint
+        run: npm install -g dclint
+
+      - name: Run DCLint
+        run: dclint .
