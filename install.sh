@@ -13,7 +13,7 @@ AUDIO_FALLBACK_URL="https://upload.wikimedia.org/wikipedia/commons/6/66/Aaron_Du
 STEREOTOOL_VERSION="1021"
 STEREOTOOL_BASE_URL="https://download.thimeo.com"
 
-# General settings
+# General configuration
 TIMEZONE="Europe/Amsterdam"
 DIRECTORIES=("/opt/liquidsoap/scripts" "/opt/liquidsoap/audio")
 OS_ARCH=$(dpkg --print-architecture)
@@ -64,8 +64,6 @@ fi
 echo -e "${BLUE}►► Creating directories...${NC}"
 for dir in "${DIRECTORIES[@]}"; do
   mkdir -p "${dir}"
-  chown liquidsoap:liquidsoap "${dir}"
-  chmod g+s "${dir}"
 done
 
 # Backup existing configuration and download new configuration files
@@ -77,7 +75,7 @@ curl -sLo "/opt/liquidsoap/scripts/radio.liq" "${LIQUIDSOAP_CONFIG_URL}"
 if [ "${USE_ST}" == "y" ]; then
   install_packages silent unzip
   echo -e "${BLUE}►► Installing StereoTool...${NC}"
-  mkdir -p /opt/stereotool
+  mkdir -p /opt/liquidsoap/stereotool
 
   # Download and extract StereoTool
   curl -sLo "/tmp/st.zip" "${STEREOTOOL_BASE_URL}/Stereo_Tool_Generic_plugin_${STEREOTOOL_VERSION}.zip"
@@ -113,7 +111,7 @@ if [ "${USE_ST}" == "y" ]; then
     exit 1
   fi
 
-  cp "${stereotool_lib_path}" "/opt/stereotool/st_plugin.so"
+  cp "${stereotool_lib_path}" "/opt/liquidsoap/stereotool/st_plugin.so"
 
   # Clean up temporary files
   rm -rf "${stereotool_tmp_dir}" "/tmp/st.zip"
@@ -123,7 +121,7 @@ else
 fi
 
 # Write minimal StereoTool configuration
-cat <<EOL > /var/cache/liquidsoap/.liquidsoap.rc
+cat <<EOL > /opt/liquidsoap/.liquidsoap.rc
 [Stereo Tool Configuration]
 Enable web interface=1
 Whitelist=/0

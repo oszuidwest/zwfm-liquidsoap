@@ -1,6 +1,3 @@
-# Log (should not be changed)
-settings.log.file.path := "/var/log/liquidsoap/<script>.log"
-
 # Audio defaults
 settings.frame.audio.channels := 2
 settings.frame.audio.samplerate := 48000
@@ -9,7 +6,7 @@ settings.frame.audio.samplerate := 48000
 icecastserver = "icecast.example.org"
 icecastport = 8000
 icecastpassword = "hackme"
-fallbackfile = "/var/audio/fallback.ogg"
+fallbackfile = "/audio/fallback.ogg"
 upstreampassword = "foxtrot-uniform-charlie-kilo"
 
 # Logging function for various events
@@ -140,7 +137,7 @@ end
 # StereoTool implementation
 radioproc =
   stereotool(
-    library_file="/opt/stereotool/st_plugin.so",
+    library_file="/stereotool/st_plugin.so",
     license_key=
       "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
     preset="/usr/share/liquidsoap/.liquidsoap.rc",
