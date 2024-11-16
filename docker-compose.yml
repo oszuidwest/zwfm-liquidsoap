@@ -5,6 +5,7 @@ services:
     container_name: liquidsoap
     volumes:
       - ./scripts:/scripts
+      - ./audio:/audio
     ports:
       - '9000:9000'
     command: /scripts/radio.liq
