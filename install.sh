@@ -14,9 +14,8 @@ STEREOTOOL_VERSION="1021"
 STEREOTOOL_BASE_URL="https://download.thimeo.com"
 
 # General settings
-SUPPORTED_OS=("bookworm" "jammy")
 TIMEZONE="Europe/Amsterdam"
-DIRECTORIES=("/etc/liquidsoap" "/var/audio")
+DIRECTORIES=("/opt/liquidsoap")
 
 # Download the latest version of the functions library
 rm -f "${FUNCTIONS_LIB_PATH}"
@@ -35,6 +34,9 @@ check_user_privileges privileged
 is_this_linux
 is_this_os_64bit
 set_timezone "${TIMEZONE}"
+
+# Check if docker is installed 
+require_tool "docker"
 
 # Clear the terminal and display the banner
 clear
@@ -66,10 +68,10 @@ for dir in "${DIRECTORIES[@]}"; do
 done
 
 # Backup existing configuration and download new configuration files
-backup_file "/etc/liquidsoap/radio.liq"
+backup_file "/opt/liquidsoap/radio.liq"
 echo -e "${BLUE}►► Downloading configuration files...${NC}"
 curl -sLo "/var/audio/fallback.ogg" "${AUDIO_FALLBACK_URL}"
-curl -sLo "/etc/liquidsoap/radio.liq" "${LIQUIDSOAP_CONFIG_URL}"
+curl -sLo "/opt/liquidsoap/radio.liq" "${LIQUIDSOAP_CONFIG_URL}"
 
 if [ "${USE_ST}" == "y" ]; then
   install_packages silent unzip
@@ -116,7 +118,7 @@ if [ "${USE_ST}" == "y" ]; then
   rm -rf "${stereotool_tmp_dir}" "/tmp/st.zip"
 else
   # Remove StereoTool configuration from Liquidsoap script if not used
-  sed -i '/# StereoTool implementation/,/output.dummy(radioproc)/d' "/etc/liquidsoap/radio.liq"
+  sed -i '/# StereoTool implementation/,/output.dummy(radioproc)/d' "/opt/liquidsoap/radio.liq"
 fi
 
 # Write minimal StereoTool configuration
