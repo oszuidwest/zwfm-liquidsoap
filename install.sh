@@ -15,7 +15,7 @@ STEREOTOOL_BASE_URL="https://download.thimeo.com"
 
 # General settings
 TIMEZONE="Europe/Amsterdam"
-DIRECTORIES=("/opt/liquidsoap/scripts")
+DIRECTORIES=("/opt/liquidsoap/scripts" "/opt/liquidsoap/audio")
 OS_ARCH=$(dpkg --print-architecture)
 
 # Download the latest version of the functions library
@@ -69,10 +69,10 @@ for dir in "${DIRECTORIES[@]}"; do
 done
 
 # Backup existing configuration and download new configuration files
-backup_file "/opt/liquidsoap/radio.liq"
+backup_file "/opt/liquidsoap/scripts/radio.liq"
 echo -e "${BLUE}►► Downloading configuration files...${NC}"
-curl -sLo "/var/audio/fallback.ogg" "${AUDIO_FALLBACK_URL}"
-curl -sLo "/opt/liquidsoap/radio.liq" "${LIQUIDSOAP_CONFIG_URL}"
+curl -sLo "/opt/liquidsoap/audio/fallback.ogg" "${AUDIO_FALLBACK_URL}"
+curl -sLo "/opt/liquidsoap/scripts/radio.liq" "${LIQUIDSOAP_CONFIG_URL}"
 
 if [ "${USE_ST}" == "y" ]; then
   install_packages silent unzip
