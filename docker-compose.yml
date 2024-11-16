@@ -7,7 +7,7 @@ services:
       - ./scripts:/scripts
       - ./audio:/audio
       - ./stereotool:/stereotool
-      - .liquidsoap.rc:/usr/share/liquidsoap/.liquidsoap.rc
+      - .liquidsoap.rc:/var/cache/liquidsoap/.liquidsoap.rc
     ports:
       - '8008:8080' # StereoTool GUI (TCP)
       - '8888:8888/udp' # SRT Input 1
