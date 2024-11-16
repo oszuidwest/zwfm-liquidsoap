@@ -178,15 +178,15 @@ else
 fi
 
 # Write minimal StereoTool configuration
-cat <<EOL > /usr/share/liquidsoap/.liquidsoap.rc
+cat <<EOL > /var/cache/liquidsoap/.liquidsoap.rc
 [Stereo Tool Configuration]
 Enable web interface=1
 Whitelist=/0
 EOL
 
-# Hotfix for preset saving issue (https://github.com/savonet/liquidsoap/issues/4161)
-chmod 777 /usr/share/liquidsoap/
-chown liquidsoap:liquidsoap /usr/share/liquidsoap/.liquidsoap.rc
+# Hotfix for preset saving issue (https://github.com/savonet/liquidsoap/discussions/4171)
+chmod 777 /var/cache/liquidsoap/
+chown liquidsoap:liquidsoap /var/cache/liquidsoap/.liquidsoap.rc
 
 # Set up Liquidsoap as a system service
 echo -e "${BLUE}►► Setting up Liquidsoap service...${NC}"
