@@ -9,8 +9,8 @@ services:
       - ./stereotool:/stereotool
       - .liquidsoap.rc:/usr/share/liquidsoap/.liquidsoap.rc
     ports:
-      - '8008:8080' # StereoTool GUI
-      - '8888:8888' # SRT Input 1
-      - '9999:9999' # SRT Input 2
+      - '8008:8080' # StereoTool GUI (TCP)
+      - '8888:8888/udp' # SRT Input 1
+      - '9999:9999/udp' # SRT Input 2
     command: /scripts/radio.liq
     restart: unless-stopped
