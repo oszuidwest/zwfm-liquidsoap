@@ -75,7 +75,7 @@ curl -sLo "/opt/liquidsoap/scripts/radio.liq" "${LIQUIDSOAP_CONFIG_URL}"
 if [ "${USE_ST}" == "y" ]; then
   install_packages silent unzip
   echo -e "${BLUE}►► Installing StereoTool...${NC}"
-  mkdir -p /opt/liquidsoap/stereotool
+  mkdir -p /opt/liquidsoap/stereotool/.liquidsoap.presets
 
   # Download and extract StereoTool
   curl -sLo "/tmp/st.zip" "${STEREOTOOL_BASE_URL}/Stereo_Tool_Generic_plugin_${STEREOTOOL_VERSION}.zip"
@@ -121,7 +121,7 @@ else
 fi
 
 # Write minimal StereoTool configuration
-cat <<EOL > /opt/liquidsoap/.liquidsoap.rc
+cat <<EOL > /opt/liquidsoap/stereotool/.liquidsoap.rc
 [Stereo Tool Configuration]
 Enable web interface=1
 Whitelist=/0
