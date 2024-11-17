@@ -163,18 +163,19 @@ echo -e "${BLUE}►► Determining UID and GID of the liquidsoap user in the con
 CONTAINER_IMAGE="savonet/liquidsoap:v${LIQUIDSOAP_VERSION}"
 USER_INFO=$(docker run --rm --entrypoint /bin/sh "${CONTAINER_IMAGE}" -c 'id liquidsoap')
 
-UID=$(echo "${USER_INFO}" | grep -oP 'uid=\K[0-9]+')
-GID=$(echo "${USER_INFO}" | grep -oP 'gid=\K[0-9]+')
+# Rename variables to avoid conflicts with shell built-in variables
+LIQUIDSOAP_UID=$(echo "${USER_INFO}" | grep -oP 'uid=\K[0-9]+')
+LIQUIDSOAP_GID=$(echo "${USER_INFO}" | grep -oP 'gid=\K[0-9]+')
 
-if [ -z "${UID}" ] || [ -z "${GID}" ]; then
+if [ -z "${LIQUIDSOAP_UID}" ] || [ -z "${LIQUIDSOAP_GID}" ]; then
   echo -e "${RED}Error: Failed to retrieve UID or GID for the liquidsoap user.${NC}"
   exit 1
 fi
 
-echo "Liquidsoap UID: ${UID}, GID: ${GID}"
+echo "Liquidsoap UID: ${LIQUIDSOAP_UID}, GID: ${LIQUIDSOAP_GID}"
 
 # Set ownership of directories
 echo -e "${BLUE}►► Setting ownership for /opt/liquidsoap...${NC}"
-chown -R "${UID}:${GID}" /opt/liquidsoap
+chown -R "${LIQUIDSOAP_UID}:${LIQUIDSOAP_GID}" /opt/liquidsoap
 
 echo -e "${GREEN}Installation completed successfully!${NC}"
