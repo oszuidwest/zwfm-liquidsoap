@@ -27,7 +27,7 @@ DOCKER_COMPOSE_URL="https://raw.githubusercontent.com/oszuidwest/zwfm-liquidsoap
 DOCKER_COMPOSE_PATH="/opt/liquidsoap/docker-compose.yml"
 
 # StereoTool configuration
-STEREO_TOOL_VERSION="1021"
+STEREO_TOOL_VERSION="1041"
 STEREO_TOOL_BASE_URL="https://download.thimeo.com"
 STEREO_TOOL_ZIP_URL="${STEREO_TOOL_BASE_URL}/Stereo_Tool_Generic_plugin_${STEREO_TOOL_VERSION}.zip"
 STEREO_TOOL_ZIP_PATH="/tmp/stereotool.zip"
