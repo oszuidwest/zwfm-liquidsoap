@@ -9,6 +9,8 @@ LIQUIDSOAP_VERSION="2.3.0-rc2"  # TODO: On 2.3.0 check preset saving again!
 LIQUIDSOAP_CONFIG_URL="https://raw.githubusercontent.com/oszuidwest/zwfm-liquidsoap/main/radio.liq"
 AUDIO_FALLBACK_URL="https://upload.wikimedia.org/wikipedia/commons/6/66/Aaron_Dunn_-_Sonata_No_1_-_Movement_2.ogg"
 
+# TODO: Download docker-compose.yml too
+
 # StereoTool configuration
 STEREOTOOL_VERSION="1021"
 STEREOTOOL_BASE_URL="https://download.thimeo.com"
@@ -126,5 +128,7 @@ cat <<EOL > /opt/liquidsoap/stereotool/.liquidsoap.rc
 Enable web interface=1
 Whitelist=/0
 EOL
+
+# TODO: Chown all the things here
 
 echo -e "${GREEN}Setup completed successfully!${NC}"
