@@ -23,6 +23,9 @@ LIQUIDSOAP_CONFIG_PATH="/opt/liquidsoap/scripts/radio.liq"
 AUDIO_FALLBACK_URL="https://upload.wikimedia.org/wikipedia/commons/6/66/Aaron_Dunn_-_Sonata_No_1_-_Movement_2.ogg"
 AUDIO_FALLBACK_PATH="/opt/liquidsoap/audio/fallback.ogg"
 
+RDS_RADIOTEXT_URL="https://rds.zuidwestfm.nl/?rt"
+RDS_RADIOTEXT_PATH="/opt/liquidsoap/metadata/rds.txt"
+
 DOCKER_COMPOSE_URL="https://raw.githubusercontent.com/oszuidwest/zwfm-liquidsoap/refs/heads/liq-230/docker-compose.yml"
 DOCKER_COMPOSE_PATH="/opt/liquidsoap/docker-compose.yml"
 
@@ -37,6 +40,7 @@ TIMEZONE="Europe/Amsterdam"
 DIRECTORIES=(
   "/opt/liquidsoap/scripts"
   "/opt/liquidsoap/audio"
+  "/opt/liquidsoap/metadata"
 )
 OS_ARCH=$(dpkg --print-architecture)
 
