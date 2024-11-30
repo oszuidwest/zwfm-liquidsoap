@@ -16,15 +16,12 @@ fi
 source "${FUNCTIONS_LIB_PATH}"
 
 # Liquidsoap configuration
-LIQUIDSOAP_VERSION="2.3.0"  # @TODO: switch to main before merge!
+LIQUIDSOAP_VERSION="2.3.0"  # @TODO: check preset saving before merge!
 LIQUIDSOAP_CONFIG_URL="https://raw.githubusercontent.com/oszuidwest/zwfm-liquidsoap/refs/heads/liq-230/radio.liq" # @TODO: switch to main before merge!
 LIQUIDSOAP_CONFIG_PATH="/opt/liquidsoap/scripts/radio.liq"
 
 AUDIO_FALLBACK_URL="https://upload.wikimedia.org/wikipedia/commons/6/66/Aaron_Dunn_-_Sonata_No_1_-_Movement_2.ogg"
 AUDIO_FALLBACK_PATH="/opt/liquidsoap/audio/fallback.ogg"
-
-RDS_RADIOTEXT_URL="https://rds.zuidwestfm.nl/?rt"
-RDS_RADIOTEXT_PATH="/opt/liquidsoap/metadata/rds_rt.txt"
 
 DOCKER_COMPOSE_URL="https://raw.githubusercontent.com/oszuidwest/zwfm-liquidsoap/refs/heads/liq-230/docker-compose.yml" # @TODO: switch to main before merge!
 DOCKER_COMPOSE_PATH="/opt/liquidsoap/docker-compose.yml"
@@ -34,6 +31,10 @@ STEREO_TOOL_VERSION="1041"
 STEREO_TOOL_BASE_URL="https://download.thimeo.com"
 STEREO_TOOL_ZIP_URL="${STEREO_TOOL_BASE_URL}/Stereo_Tool_Generic_plugin_${STEREO_TOOL_VERSION}.zip"
 STEREO_TOOL_ZIP_PATH="/tmp/stereotool.zip"
+
+# RDS configuration
+RDS_RADIOTEXT_URL="https://rds.zuidwestfm.nl/?rt"
+RDS_RADIOTEXT_PATH="/opt/liquidsoap/metadata/rds_rt.txt"
 
 # General configuration
 TIMEZONE="Europe/Amsterdam"
