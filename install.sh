@@ -16,7 +16,7 @@ fi
 source "${FUNCTIONS_LIB_PATH}"
 
 # Liquidsoap configuration
-LIQUIDSOAP_VERSION="2.3.0-rc2"  # TODO: On 2.3.0 check preset saving again!
+LIQUIDSOAP_VERSION="2.3.0"  # TODO: check preset saving again!
 LIQUIDSOAP_CONFIG_URL="https://raw.githubusercontent.com/oszuidwest/zwfm-liquidsoap/refs/heads/liq-230/radio.liq"
 LIQUIDSOAP_CONFIG_PATH="/opt/liquidsoap/scripts/radio.liq"
 
