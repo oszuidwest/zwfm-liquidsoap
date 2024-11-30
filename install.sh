@@ -24,7 +24,7 @@ AUDIO_FALLBACK_URL="https://upload.wikimedia.org/wikipedia/commons/6/66/Aaron_Du
 AUDIO_FALLBACK_PATH="/opt/liquidsoap/audio/fallback.ogg"
 
 RDS_RADIOTEXT_URL="https://rds.zuidwestfm.nl/?rt"
-RDS_RADIOTEXT_PATH="/opt/liquidsoap/metadata/rds.txt"
+RDS_RADIOTEXT_PATH="/opt/liquidsoap/metadata/rds_rt.txt"
 
 DOCKER_COMPOSE_URL="https://raw.githubusercontent.com/oszuidwest/zwfm-liquidsoap/refs/heads/liq-230/docker-compose.yml"
 DOCKER_COMPOSE_PATH="/opt/liquidsoap/docker-compose.yml"
