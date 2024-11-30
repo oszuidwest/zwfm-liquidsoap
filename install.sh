@@ -108,6 +108,12 @@ if [ "${USE_ST}" == "y" ]; then
   echo -e "${BLUE}►► Installing StereoTool...${NC}"
   install_packages silent unzip
 
+  # Download RDS metdata
+  if ! curl -sLo "${RDS_RADIOTEXT_PATH}" "${RDS_RADIOTEXT_URL}"; then
+    echo -e "${RED}Error: Failed to download RDS metadata.${NC}"
+    exit 1
+  fi
+  
   STEREO_TOOL_DIR="/opt/liquidsoap/stereotool"
   mkdir -p "${STEREO_TOOL_DIR}/.liquidsoap.presets"
 
