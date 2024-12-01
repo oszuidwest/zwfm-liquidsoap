@@ -15,15 +15,18 @@ fi
 # shellcheck source=/tmp/functions.sh
 source "${FUNCTIONS_LIB_PATH}"
 
+# Docker files
+DOCKER_COMPOSE_URL="https://raw.githubusercontent.com/oszuidwest/zwfm-liquidsoap/refs/heads/liq-230/docker-compose.yml" # @TODO: switch to main before merge!
+DOCKER_COMPOSE_PATH="/opt/liquidsoap/docker-compose.yml"
+DOCKER_COMPOSE_ST_URL="https://raw.githubusercontent.com/oszuidwest/zwfm-liquidsoap/refs/heads/liq-230/docker-compose.stereotool.yml" # @TODO: switch to main before merge!
+DOCKER_COMPOSE_ST_PATH="/opt/liquidsoap/docker-compose.stereotool.yml"
+
 # Liquidsoap configuration # @TODO: check preset saving before merge!
 LIQUIDSOAP_CONFIG_URL="https://raw.githubusercontent.com/oszuidwest/zwfm-liquidsoap/refs/heads/liq-230/radio.liq" # @TODO: switch to main before merge!
 LIQUIDSOAP_CONFIG_PATH="/opt/liquidsoap/scripts/radio.liq"
 
 AUDIO_FALLBACK_URL="https://upload.wikimedia.org/wikipedia/commons/6/66/Aaron_Dunn_-_Sonata_No_1_-_Movement_2.ogg"
 AUDIO_FALLBACK_PATH="/opt/liquidsoap/audio/fallback.ogg"
-
-DOCKER_COMPOSE_URL="https://raw.githubusercontent.com/oszuidwest/zwfm-liquidsoap/refs/heads/liq-230/docker-compose.yml" # @TODO: switch to main before merge!
-DOCKER_COMPOSE_PATH="/opt/liquidsoap/docker-compose.yml"
 
 # StereoTool configuration
 STEREO_TOOL_VERSION="1041"
@@ -103,6 +106,13 @@ fi
 if [ "${USE_ST}" == "y" ]; then
   echo -e "${BLUE}►► Installing StereoTool...${NC}"
   install_packages silent unzip
+
+  # Download the docker-compose extra's for ST
+  backup_file "${DOCKER_COMPOSE_ST_PATH}"
+  if ! curl -sLo "${DOCKER_COMPOSE_ST_PATH}" "${DOCKER_COMPOSE_ST_URL}"; then
+    echo -e "${RED}Error: Failed to download docker-compose.stereotool.yml.${NC}"
+    exit 1
+  fi
 
   # Download RDS metdata
   if ! curl -sLo "${RDS_RADIOTEXT_PATH}" "${RDS_RADIOTEXT_URL}"; then
