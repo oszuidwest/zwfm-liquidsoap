@@ -4,6 +4,6 @@ services:
       - ./stereotool:/stereotool
       - ./stereotool/.liquidsoap.rc:/var/cache/liquidsoap/.liquidsoap.rc
       - ./stereotool/.liquidsoap.presets:/var/cache/liquidsoap/.liquidsoap.presets
-      - ./metadata/rds.txt:/tmp/rds.txt
+      - ./metadata/rds_rt.txt:/tmp/rds_rt.txt
     ports:
       - "8080:8080"  # StereoTool GUI (TCP)
