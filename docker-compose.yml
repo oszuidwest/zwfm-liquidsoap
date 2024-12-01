@@ -6,15 +6,11 @@ services:
     volumes:
       - ./scripts:/scripts
       - ./audio:/audio
-      - ./stereotool:/stereotool
-      - ./stereotool/.liquidsoap.rc:/var/cache/liquidsoap/.liquidsoap.rc
-      - ./stereotool/.liquidsoap.presets:/var/cache/liquidsoap/.liquidsoap.presets
-      - ./metadata/rds.txt:/tmp/rds.txt      
     environment:
       - TZ=Europe/Amsterdam
     ports:
-      - '8080:8080' # StereoTool GUI (TCP)
-      - '8888:8888/udp' # SRT Input 1
-      - '9999:9999/udp' # SRT Input 2
+      - "8888:8888/udp" # SRT Input 1
+      - "9999:9999/udp" # SRT Input 2
     command: /scripts/radio.liq
     restart: unless-stopped
+    user: "1000:1000"

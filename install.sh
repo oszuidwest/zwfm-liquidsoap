@@ -15,8 +15,7 @@ fi
 # shellcheck source=/tmp/functions.sh
 source "${FUNCTIONS_LIB_PATH}"
 
-# Liquidsoap configuration
-LIQUIDSOAP_VERSION="2.3.0"  # @TODO: check preset saving before merge!
+# Liquidsoap configuration # @TODO: check preset saving before merge!
 LIQUIDSOAP_CONFIG_URL="https://raw.githubusercontent.com/oszuidwest/zwfm-liquidsoap/refs/heads/liq-230/radio.liq" # @TODO: switch to main before merge!
 LIQUIDSOAP_CONFIG_PATH="/opt/liquidsoap/scripts/radio.liq"
 
@@ -101,10 +100,6 @@ if ! curl -sLo "${AUDIO_FALLBACK_PATH}" "${AUDIO_FALLBACK_URL}"; then
   exit 1
 fi
 
-# Update docker-compose.yml with the correct Liquidsoap version
-echo -e "${BLUE}►► Updating docker-compose.yml with the correct Liquidsoap version...${NC}"
-sed -i "s|image: savonet/liquidsoap:.*|image: savonet/liquidsoap:v${LIQUIDSOAP_VERSION}|g" "${DOCKER_COMPOSE_PATH}"
-
 if [ "${USE_ST}" == "y" ]; then
   echo -e "${BLUE}►► Installing StereoTool...${NC}"
   install_packages silent unzip
@@ -169,21 +164,8 @@ else
   sed -i '/# StereoTool implementation/,/output.dummy(radioproc)/d' "${LIQUIDSOAP_CONFIG_PATH}"
 fi
 
-# Determine the UID and GID of the liquidsoap user in the container
-echo -e "${BLUE}►► Determining UID and GID of the liquidsoap user in the container...${NC}"
-CONTAINER_IMAGE="savonet/liquidsoap:v${LIQUIDSOAP_VERSION}"
-USER_INFO=$(docker run --rm --entrypoint /bin/sh "${CONTAINER_IMAGE}" -c 'id liquidsoap')
-
-LIQUIDSOAP_UID=$(echo "${USER_INFO}" | grep -oP 'uid=\K[0-9]+')
-LIQUIDSOAP_GID=$(echo "${USER_INFO}" | grep -oP 'gid=\K[0-9]+')
-
-if [ -z "${LIQUIDSOAP_UID}" ] || [ -z "${LIQUIDSOAP_GID}" ]; then
-  echo -e "${RED}Error: Failed to retrieve UID or GID for the liquidsoap user.${NC}"
-  exit 1
-fi
-
 # Set ownership of directories
 echo -e "${BLUE}►► Setting ownership for /opt/liquidsoap...${NC}"
-chown -R "${LIQUIDSOAP_UID}:${LIQUIDSOAP_GID}" /opt/liquidsoap
+chown -R 1000:1000 /opt/liquidsoap
 
 echo -e "${GREEN}Installation completed successfully!${NC}"
