@@ -13,4 +13,4 @@ services:
       - "9999:9999/udp" # SRT Input 2
     command: /scripts/radio.liq
     restart: unless-stopped
-    user: "1000:1000"
+    user: "10000:10001"

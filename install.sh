@@ -176,6 +176,6 @@ fi
 
 # Adjust ownership for the directories
 echo -e "${BLUE}►► Setting ownership for /opt/liquidsoap...${NC}"
-chown -R 1000:1000 /opt/liquidsoap
+chown -R 10000:10001 /opt/liquidsoap
 
 echo -e "${GREEN}Installation completed successfully!${NC}"
