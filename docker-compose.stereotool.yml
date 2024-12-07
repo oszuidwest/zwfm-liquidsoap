@@ -1,3 +1,4 @@
+name: zwfm-liquidsoap-stereotool
 services:
   liquidsoap:
     volumes:
