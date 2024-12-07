@@ -9,8 +9,8 @@ services:
     environment:
       - TZ=Europe/Amsterdam
     ports:
-      - "0.0.0.0:8888:8888/udp"  # SRT Input 1
-      - "0.0.0.0:9999:9999/udp"  # SRT Input 2
+      - '0.0.0.0:8888:8888/udp' # SRT Input 1
+      - '0.0.0.0:9999:9999/udp' # SRT Input 2
     command: /scripts/radio.liq
     restart: unless-stopped
     user: "10000:10001"
