@@ -107,6 +107,11 @@ if [ "${USE_ST}" == "y" ]; then
   echo -e "${BLUE}►► Installing StereoTool...${NC}"
   install_packages silent unzip
 
+  # Add RDS update cronjob if it doesn't exist yet (TODO: Integrate this in Liquidsoap)
+  if ! crontab -l | grep -q "${RDS_RADIOTEXT_PATH}"; then
+    echo "0 * * * * curl -s ${RDS_RADIOTEXT_URL} > ${RDS_RADIOTEXT_PATH} 2>/dev/null" | crontab -
+  fi
+
   # Download the StereoTool-specific docker-compose configuration
   backup_file "${DOCKER_COMPOSE_ST_PATH}"
   if ! curl -sLo "${DOCKER_COMPOSE_ST_PATH}" "${DOCKER_COMPOSE_ST_URL}"; then
