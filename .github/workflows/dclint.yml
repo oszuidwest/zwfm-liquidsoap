@@ -3,10 +3,11 @@ on:
   push:
     paths:
       - 'docker-compose.yml'
+      - 'docker-compose.stereotool.yml'
   pull_request:
     paths:
       - 'docker-compose.yml'
-
+      - 'docker-compose.stereotool.yml'
 jobs:
   lint:
     name: lint
