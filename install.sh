@@ -126,7 +126,6 @@ if [ "${USE_ST}" == "y" ]; then
   fi
   
   STEREO_TOOL_DIR="/opt/liquidsoap/stereotool"
-  mkdir -p "${STEREO_TOOL_DIR}/.liquidsoap.presets"
 
   # Download and extract StereoTool
   if ! curl -sLo "${STEREO_TOOL_ZIP_PATH}" "${STEREO_TOOL_ZIP_URL}"; then
