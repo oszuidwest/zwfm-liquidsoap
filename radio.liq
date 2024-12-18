@@ -137,7 +137,7 @@ end
 # StereoTool implementation
 radioproc =
   stereotool(
-    library_file="/stereotool/st_plugin.so",
+    library_file="/var/cache/liquidsoap/st_plugin.so",
     license_key=
       "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
     preset="/var/cache/liquidsoap/.liquidsoap.rc",
