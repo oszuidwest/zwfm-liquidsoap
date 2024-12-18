@@ -1,3 +1,5 @@
+### NEEDS FULL REWRITE TO WORK WITH DOCKER LOGS!!! ###
+
 #!/bin/bash
 
 # Monitor Script for /var/log/liquidsoap/radio.log
