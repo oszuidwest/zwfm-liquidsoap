@@ -1,5 +1,5 @@
 # zwfm-liquidsoap
-This repository contains an audio streaming solution tailored for [ZuidWest FM](https://www.zuidwestfm.nl/) in the Netherlands. Leveraging [Liquidsoap](https://www.liquidsoap.info), it facilitates internet streaming with a reliable fallback mechanism and is capable of pushing MPX to broadcast transmitters via MicroMPX.
+This repository contains an audio streaming solution tailored for [ZuidWest FM](https://www.zuidwestfm.nl/) and [Radio Rucphen](https://www.rucphenrtv.nl/) in the Netherlands. Leveraging [Liquidsoap](https://www.liquidsoap.info), it facilitates internet streaming with a reliable fallback mechanism and is capable of pushing MPX to broadcast transmitters via MicroMPX.
 
 ![liq flow public](https://github.com/oszuidwest/zwfm-liquidsoap/assets/6742496/8cbd66e9-7ab2-4f00-b723-fb7f91060769)
 
@@ -13,15 +13,16 @@ The system design involves delivering the broadcast through two pathways. Liquid
 
 ## Scripts
 - **icecast2.sh**: This script installs Icecast 2 and provides SSL support via Let's Encrypt/Certbot. Execute it using `/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/oszuidwest/zwfm-liquidsoap/main/icecast2.sh)"`
-- **install.sh**: Installs Liquidsoap 2.2.5 with fdkaac support and sets it up as an auto-start service. Execute it using `/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/oszuidwest/zwfm-liquidsoap/main/install.sh)"`
-- **monitor.sh**: Experimental log parser/dashboard for Liquidsoap status. Not installed by default. Work in progress.
+- **install.sh**: Installs Liquidsoap 2.3.0 with fdkaac support in a Docker container. Execute it using `/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/oszuidwest/zwfm-liquidsoap/main/install.sh)"`
+- **monitor.sh**: Experimental log parser for Liquidsoap status. Not installed by default. Work in progress. (⚠️ BROKEN - Needs rewrite to work with Docker logs)
 
 ## Configurations
 - **radio.liq**: A production-ready Liquidsoap configuration that incorporates StereoTool as a MicroMPX encoder.
-- **liquidsoap.service**: A systemd service file for managing Liquidsoap.
+- **docker-compose.yml**: Basic Liquidsoap configuration in Docker.
+- **docker-compose.stereotool.yml**: Extended configuration for StereoTool in Docker.
 
 ## Compatibility
-1. Tested with Ubuntu 22.04 or Debian 12.
+1. Tested on Ubuntu 24.04 and Debian 12.
 2. Supports x86_64 or ARM64 system architectures (e.g., Ampere Altra, Raspberry Pi). Note: StereoTool MicroMPX is currently not well-supported on ARM architectures.
 3. Requires an internet connection for script dependencies.
 
