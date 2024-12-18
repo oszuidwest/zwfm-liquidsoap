@@ -1,6 +1,8 @@
 name: Docker Compose linter
 on:
   push:
+    branches:
+      - main
     paths:
       - 'docker-compose.yml'
       - 'docker-compose.stereotool.yml'
@@ -8,6 +10,7 @@ on:
     paths:
       - 'docker-compose.yml'
       - 'docker-compose.stereotool.yml'
+
 jobs:
   lint:
     name: lint

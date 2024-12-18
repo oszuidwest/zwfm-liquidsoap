@@ -1,7 +1,11 @@
 name: Prettier Liquidsoap
-
-on: 
+on:
   push:
+    branches:
+      - main
+    paths:
+      - '**.liq'
+  pull_request:
     paths:
       - '**.liq'
 
