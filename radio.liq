@@ -191,5 +191,3 @@ output_icecast_stream(
   mount="/zuidwest.stl",
   source=audio_to_icecast
 )
-
-
