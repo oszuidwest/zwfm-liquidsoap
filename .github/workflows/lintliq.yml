@@ -12,10 +12,15 @@ on:
 jobs:
   format:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     steps:
       - name: Check out code
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref || github.ref_name }}
+          fetch-depth: 0
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -34,25 +39,10 @@ jobs:
         run: |
           git config --global user.name 'github-actions[bot]'
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
-          
-          # Stash changes
-          git stash
-          
-          # Fetch and rebase
-          git fetch origin ${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}
-          git rebase origin/${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}
-          
-          # Pop stash
-          git stash pop
-          
-          # Stage and commit
           git add -A
-          
-          # Check if there are changes and commit them
           if git diff --staged --quiet; then
             echo "No changes to commit"
-            exit 0
           else
             git commit -m "Format .liq files with Prettier"
-            git push origin HEAD:${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}
+            git push
           fi
