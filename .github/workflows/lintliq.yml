@@ -34,6 +34,8 @@ jobs:
         run: |
           git config --global user.name 'github-actions[bot]'
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git fetch origin ${GITHUB_REF_NAME}
+          git rebase origin/${GITHUB_REF_NAME}
           git add -A
           git commit -m "Format .liq files with Prettier" || echo "No changes to commit"
           git push origin HEAD:refs/heads/${GITHUB_REF_NAME}
