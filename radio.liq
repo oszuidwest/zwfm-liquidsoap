@@ -192,6 +192,3 @@ output_icecast_stream(
   source=audio_to_icecast
 )
 
-
-
-
