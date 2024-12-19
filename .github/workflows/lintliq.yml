@@ -35,11 +35,17 @@ jobs:
           git config --global user.name 'github-actions[bot]'
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
           
+          # Stash changes
+          git stash
+          
           # Fetch and rebase
           git fetch origin ${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}
           git rebase origin/${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}
           
-          # Stage changes
+          # Pop stash
+          git stash pop
+          
+          # Stage and commit
           git add -A
           
           # Check if there are changes and commit them
