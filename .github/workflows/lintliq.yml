@@ -35,19 +35,18 @@ jobs:
           git config --global user.name 'github-actions[bot]'
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
           
-          # Stage the changes first
+          # Fetch and rebase
+          git fetch origin ${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}
+          git rebase origin/${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}
+          
+          # Stage changes
           git add -A
           
-          # Only proceed with commit and push if there are changes
+          # Check if there are changes and commit them
           if git diff --staged --quiet; then
             echo "No changes to commit"
             exit 0
           else
-            # Fetch and rebase
-            git fetch origin ${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}
-            git rebase origin/${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}
-            
-            # Commit and push
             git commit -m "Format .liq files with Prettier"
             git push origin HEAD:${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}
           fi
