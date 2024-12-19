@@ -34,9 +34,6 @@ jobs:
         id: get_branch
         run: echo "branch_name=$(git symbolic-ref --short HEAD || echo 'main')" >> $GITHUB_ENV
 
-      - name: Log branch name
-        run: echo "Current branch: ${{ env.branch_name }}"
-
       - name: Commit changes
         run: |
           git config --global user.name 'github-actions[bot]'
