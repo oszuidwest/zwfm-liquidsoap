@@ -30,12 +30,19 @@ jobs:
         run: |
           npx liquidsoap-prettier -w "**/*.liq"
 
+      - name: Get current branch name
+        id: get_branch
+        run: echo "branch_name=$(git symbolic-ref --short HEAD || echo 'main')" >> $GITHUB_ENV
+
+      - name: Log branch name
+        run: echo "Current branch: ${{ env.branch_name }}"
+
       - name: Commit changes
         run: |
           git config --global user.name 'github-actions[bot]'
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
-          git fetch origin ${GITHUB_REF_NAME}
-          git rebase origin/${GITHUB_REF_NAME}
+          git fetch origin ${{ env.branch_name }}
+          git rebase origin/${{ env.branch_name }}
           git add -A
           git commit -m "Format .liq files with Prettier" || echo "No changes to commit"
-          git push origin HEAD:refs/heads/${GITHUB_REF_NAME}
+          git push origin HEAD:refs/heads/${{ env.branch_name }}
