@@ -144,7 +144,7 @@ radioproc =
     radio
   )
 
-# Output StereoTool sound to a dummy output since we only use it for MicroMPX
+# Send processed audio to a dummy output since we only use it for MicroMPX
 output.dummy(radioproc)
 
 # Output a high bitrate mp3 stream

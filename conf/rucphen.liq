@@ -148,8 +148,8 @@ radioproc =
     radio
   )
 
-# Output StereoTool sound to a dummy output since we only use it for MicroMPX
-output.dummy(radioproc)
+# Send unprocessed audio to a dummy output since we only use it as StereoTool input
+output.dummy(radio)
 
 # Output a high bitrate mp3 stream
 output_icecast_stream(
