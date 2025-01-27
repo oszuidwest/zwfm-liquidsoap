@@ -115,11 +115,11 @@ radio =
 ##############################################################################
 
 # Create a clock for output to Icecast
-audio_to_icecast = mksafe(buffer(radio))
+audio_to_icecast = mksafe(buffer(radioproc))
 clock.assign_new(id="icecast_clock", [audio_to_icecast])
 
 # Create a clock for output to Dutch Media Exchange
-audio_to_dme = mksafe(buffer(radio))
+audio_to_dme = mksafe(buffer(radioproc))
 clock.assign_new(id="dme_clock", [audio_to_dme])
 
 # Function to output an icecast stream with common parameters
