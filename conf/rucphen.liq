@@ -3,10 +3,10 @@ settings.frame.audio.channels := 2
 settings.frame.audio.samplerate := 48000
 
 # Streaming configuration (do change this)
-icecastserver = "icecast.example.org"
-icecastport = 8000
+icecastserver = "icecast.zuidwest.cloud"
+icecastport = 80
 icecastpassword = "hackme"
-fallbackfile = "/audio/fallback.ogg"
+fallbackfile = "/audio/fallback.mp3"
 upstreampassword = "foxtrot-uniform-charlie-kilo"
 
 # Logging function for various events
@@ -118,6 +118,10 @@ radio =
 audio_to_icecast = mksafe(buffer(radio))
 clock.assign_new(id="icecast_clock", [audio_to_icecast])
 
+# Create a clock for output to Dutch Media Exchange
+audio_to_dme = mksafe(buffer(radio))
+clock.assign_new(id="dme_clock", [audio_to_dme])
+
 # Function to output an icecast stream with common parameters
 def output_icecast_stream(~format, ~description, ~mount, ~source) =
   output.icecast(
@@ -127,7 +131,7 @@ def output_icecast_stream(~format, ~description, ~mount, ~source) =
     port=icecastport,
     password=icecastpassword,
     name=
-      "ZuidWest FM",
+      "Radio Rucphen",
     description=description,
     mount=mount,
     source
@@ -152,7 +156,7 @@ output_icecast_stream(
   format=%mp3(bitrate = 192, samplerate = 48000, internal_quality = 0),
   description=
     "Hoge Kwaliteit Stream (192kbit MP3)",
-  mount="/zuidwest.mp3",
+  mount="/radiorucphen.mp3",
   source=audio_to_icecast
 )
 
@@ -170,7 +174,7 @@ output_icecast_stream(
     ),
   description=
     "Mobile Stream (96kbit AAC)",
-  mount="/zuidwest.aac",
+  mount="/radiorucphen.aac",
   source=audio_to_icecast
 )
 
@@ -188,6 +192,27 @@ output_icecast_stream(
     ),
   description=
     "Transport Stream (576kbit AAC)",
-  mount="/zuidwest.stl",
+  mount="/radiorucphen.stl",
   source=audio_to_icecast
+)
+
+# Output a high bitrate AAC stream to Dutch Media Exchange
+output.icecast(
+  %fdkaac(
+    channels = 2,
+    samplerate = 48000,
+    bitrate = 576,
+    afterburner = true,
+    aot = 'mpeg4_aac_lc',
+    transmux = 'adts',
+    sbr_mode = true
+  ),
+  host="xxxxxxx",
+  port=0000,
+  password="xxxxx",
+  mount="/xxxx",
+  name="Rucphen RTV",
+  description="Altijd nieuws, altijd muziek",
+  user="xxxx",
+  audio_to_dme
 )
