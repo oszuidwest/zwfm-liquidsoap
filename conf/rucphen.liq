@@ -211,8 +211,10 @@ output.icecast(
   port=0000,
   password="xxxxx",
   mount="/xxxx",
-  name="Rucphen RTV",
-  description="Altijd nieuws, altijd muziek",
+  name=
+    "Rucphen RTV",
+  description=
+    "Altijd nieuws, altijd muziek",
   user="xxxx",
   audio_to_dme
 )
