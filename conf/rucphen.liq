@@ -113,6 +113,9 @@ radioproc =
     radio
   )
 
+# Send unprocessed audio to a dummy output since we only use it as StereoTool input
+output.dummy(radio)
+
 ##############################################################################
 #                             WARNING                                        #
 #                       OUTPUTTING TO MULTIPLE                               #
@@ -147,9 +150,6 @@ def output_icecast_stream(~format, ~description, ~mount, ~source) =
     source
   )
 end
-
-# Send unprocessed audio to a dummy output since we only use it as StereoTool input
-output.dummy(radio)
 
 # Output a high bitrate mp3 stream
 output_icecast_stream(

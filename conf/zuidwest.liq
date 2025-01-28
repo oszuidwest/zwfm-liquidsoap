@@ -113,6 +113,9 @@ radioproc =
     radio
   )
 
+# Send processed audio to a dummy output since we only use it for MicroMPX
+output.dummy(radioproc)
+
 ##############################################################################
 #                             WARNING                                        #
 #                       OUTPUTTING TO MULTIPLE                               #
@@ -143,9 +146,6 @@ def output_icecast_stream(~format, ~description, ~mount, ~source) =
     source
   )
 end
-
-# Send processed audio to a dummy output since we only use it for MicroMPX
-output.dummy(radioproc)
 
 # Output a high bitrate mp3 stream
 output_icecast_stream(
