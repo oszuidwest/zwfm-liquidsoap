@@ -52,8 +52,8 @@ studio_b =
 studio_a =
   blank.detect(
     id="detect_studio_a",
-    max_blank=10.0,
-    min_noise=30.0,
+    max_blank=15.0,
+    min_noise=15.0,
     fun () ->
       log_event(
         "studio_a",
@@ -71,8 +71,8 @@ studio_a =
 studio_b =
   blank.detect(
     id="detect_studio_b",
-    max_blank=10.0,
-    min_noise=30.0,
+    max_blank=15.0,
+    min_noise=15.0,
     fun () ->
       log_event(
         "studio_b",
@@ -89,9 +89,9 @@ studio_b =
 
 # Consider inputs unavailable when silent
 studio_a =
-  blank.strip(id="stripped_studio_a", max_blank=10., min_noise=30., studio_a)
+  blank.strip(id="stripped_studio_a", max_blank=15., min_noise=15., studio_a)
 studio_b =
-  blank.strip(id="stripped_studio_b", max_blank=10., min_noise=30., studio_b)
+  blank.strip(id="stripped_studio_b", max_blank=15., min_noise=15., studio_b)
 
 # Wrap it in a buffer to prevent latency from connection/disconnection to impact downstream operators/output
 studio_a = buffer(id="buffered_studio_a", fallible=true, studio_a)
@@ -101,6 +101,16 @@ studio_b = buffer(id="buffered_studio_b", fallible=true, studio_b)
 radio =
   fallback(
     id="radio_prod", track_sensitive=false, [studio_a, studio_b, noodband]
+  )
+
+# StereoTool implementation
+radioproc =
+  stereotool(
+    library_file="/var/cache/liquidsoap/st_plugin.so",
+    license_key=
+      "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    preset="/var/cache/liquidsoap/.liquidsoap.rc",
+    radio
   )
 
 ##############################################################################
@@ -133,16 +143,6 @@ def output_icecast_stream(~format, ~description, ~mount, ~source) =
     source
   )
 end
-
-# StereoTool implementation
-radioproc =
-  stereotool(
-    library_file="/var/cache/liquidsoap/st_plugin.so",
-    license_key=
-      "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
-    preset="/var/cache/liquidsoap/.liquidsoap.rc",
-    radio
-  )
 
 # Send processed audio to a dummy output since we only use it for MicroMPX
 output.dummy(radioproc)
