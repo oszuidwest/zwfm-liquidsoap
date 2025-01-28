@@ -29,7 +29,7 @@ AUDIO_FALLBACK_URL="https://upload.wikimedia.org/wikipedia/commons/6/66/Aaron_Du
 AUDIO_FALLBACK_PATH="/opt/liquidsoap/audio/fallback.ogg"
 
 # StereoTool configuration
-STEREO_TOOL_VERSION="1041"
+STEREO_TOOL_VERSION="1050"
 STEREO_TOOL_BASE_URL="https://download.thimeo.com"
 STEREO_TOOL_ZIP_URL="${STEREO_TOOL_BASE_URL}/Stereo_Tool_Generic_plugin_${STEREO_TOOL_VERSION}.zip"
 STEREO_TOOL_ZIP_PATH="/tmp/stereotool.zip"
@@ -98,6 +98,7 @@ if ! curl -sLo "${DOCKER_COMPOSE_PATH}" "${DOCKER_COMPOSE_URL}"; then
   exit 1
 fi
 
+backup_file "${AUDIO_FALLBACK_PATH}"
 if ! curl -sLo "${AUDIO_FALLBACK_PATH}" "${AUDIO_FALLBACK_URL}"; then
   echo -e "${RED}Error: Unable to download the audio fallback file.${NC}"
   exit 1
