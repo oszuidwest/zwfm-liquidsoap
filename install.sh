@@ -192,7 +192,7 @@ Whitelist=/0
 EOL
 else
   # Remove StereoTool configuration from the Liquidsoap script if not in use
-  sed -i '/# StereoTool implementation/,/output.dummy(radioproc)/d' "${LIQUIDSOAP_CONFIG_PATH}"
+  sed -i '/# StereoTool implementation/,/output.dummy(.*)/d' "${LIQUIDSOAP_CONFIG_PATH}"
 fi
 
 # Adjust ownership for the directories
