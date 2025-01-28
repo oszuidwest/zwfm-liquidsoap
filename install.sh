@@ -21,8 +21,9 @@ DOCKER_COMPOSE_PATH="/opt/liquidsoap/docker-compose.yml"
 DOCKER_COMPOSE_ST_URL="https://raw.githubusercontent.com/oszuidwest/zwfm-liquidsoap/main/docker-compose.stereotool.yml" 
 DOCKER_COMPOSE_ST_PATH="/opt/liquidsoap/docker-compose.stereotool.yml"
 
-# Liquidsoap configuration #
-LIQUIDSOAP_CONFIG_URL="https://raw.githubusercontent.com/oszuidwest/zwfm-liquidsoap/main/conf/zuidwest.liq"
+# Liquidsoap configuration
+LIQUIDSOAP_CONFIG_URL_ZUIDWEST="https://raw.githubusercontent.com/oszuidwest/zwfm-liquidsoap/main/conf/zuidwest.liq"
+LIQUIDSOAP_CONFIG_URL_RUCPHEN="https://raw.githubusercontent.com/oszuidwest/zwfm-liquidsoap/main/conf/rucphen.liq"
 LIQUIDSOAP_CONFIG_PATH="/opt/liquidsoap/scripts/radio.liq"
 
 AUDIO_FALLBACK_URL="https://upload.wikimedia.org/wikipedia/commons/6/66/Aaron_Dunn_-_Sonata_No_1_-_Movement_2.ogg"
@@ -70,6 +71,13 @@ EOF
 echo -e "${GREEN}⎎ Liquidsoap and StereoTool Installation${NC}\n"
 
 # Prompt user for input
+ask_user "STATION_CONFIG" "zuidwest" "Which station configuration would you like to use? (zuidwest/rucphen)" "str"
+
+# Validate station configuration
+if [[ ! "$STATION_CONFIG" =~ ^(zuidwest|rucphen)$ ]]; then
+    echo -e "${RED}Error: Invalid station configuration. Must be either 'zuidwest' or 'rucphen'.${NC}"
+    exit 1
+fi
 ask_user "USE_ST" "n" "Would you like to use StereoTool for sound processing? (y/n)" "y/n"
 ask_user "DO_UPDATES" "y" "Would you like to perform all OS updates? (y/n)" "y/n"
 
@@ -86,9 +94,16 @@ done
 # Backup and download configuration files
 echo -e "${BLUE}►► Downloading configuration files...${NC}"
 
+# Set configuration URL based on user choice
+if [ "${STATION_CONFIG}" == "zuidwest" ]; then
+  LIQUIDSOAP_CONFIG_URL="${LIQUIDSOAP_CONFIG_URL_ZUIDWEST}"
+else
+  LIQUIDSOAP_CONFIG_URL="${LIQUIDSOAP_CONFIG_URL_RUCPHEN}"
+fi
+
 backup_file "${LIQUIDSOAP_CONFIG_PATH}"
 if ! curl -sLo "${LIQUIDSOAP_CONFIG_PATH}" "${LIQUIDSOAP_CONFIG_URL}"; then
-  echo -e "${RED}Error: Unable to download the Liquidsoap configuration.${NC}"
+  echo -e "${RED}Error: Unable to download the Liquidsoap configuration for ${STATION_CONFIG}.${NC}"
   exit 1
 fi
 
@@ -184,4 +199,4 @@ fi
 echo -e "${BLUE}►► Setting ownership for /opt/liquidsoap...${NC}"
 chown -R 10000:10001 /opt/liquidsoap
 
-echo -e "${GREEN}Installation completed successfully!${NC}"
+echo -e "${GREEN}Installation completed successfully for ${STATION_CONFIG} configuration!${NC}"
