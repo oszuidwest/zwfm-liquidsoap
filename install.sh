@@ -21,15 +21,16 @@ DOCKER_COMPOSE_PATH="/opt/liquidsoap/docker-compose.yml"
 DOCKER_COMPOSE_ST_URL="https://raw.githubusercontent.com/oszuidwest/zwfm-liquidsoap/main/docker-compose.stereotool.yml" 
 DOCKER_COMPOSE_ST_PATH="/opt/liquidsoap/docker-compose.stereotool.yml"
 
-# Liquidsoap configuration #
-LIQUIDSOAP_CONFIG_URL="https://raw.githubusercontent.com/oszuidwest/zwfm-liquidsoap/main/radio.liq"
+# Liquidsoap configuration
+LIQUIDSOAP_CONFIG_URL_ZUIDWEST="https://raw.githubusercontent.com/oszuidwest/zwfm-liquidsoap/main/conf/zuidwest.liq"
+LIQUIDSOAP_CONFIG_URL_RUCPHEN="https://raw.githubusercontent.com/oszuidwest/zwfm-liquidsoap/main/conf/rucphen.liq"
 LIQUIDSOAP_CONFIG_PATH="/opt/liquidsoap/scripts/radio.liq"
 
 AUDIO_FALLBACK_URL="https://upload.wikimedia.org/wikipedia/commons/6/66/Aaron_Dunn_-_Sonata_No_1_-_Movement_2.ogg"
 AUDIO_FALLBACK_PATH="/opt/liquidsoap/audio/fallback.ogg"
 
 # StereoTool configuration
-STEREO_TOOL_VERSION="1041"
+STEREO_TOOL_VERSION="1050"
 STEREO_TOOL_BASE_URL="https://download.thimeo.com"
 STEREO_TOOL_ZIP_URL="${STEREO_TOOL_BASE_URL}/Stereo_Tool_Generic_plugin_${STEREO_TOOL_VERSION}.zip"
 STEREO_TOOL_ZIP_PATH="/tmp/stereotool.zip"
@@ -70,6 +71,13 @@ EOF
 echo -e "${GREEN}⎎ Liquidsoap and StereoTool Installation${NC}\n"
 
 # Prompt user for input
+ask_user "STATION_CONFIG" "zuidwest" "Which station configuration would you like to use? (zuidwest/rucphen)" "str"
+
+# Validate station configuration
+if [[ ! "$STATION_CONFIG" =~ ^(zuidwest|rucphen)$ ]]; then
+    echo -e "${RED}Error: Invalid station configuration. Must be either 'zuidwest' or 'rucphen'.${NC}"
+    exit 1
+fi
 ask_user "USE_ST" "n" "Would you like to use StereoTool for sound processing? (y/n)" "y/n"
 ask_user "DO_UPDATES" "y" "Would you like to perform all OS updates? (y/n)" "y/n"
 
@@ -86,9 +94,16 @@ done
 # Backup and download configuration files
 echo -e "${BLUE}►► Downloading configuration files...${NC}"
 
+# Set configuration URL based on user choice
+if [ "${STATION_CONFIG}" == "zuidwest" ]; then
+  LIQUIDSOAP_CONFIG_URL="${LIQUIDSOAP_CONFIG_URL_ZUIDWEST}"
+else
+  LIQUIDSOAP_CONFIG_URL="${LIQUIDSOAP_CONFIG_URL_RUCPHEN}"
+fi
+
 backup_file "${LIQUIDSOAP_CONFIG_PATH}"
 if ! curl -sLo "${LIQUIDSOAP_CONFIG_PATH}" "${LIQUIDSOAP_CONFIG_URL}"; then
-  echo -e "${RED}Error: Unable to download the Liquidsoap configuration.${NC}"
+  echo -e "${RED}Error: Unable to download the Liquidsoap configuration for ${STATION_CONFIG}.${NC}"
   exit 1
 fi
 
@@ -98,6 +113,7 @@ if ! curl -sLo "${DOCKER_COMPOSE_PATH}" "${DOCKER_COMPOSE_URL}"; then
   exit 1
 fi
 
+backup_file "${AUDIO_FALLBACK_PATH}"
 if ! curl -sLo "${AUDIO_FALLBACK_PATH}" "${AUDIO_FALLBACK_URL}"; then
   echo -e "${RED}Error: Unable to download the audio fallback file.${NC}"
   exit 1
@@ -183,4 +199,4 @@ fi
 echo -e "${BLUE}►► Setting ownership for /opt/liquidsoap...${NC}"
 chown -R 10000:10001 /opt/liquidsoap
 
-echo -e "${GREEN}Installation completed successfully!${NC}"
+echo -e "${GREEN}Installation completed successfully for ${STATION_CONFIG} configuration!${NC}"

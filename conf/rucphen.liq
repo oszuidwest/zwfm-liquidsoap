@@ -3,10 +3,10 @@ settings.frame.audio.channels := 2
 settings.frame.audio.samplerate := 48000
 
 # Streaming configuration (do change this)
-icecastserver = "icecast.example.org"
-icecastport = 8000
+icecastserver = "icecast.zuidwest.cloud"
+icecastport = 80
 icecastpassword = "hackme"
-fallbackfile = "/audio/fallback.ogg"
+fallbackfile = "/audio/fallback.mp3"
 upstreampassword = "foxtrot-uniform-charlie-kilo"
 
 # Logging function for various events
@@ -52,8 +52,8 @@ studio_b =
 studio_a =
   blank.detect(
     id="detect_studio_a",
-    max_blank=10.0,
-    min_noise=30.0,
+    max_blank=15.0,
+    min_noise=15.0,
     fun () ->
       log_event(
         "studio_a",
@@ -71,8 +71,8 @@ studio_a =
 studio_b =
   blank.detect(
     id="detect_studio_b",
-    max_blank=10.0,
-    min_noise=30.0,
+    max_blank=15.0,
+    min_noise=15.0,
     fun () ->
       log_event(
         "studio_b",
@@ -89,9 +89,9 @@ studio_b =
 
 # Consider inputs unavailable when silent
 studio_a =
-  blank.strip(id="stripped_studio_a", max_blank=10., min_noise=30., studio_a)
+  blank.strip(id="stripped_studio_a", max_blank=15., min_noise=15., studio_a)
 studio_b =
-  blank.strip(id="stripped_studio_b", max_blank=10., min_noise=30., studio_b)
+  blank.strip(id="stripped_studio_b", max_blank=15., min_noise=15., studio_b)
 
 # Wrap it in a buffer to prevent latency from connection/disconnection to impact downstream operators/output
 studio_a = buffer(id="buffered_studio_a", fallible=true, studio_a)
@@ -102,6 +102,19 @@ radio =
   fallback(
     id="radio_prod", track_sensitive=false, [studio_a, studio_b, noodband]
   )
+
+# StereoTool implementation
+radioproc =
+  stereotool(
+    library_file="/var/cache/liquidsoap/st_plugin.so",
+    license_key=
+      "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    preset="/var/cache/liquidsoap/.liquidsoap.rc",
+    radio
+  )
+
+# Send unprocessed audio to a dummy output since we only use it as StereoTool input
+output.dummy(radio)
 
 ##############################################################################
 #                             WARNING                                        #
@@ -115,8 +128,12 @@ radio =
 ##############################################################################
 
 # Create a clock for output to Icecast
-audio_to_icecast = mksafe(buffer(radio))
+audio_to_icecast = mksafe(buffer(radioproc))
 clock.assign_new(id="icecast_clock", [audio_to_icecast])
+
+# Create a clock for output to Dutch Media Exchange
+audio_to_dme = mksafe(buffer(radioproc))
+clock.assign_new(id="dme_clock", [audio_to_dme])
 
 # Function to output an icecast stream with common parameters
 def output_icecast_stream(~format, ~description, ~mount, ~source) =
@@ -127,32 +144,19 @@ def output_icecast_stream(~format, ~description, ~mount, ~source) =
     port=icecastport,
     password=icecastpassword,
     name=
-      "ZuidWest FM",
+      "Radio Rucphen",
     description=description,
     mount=mount,
     source
   )
 end
 
-# StereoTool implementation
-radioproc =
-  stereotool(
-    library_file="/var/cache/liquidsoap/st_plugin.so",
-    license_key=
-      "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
-    preset="/var/cache/liquidsoap/.liquidsoap.rc",
-    radio
-  )
-
-# Output StereoTool sound to a dummy output since we only use it for MicroMPX
-output.dummy(radioproc)
-
 # Output a high bitrate mp3 stream
 output_icecast_stream(
   format=%mp3(bitrate = 192, samplerate = 48000, internal_quality = 0),
   description=
     "Hoge Kwaliteit Stream (192kbit MP3)",
-  mount="/zuidwest.mp3",
+  mount="/radiorucphen.mp3",
   source=audio_to_icecast
 )
 
@@ -170,7 +174,7 @@ output_icecast_stream(
     ),
   description=
     "Mobile Stream (96kbit AAC)",
-  mount="/zuidwest.aac",
+  mount="/radiorucphen.aac",
   source=audio_to_icecast
 )
 
@@ -188,6 +192,29 @@ output_icecast_stream(
     ),
   description=
     "Transport Stream (576kbit AAC)",
-  mount="/zuidwest.stl",
+  mount="/radiorucphen.stl",
   source=audio_to_icecast
+)
+
+# Output a high bitrate AAC stream to Dutch Media Exchange
+output.icecast(
+  %fdkaac(
+    channels = 2,
+    samplerate = 48000,
+    bitrate = 576,
+    afterburner = true,
+    aot = 'mpeg4_aac_lc',
+    transmux = 'adts',
+    sbr_mode = true
+  ),
+  host="xxxxxxx",
+  port=0000,
+  password="xxxxx",
+  mount="/xxxx",
+  name=
+    "Rucphen RTV",
+  description=
+    "Altijd nieuws, altijd muziek",
+  user="xxxx",
+  audio_to_dme
 )
