@@ -109,7 +109,7 @@ radioproc =
     library_file="/var/cache/liquidsoap/st_plugin.so",
     license_key=
       "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
-    preset="/var/cache/liquidsoap/.liquidsoap.rc",
+    preset="/var/cache/liquidsoap/.st_plugin.so.rc",
     radio
   )
 
