@@ -18,7 +18,7 @@ source "${FUNCTIONS_LIB_PATH}"
 # Docker files
 DOCKER_COMPOSE_URL="https://raw.githubusercontent.com/oszuidwest/zwfm-liquidsoap/main/docker-compose.yml"
 DOCKER_COMPOSE_PATH="/opt/liquidsoap/docker-compose.yml"
-DOCKER_COMPOSE_ST_URL="https://raw.githubusercontent.com/oszuidwest/zwfm-liquidsoap/main/docker-compose.stereotool.yml" 
+DOCKER_COMPOSE_ST_URL="https://raw.githubusercontent.com/oszuidwest/zwfm-liquidsoap/main/docker-compose.stereotool.yml"
 DOCKER_COMPOSE_ST_PATH="/opt/liquidsoap/docker-compose.stereotool.yml"
 
 # Liquidsoap configuration
@@ -61,7 +61,7 @@ require_tool "docker"
 # Display a welcome banner
 clear
 cat << "EOF"
- ______     _     ___          __       _     ______ __  __ 
+ ______     _     ___          __       _     ______ __  __
 |___  /    (_)   | \ \        / /      | |   |  ____|  \/  |
    / /_   _ _  __| |\ \  /\  / /__  ___| |_  | |__  | \  / |
   / /| | | | |/ _` | \ \/  \/ / _ \/ __| __| |  __| | |\/| |
@@ -140,7 +140,7 @@ if [ "${USE_ST}" == "y" ]; then
     echo -e "${RED}Error: Unable to download RDS metadata.${NC}"
     exit 1
   fi
-  
+
   STEREO_TOOL_DIR="/opt/liquidsoap/stereotool"
   mkdir -p "${STEREO_TOOL_DIR}"
 
@@ -184,7 +184,7 @@ if [ "${USE_ST}" == "y" ]; then
   rm -rf "${TMP_DIR}" "${STEREO_TOOL_ZIP_PATH}"
 
   # Write StereoTool configuration
-  STEREOTOOL_RC_PATH="${STEREO_TOOL_DIR}/.liquidsoap.rc"
+  STEREOTOOL_RC_PATH="${STEREO_TOOL_DIR}/.st_plugin.so.rc"
   cat <<EOL > "${STEREOTOOL_RC_PATH}"
 [Stereo Tool Configuration]
 Enable web interface=1
