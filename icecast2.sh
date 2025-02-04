@@ -5,14 +5,14 @@ clear
 
 # Download the functions library
 if ! curl -s -o /tmp/functions.sh https://raw.githubusercontent.com/oszuidwest/bash-functions/main/common-functions.sh; then
-  echo -e  "*** Failed to download functions library. Please check your network connection! ***"
+  echo -e "*** Failed to download functions library. Please check your network connection! ***"
   exit 1
 fi
 
-# Source the functions file
+# Source the functions library
 source /tmp/functions.sh
 
-# Something fancy for the sysadmin
+# Display a fancy banner for the sysadmin
 cat << "EOF"
  ______     _     ___          __       _     ______ __  __ 
 |___  /    (_)   | \ \        / /      | |   |  ____|  \/  |
@@ -27,7 +27,7 @@ cat << "EOF"
 
 EOF
 
-# Configure environment
+# Configure the environment
 set_colors
 check_user_privileges privileged
 is_this_linux
@@ -35,32 +35,48 @@ is_this_os_64bit
 set_timezone Europe/Amsterdam
 
 # Collect user inputs
-ask_user "HOSTNAME" "localhost" "Specify the host name (for example: icecast.zuidwestfm.nl. Enter it without http:// or www) please" "str"
+ask_user "HOSTNAMES" "localhost" "Specify the host name(s) (e.g., icecast.example.com) separated by a space (enter without http:// or www) please" "str"
 ask_user "SOURCEPASS" "hackme" "Specify the source and relay password" "str"
 ask_user "ADMINPASS" "hackme" "Specify the admin password" "str"
 ask_user "LOCATED" "Earth" "Where is this server located (visible on admin pages)?" "str"
-ask_user "ADMINMAIL" "root@localhost.local" "What's the admins e-mail (visible on admin pages and for let's encrypt)?" "email"
+ask_user "ADMINMAIL" "root@localhost.local" "What's the admin's e-mail (visible on admin pages and for Let's Encrypt)?" "email"
 ask_user "PORT" "80" "Specify the port" "num"
 ask_user "SSL" "n" "Do you want Let's Encrypt to get a certificate for this server? (y/n)" "y/n"
 
-# Set environment variables
-export DEBIAN_FRONTEND="noninteractive"
+# Sanitize the entered hostname(s)
+HOSTNAMES=$(echo "$HOSTNAMES" | xargs)
+IFS=' ' read -r -a HOSTNAMES_ARRAY <<< "$HOSTNAMES"
+sanitized_domains=()
+for domain in "${HOSTNAMES_ARRAY[@]}"; do
+  sanitized_domain=$(echo "$domain" | tr -d '[:space:]')
+  sanitized_domains+=("$sanitized_domain")
+done
 
-# Update and install packages
+# Order the entered hostname(s)
+HOSTNAMES_ARRAY=("${sanitized_domains[@]}")
+PRIMARY_HOSTNAME="${HOSTNAMES_ARRAY[0]}"
+
+# Build the domain flags for Certbot (e.g., -d domain1 -d domain2 ...)
+DOMAINS_FLAGS=""
+for domain in "${HOSTNAMES_ARRAY[@]}"; do
+  DOMAINS_FLAGS="$DOMAINS_FLAGS -d $domain"
+done
+
+# Update the OS and install necessary packages
 update_os silent
 install_packages silent icecast2 certbot
 
-# Generate initial icecast.xml configuration
+# Generate the initial icecast.xml configuration
 ICECAST_XML="/etc/icecast2/icecast.xml"
 cat <<EOF > "$ICECAST_XML"
 <icecast>
   <location>$LOCATED</location>
   <admin>$ADMINMAIL</admin>
-  <hostname>$HOSTNAME</hostname>
+  <hostname>$PRIMARY_HOSTNAME</hostname>
 
   <limits>
-    <clients>1000</clients>
-    <sources>10</sources>
+    <clients>5000</clients>
+    <sources>25</sources>
     <burst-size>265536</burst-size>
   </limits>
 
@@ -94,21 +110,23 @@ cat <<EOF > "$ICECAST_XML"
 </icecast>
 EOF
 
-# Set capabilities
+# Set capabilities so that Icecast can listen on ports 80/443
 setcap CAP_NET_BIND_SERVICE=+eip /usr/bin/icecast2
 
-# Reload and restart Icecast service
+# Reload and restart the Icecast service
 systemctl enable icecast2
 systemctl daemon-reload
 systemctl restart icecast2
 
 # SSL configuration
 if [ "$SSL" = "y" ] && [ "$PORT" = "80" ]; then
-  # Run Certbot to obtain SSL certificate
-  echo -e "${BLUE}►► Running Certbot to obtain SSL certificate...${NC}"
-  certbot --text --agree-tos --email "$ADMINMAIL" --noninteractive --no-eff-email --webroot --webroot-path="/usr/share/icecast2/web" -d "$HOSTNAME" --deploy-hook "cat /etc/letsencrypt/live/$HOSTNAME/fullchain.pem /etc/letsencrypt/live/$HOSTNAME/privkey.pem > /usr/share/icecast2/icecast.pem && systemctl restart icecast2" certonly
+  echo -e "${BLUE}►► Running Certbot to obtain SSL certificate for domains: ${HOSTNAMES_ARRAY[*]} ${NC}"
+  certbot --text --agree-tos --email "$ADMINMAIL" --noninteractive --no-eff-email \
+    --webroot --webroot-path="/usr/share/icecast2/web" "$DOMAINS_FLAGS" \
+    --deploy-hook "cat /etc/letsencrypt/live/$PRIMARY_HOSTNAME/fullchain.pem /etc/letsencrypt/live/$PRIMARY_HOSTNAME/privkey.pem > /usr/share/icecast2/icecast.pem && systemctl restart icecast2" \
+    certonly
 
-  # Check if Certbot was successful
+  # Check if Certbot successfully obtained a certificate
   if [ -f "/usr/share/icecast2/icecast.pem" ]; then
     # Update icecast.xml with SSL settings
     sed -i "/<paths>/a \
@@ -120,7 +138,7 @@ if [ "$SSL" = "y" ] && [ "$PORT" = "80" ]; then
         <ssl>1</ssl>\n\
     </listen-socket>" "$ICECAST_XML"
 
-    # Restart Icecast to apply new configuration
+    # Restart Icecast to apply the new configuration
     echo -e "${BLUE}►► Restarting Icecast with SSL support${NC}"
     systemctl restart icecast2
   else
