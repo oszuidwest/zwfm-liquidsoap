@@ -1,0 +1,8 @@
+# Icecast logs
+*.log
+
+# Database
+*.db
+
+# Vendor directory
+/vendor/
