@@ -1,2 +1,4 @@
 51.138.78.215 # ZuidWest Audiologger 1
 195.201.170.190 # ZuidWest Audiologger 2
+144.76.38.123 # MusicDNA listener
+65.21.237.58 # MusicDNA listener
