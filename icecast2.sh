@@ -56,10 +56,10 @@ done
 HOSTNAMES_ARRAY=("${sanitized_domains[@]}")
 PRIMARY_HOSTNAME="${HOSTNAMES_ARRAY[0]}"
 
-# Build the domain flags for Certbot (e.g., -d domain1 -d domain2 ...)
-DOMAINS_FLAGS=""
+# Build the domain flags for Certbot as an array
+DOMAINS_FLAGS=()
 for domain in "${HOSTNAMES_ARRAY[@]}"; do
-  DOMAINS_FLAGS="$DOMAINS_FLAGS -d $domain"
+  DOMAINS_FLAGS+=( -d "$domain" )
 done
 
 # Update the OS and install necessary packages
@@ -123,7 +123,8 @@ systemctl restart icecast2
 if [ "$SSL" = "y" ] && [ "$PORT" = "80" ]; then
   echo -e "${BLUE}►► Running Certbot to obtain SSL certificate for domains: ${HOSTNAMES_ARRAY[*]} ${NC}"
   certbot --text --agree-tos --email "$ADMINMAIL" --noninteractive --no-eff-email \
-    --webroot --webroot-path="/usr/share/icecast2/web" "$DOMAINS_FLAGS" \
+    --webroot --webroot-path="/usr/share/icecast2/web" \
+    "${DOMAINS_FLAGS[@]}" \
     --deploy-hook "cat /etc/letsencrypt/live/$PRIMARY_HOSTNAME/fullchain.pem /etc/letsencrypt/live/$PRIMARY_HOSTNAME/privkey.pem > /usr/share/icecast2/icecast.pem && systemctl restart icecast2" \
     certonly
 

@@ -20,6 +20,8 @@ DOCKER_COMPOSE_URL="https://raw.githubusercontent.com/oszuidwest/zwfm-liquidsoap
 DOCKER_COMPOSE_PATH="/opt/liquidsoap/docker-compose.yml"
 DOCKER_COMPOSE_ST_URL="https://raw.githubusercontent.com/oszuidwest/zwfm-liquidsoap/main/docker-compose.stereotool.yml"
 DOCKER_COMPOSE_ST_PATH="/opt/liquidsoap/docker-compose.stereotool.yml"
+DOCKER_COMPOSE_DAB_URL="https://raw.githubusercontent.com/oszuidwest/zwfm-liquidsoap/main/docker-compose.dabplus.yml"
+DOCKER_COMPOSE_DAB_PATH="/opt/liquidsoap/docker-compose.dabplus.yml"
 
 # Liquidsoap configuration
 LIQUIDSOAP_CONFIG_URL_ZUIDWEST="https://raw.githubusercontent.com/oszuidwest/zwfm-liquidsoap/main/conf/zuidwest.liq"
@@ -34,6 +36,13 @@ STEREO_TOOL_VERSION="1050"
 STEREO_TOOL_BASE_URL="https://download.thimeo.com"
 STEREO_TOOL_ZIP_URL="${STEREO_TOOL_BASE_URL}/Stereo_Tool_Generic_plugin_${STEREO_TOOL_VERSION}.zip"
 STEREO_TOOL_ZIP_PATH="/tmp/stereotool.zip"
+STEREO_TOOL_INSTALL_DIR="/opt/liquidsoap/stereotool"
+
+# Open Digital Radio Encoder configuration
+ODR_VERSION="v3.6.0"
+ODR_BASE_URL="https://github.com/oszuidwest/zwfm-odrbuilds/releases/download/odr-audioenc-${ODR_VERSION}"
+ODR_INSTALL_DIR="/opt/liquidsoap/dabplus"
+ODR_SOCKETS_DIR="/opt/liquidsoap/dabplus/sockets"
 
 # RDS configuration
 RDS_RADIOTEXT_URL="https://rds.zuidwestfm.nl/?rt"
@@ -79,6 +88,7 @@ if [[ ! "$STATION_CONFIG" =~ ^(zuidwest|rucphen)$ ]]; then
     exit 1
 fi
 ask_user "USE_ST" "n" "Would you like to use StereoTool for sound processing? (y/n)" "y/n"
+ask_user "USE_DAB" "n" "Would you like to install DAB+ encoding support? (y/n)" "y/n"
 ask_user "DO_UPDATES" "y" "Would you like to perform all OS updates? (y/n)" "y/n"
 
 if [ "${DO_UPDATES}" == "y" ]; then
@@ -141,8 +151,8 @@ if [ "${USE_ST}" == "y" ]; then
     exit 1
   fi
 
-  STEREO_TOOL_DIR="/opt/liquidsoap/stereotool"
-  mkdir -p "${STEREO_TOOL_DIR}"
+  # Create installation directory
+  mkdir -p "${STEREO_TOOL_INSTALL_DIR}"
 
   # Download and extract StereoTool
   if ! curl -sLo "${STEREO_TOOL_ZIP_PATH}" "${STEREO_TOOL_ZIP_URL}"; then
@@ -178,13 +188,13 @@ if [ "${USE_ST}" == "y" ]; then
     exit 1
   fi
 
-  cp "${LIB_PATH}" "${STEREO_TOOL_DIR}/st_plugin.so"
+  cp "${LIB_PATH}" "${STEREO_TOOL_INSTALL_DIR}/st_plugin.so"
 
   # Clean up temporary files
   rm -rf "${TMP_DIR}" "${STEREO_TOOL_ZIP_PATH}"
 
   # Write StereoTool configuration
-  STEREOTOOL_RC_PATH="${STEREO_TOOL_DIR}/.st_plugin.so.rc"
+  STEREOTOOL_RC_PATH="${STEREO_TOOL_INSTALL_DIR}/.st_plugin.so.rc"
   cat <<EOL > "${STEREOTOOL_RC_PATH}"
 [Stereo Tool Configuration]
 Enable web interface=1
@@ -193,6 +203,56 @@ EOL
 else
   # Remove StereoTool configuration from the Liquidsoap script if not in use
   sed -i '/# StereoTool implementation/,/output.dummy(.*)/d' "${LIQUIDSOAP_CONFIG_PATH}"
+fi
+
+# Install DAB+ encoder if requested
+if [ "${USE_DAB}" == "y" ]; then
+  echo -e "${BLUE}►► Installing DAB+ encoder...${NC}"
+  
+  # Create DAB installation directory
+  mkdir -p "${ODR_INSTALL_DIR}"
+
+  # Create DAB metadata sockets directory
+  mkdir -p "${ODR_SOCKETS_DIR}"  
+  
+  # Determine the correct package based on architecture
+  case "${OS_ARCH}" in
+    amd64)
+      ODR_PACKAGE="odr-audioenc-${ODR_VERSION}-minimal-debian-amd64"
+      ;;
+    arm64)
+      ODR_PACKAGE="odr-audioenc-${ODR_VERSION}-minimal-debian-arm64"
+      ;;
+    *)
+      echo -e "${RED}Unsupported architecture: ${OS_ARCH}${NC}"
+      exit 1
+      ;;
+  esac
+
+  # Download the appropriate ODR package
+  ODR_DOWNLOAD_URL="${ODR_BASE_URL}/${ODR_PACKAGE}"
+  ODR_PACKAGE_PATH="/tmp/${ODR_PACKAGE}"
+
+  echo -e "${BLUE}►► Downloading ODR AudioEnc package...${NC}"
+  if ! curl -sLo "${ODR_PACKAGE_PATH}" "${ODR_DOWNLOAD_URL}"; then
+    echo -e "${RED}Error: Unable to download ODR AudioEnc package.${NC}"
+    exit 1
+  fi
+
+  # Extract the package
+  echo -e "${BLUE}►► Installing ODR AudioEnc...${NC}"
+  cp "${ODR_PACKAGE_PATH}" "${ODR_INSTALL_DIR}/odr-audioenc"
+  chmod +x "${ODR_INSTALL_DIR}/odr-audioenc"
+
+  # Download the DAB-specific docker-compose configuration
+  backup_file "${DOCKER_COMPOSE_DAB_PATH}"
+  if ! curl -sLo "${DOCKER_COMPOSE_DAB_PATH}" "${DOCKER_COMPOSE_DAB_URL}"; then
+    echo -e "${RED}Error: Unable to download docker-compose.dabplus.yml.${NC}"
+    exit 1
+  fi
+
+  # Clean up
+  rm -f "${ODR_PACKAGE_PATH}"
 fi
 
 # Adjust ownership for the directories
