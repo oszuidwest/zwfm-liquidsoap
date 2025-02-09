@@ -131,6 +131,10 @@ output.dummy(radioproc)
 audio_to_icecast = mksafe(buffer(radio))
 clock.assign_new(id="icecast_clock", [audio_to_icecast])
 
+# Create a clock for output to Radio Netwerk Nederland
+audio_to_rnn = mksafe(buffer(radioproc))
+clock.assign_new(id="rnn_clock", [audio_to_rnn])
+
 # Function to output an icecast stream with common parameters
 def output_icecast_stream(~format, ~description, ~mount, ~source) =
   output.icecast(
@@ -190,4 +194,12 @@ output_icecast_stream(
     "Transport Stream (576kbit AAC)",
   mount="/zuidwest.stl",
   source=audio_to_icecast
+)
+
+# Feed the audio to ODR-AudioEnc
+output.external(
+  %wav(channels = 2, samplerate = 48000),
+  "/bin/odr-audioenc -i - --bitrate=112 --stats=/dabplus/sockets/dab_stats \
+   --edi='tcp://localhost:7000'",
+  audio_to_rnn
 )

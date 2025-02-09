@@ -1,0 +1,6 @@
+name: zwfm-liquidsoap-dabplus
+services:
+  liquidsoap:
+    volumes:
+      - ./dabplus/odr-audioenc:/bin/odr-audioenc
+      - ./dabplus/sockets:/dabplus/sockets
