@@ -1,0 +1,5 @@
+name: zwfm-liquidsoap-dabenc
+services:
+  liquidsoap:
+    volumes:
+      - ./dabenc/odr-audioenc:/bin/odr-audioenc
