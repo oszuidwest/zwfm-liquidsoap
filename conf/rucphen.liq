@@ -218,3 +218,10 @@ output.icecast(
   user="xxxx",
   audio_to_dme
 )
+
+# Feed the audio to ODR-AudioEnc
+output.external(
+  %wav(channels = 2, samplerate = 48000),
+  "/bin/odr-audioenc -i - -b 128 -c 2 -r 48000 -e 'tcp://localhost:6000'",
+  radioproc
+)

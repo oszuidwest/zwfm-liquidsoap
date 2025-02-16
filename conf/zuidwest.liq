@@ -191,3 +191,10 @@ output_icecast_stream(
   mount="/zuidwest.stl",
   source=audio_to_icecast
 )
+
+# Feed the audio to ODR-AudioEnc
+output.external(
+  %wav(channels = 2, samplerate = 48000),
+  "/bin/odr-audioenc -i - -b 128 -c 2 -r 48000 -e 'tcp://localhost:7000'",
+  radioproc
+)
