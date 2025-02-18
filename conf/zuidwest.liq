@@ -195,6 +195,7 @@ output_icecast_stream(
 # Feed the audio to ODR-AudioEnc
 output.external(
   %wav(channels = 2, samplerate = 48000),
-  "/bin/odr-audioenc -i - -b 128 -c 2 -r 48000 -e 'tcp://localhost:7000'",
+  "/bin/odr-audioenc -i - --bitrate=128  --pad 10 --pad-socket=/sockets/dab_pad \
+   --stats=/sockets/dab_stats --edi='tcp://localhost:7000'",
   radioproc
 )

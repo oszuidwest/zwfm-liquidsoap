@@ -42,6 +42,7 @@ STEREO_TOOL_INSTALL_DIR="/opt/liquidsoap/stereotool"
 ODR_VERSION="v3.6.0"
 ODR_BASE_URL="https://github.com/oszuidwest/zwfm-dabplus/releases/download/odr-audioenc-${ODR_VERSION}"
 ODR_INSTALL_DIR="/opt/liquidsoap/dabenc"
+ODR_SOCKETS_DIR="/opt/liquidsoap/dabenc/sockets"
 
 # RDS configuration
 RDS_RADIOTEXT_URL="https://rds.zuidwestfm.nl/?rt"
@@ -210,6 +211,9 @@ if [ "${USE_DAB}" == "y" ]; then
   
   # Create DAB installation directory
   mkdir -p "${ODR_INSTALL_DIR}"
+
+  # Create DAB metadata sockets directory
+  mkdir -p "${ODR_SOCKETS_DIR}"  
   
   # Determine the correct package based on architecture
   case "${OS_ARCH}" in
