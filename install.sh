@@ -20,8 +20,8 @@ DOCKER_COMPOSE_URL="https://raw.githubusercontent.com/oszuidwest/zwfm-liquidsoap
 DOCKER_COMPOSE_PATH="/opt/liquidsoap/docker-compose.yml"
 DOCKER_COMPOSE_ST_URL="https://raw.githubusercontent.com/oszuidwest/zwfm-liquidsoap/main/docker-compose.stereotool.yml"
 DOCKER_COMPOSE_ST_PATH="/opt/liquidsoap/docker-compose.stereotool.yml"
-DOCKER_COMPOSE_DAB_URL="https://raw.githubusercontent.com/oszuidwest/zwfm-liquidsoap/main/docker-compose.dabenc.yml"
-DOCKER_COMPOSE_DAB_PATH="/opt/liquidsoap/docker-compose.dabenc.yml"
+DOCKER_COMPOSE_DAB_URL="https://raw.githubusercontent.com/oszuidwest/zwfm-liquidsoap/main/docker-compose.dabplus.yml"
+DOCKER_COMPOSE_DAB_PATH="/opt/liquidsoap/docker-compose.dabplus.yml"
 
 # Liquidsoap configuration
 LIQUIDSOAP_CONFIG_URL_ZUIDWEST="https://raw.githubusercontent.com/oszuidwest/zwfm-liquidsoap/main/conf/zuidwest.liq"
@@ -40,9 +40,9 @@ STEREO_TOOL_INSTALL_DIR="/opt/liquidsoap/stereotool"
 
 # Open Digital Radio Encoder configuration
 ODR_VERSION="v3.6.0"
-ODR_BASE_URL="https://github.com/oszuidwest/zwfm-dabplus/releases/download/odr-audioenc-${ODR_VERSION}"
-ODR_INSTALL_DIR="/opt/liquidsoap/dabenc"
-ODR_SOCKETS_DIR="/opt/liquidsoap/dabenc/sockets"
+ODR_BASE_URL="https://github.com/oszuidwest/zwfm-odrbuilds/releases/download/odr-audioenc-${ODR_VERSION}"
+ODR_INSTALL_DIR="/opt/liquidsoap/dabplus"
+ODR_SOCKETS_DIR="/opt/liquidsoap/dabplus/sockets"
 
 # RDS configuration
 RDS_RADIOTEXT_URL="https://rds.zuidwestfm.nl/?rt"
@@ -247,7 +247,7 @@ if [ "${USE_DAB}" == "y" ]; then
   # Download the DAB-specific docker-compose configuration
   backup_file "${DOCKER_COMPOSE_DAB_PATH}"
   if ! curl -sLo "${DOCKER_COMPOSE_DAB_PATH}" "${DOCKER_COMPOSE_DAB_URL}"; then
-    echo -e "${RED}Error: Unable to download docker-compose.dabenc.yml.${NC}"
+    echo -e "${RED}Error: Unable to download docker-compose.dabplus.yml.${NC}"
     exit 1
   fi
 
