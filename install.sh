@@ -15,45 +15,49 @@ fi
 # shellcheck source=/tmp/functions.sh
 source "${FUNCTIONS_LIB_PATH}"
 
+# Define base variables
+INSTALL_DIR="/opt/liquidsoap"
+GITHUB_BASE="https://raw.githubusercontent.com/oszuidwest/zwfm-liquidsoap/main"
+
 # Docker files
-DOCKER_COMPOSE_URL="https://raw.githubusercontent.com/oszuidwest/zwfm-liquidsoap/main/docker-compose.yml"
-DOCKER_COMPOSE_PATH="/opt/liquidsoap/docker-compose.yml"
-DOCKER_COMPOSE_ST_URL="https://raw.githubusercontent.com/oszuidwest/zwfm-liquidsoap/main/docker-compose.stereotool.yml"
-DOCKER_COMPOSE_ST_PATH="/opt/liquidsoap/docker-compose.stereotool.yml"
-DOCKER_COMPOSE_DAB_URL="https://raw.githubusercontent.com/oszuidwest/zwfm-liquidsoap/main/docker-compose.dabplus.yml"
-DOCKER_COMPOSE_DAB_PATH="/opt/liquidsoap/docker-compose.dabplus.yml"
+DOCKER_COMPOSE_URL="${GITHUB_BASE}/docker-compose.yml"
+DOCKER_COMPOSE_PATH="${INSTALL_DIR}/docker-compose.yml"
+DOCKER_COMPOSE_ST_URL="${GITHUB_BASE}/docker-compose.stereotool.yml"
+DOCKER_COMPOSE_ST_PATH="${INSTALL_DIR}/docker-compose.stereotool.yml"
+DOCKER_COMPOSE_DAB_URL="${GITHUB_BASE}/docker-compose.dabplus.yml"
+DOCKER_COMPOSE_DAB_PATH="${INSTALL_DIR}/docker-compose.dabplus.yml"
 
 # Liquidsoap configuration
-LIQUIDSOAP_CONFIG_URL_ZUIDWEST="https://raw.githubusercontent.com/oszuidwest/zwfm-liquidsoap/main/conf/zuidwest.liq"
-LIQUIDSOAP_CONFIG_URL_RUCPHEN="https://raw.githubusercontent.com/oszuidwest/zwfm-liquidsoap/main/conf/rucphen.liq"
-LIQUIDSOAP_CONFIG_PATH="/opt/liquidsoap/scripts/radio.liq"
+LIQUIDSOAP_CONFIG_URL_ZUIDWEST="${GITHUB_BASE}/conf/zuidwest.liq"
+LIQUIDSOAP_CONFIG_URL_RUCPHEN="${GITHUB_BASE}/conf/rucphen.liq"
+LIQUIDSOAP_CONFIG_PATH="${INSTALL_DIR}/scripts/radio.liq"
 
 AUDIO_FALLBACK_URL="https://upload.wikimedia.org/wikipedia/commons/6/66/Aaron_Dunn_-_Sonata_No_1_-_Movement_2.ogg"
-AUDIO_FALLBACK_PATH="/opt/liquidsoap/audio/fallback.ogg"
+AUDIO_FALLBACK_PATH="${INSTALL_DIR}/audio/fallback.ogg"
 
 # StereoTool configuration
 STEREO_TOOL_VERSION="1050"
 STEREO_TOOL_BASE_URL="https://download.thimeo.com"
 STEREO_TOOL_ZIP_URL="${STEREO_TOOL_BASE_URL}/Stereo_Tool_Generic_plugin_${STEREO_TOOL_VERSION}.zip"
 STEREO_TOOL_ZIP_PATH="/tmp/stereotool.zip"
-STEREO_TOOL_INSTALL_DIR="/opt/liquidsoap/stereotool"
+STEREO_TOOL_INSTALL_DIR="${INSTALL_DIR}/stereotool"
 
 # Open Digital Radio Encoder configuration
 ODR_VERSION="v3.6.0"
 ODR_BASE_URL="https://github.com/oszuidwest/zwfm-odrbuilds/releases/download/odr-audioenc-${ODR_VERSION}"
-ODR_INSTALL_DIR="/opt/liquidsoap/dabplus"
-ODR_SOCKETS_DIR="/opt/liquidsoap/dabplus/sockets"
+ODR_INSTALL_DIR="${INSTALL_DIR}/dabplus"
+ODR_SOCKETS_DIR="${INSTALL_DIR}/dabplus/sockets"
 
 # RDS configuration
 RDS_RADIOTEXT_URL="https://rds.zuidwestfm.nl/?rt"
-RDS_RADIOTEXT_PATH="/opt/liquidsoap/metadata/rds_rt.txt"
+RDS_RADIOTEXT_PATH="${INSTALL_DIR}/metadata/rds_rt.txt"
 
 # General configuration
 TIMEZONE="Europe/Amsterdam"
 DIRECTORIES=(
-  "/opt/liquidsoap/scripts"
-  "/opt/liquidsoap/audio"
-  "/opt/liquidsoap/metadata"
+  "${INSTALL_DIR}/scripts"
+  "${INSTALL_DIR}/audio"
+  "${INSTALL_DIR}/metadata"
 )
 OS_ARCH=$(dpkg --print-architecture)
 
@@ -231,17 +235,14 @@ if [ "${USE_DAB}" == "y" ]; then
 
   # Download the appropriate ODR package
   ODR_DOWNLOAD_URL="${ODR_BASE_URL}/${ODR_PACKAGE}"
-  ODR_PACKAGE_PATH="/tmp/${ODR_PACKAGE}"
 
-  echo -e "${BLUE}►► Downloading ODR AudioEnc package...${NC}"
-  if ! curl -sLo "${ODR_PACKAGE_PATH}" "${ODR_DOWNLOAD_URL}"; then
+  echo -e "${BLUE}►► Downloading and installing ODR AudioEnc...${NC}"
+  if ! curl -sLo "${ODR_INSTALL_DIR}/odr-audioenc" "${ODR_DOWNLOAD_URL}"; then
     echo -e "${RED}Error: Unable to download ODR AudioEnc package.${NC}"
     exit 1
   fi
 
-  # Extract the package
-  echo -e "${BLUE}►► Installing ODR AudioEnc...${NC}"
-  cp "${ODR_PACKAGE_PATH}" "${ODR_INSTALL_DIR}/odr-audioenc"
+  # Set executable permission
   chmod +x "${ODR_INSTALL_DIR}/odr-audioenc"
 
   # Download the DAB-specific docker-compose configuration
@@ -250,13 +251,10 @@ if [ "${USE_DAB}" == "y" ]; then
     echo -e "${RED}Error: Unable to download docker-compose.dabplus.yml.${NC}"
     exit 1
   fi
-
-  # Clean up
-  rm -f "${ODR_PACKAGE_PATH}"
 fi
 
 # Adjust ownership for the directories
-echo -e "${BLUE}►► Setting ownership for /opt/liquidsoap...${NC}"
-chown -R 10000:10001 /opt/liquidsoap
+echo -e "${BLUE}►► Setting ownership for ${INSTALL_DIR}...${NC}"
+chown -R 10000:10001 "${INSTALL_DIR}"
 
 echo -e "${GREEN}Installation completed successfully for ${STATION_CONFIG} configuration!${NC}"
