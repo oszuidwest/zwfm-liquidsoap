@@ -1,7 +1,7 @@
 # zwfm-liquidsoap
 This repository contains an audio streaming solution tailored for [ZuidWest FM](https://www.zuidwestfm.nl/), [Radio Rucphen](https://www.rucphenrtv.nl/) and [BredaNu](https://www.bredanu.nl/) in the Netherlands. Leveraging [Liquidsoap](https://www.liquidsoap.info), it facilitates internet streaming with a reliable fallback mechanism and is capable of pushing MPX to broadcast transmitters via MicroMPX.
 
-![liq-flow](https://github.com/user-attachments/assets/2380e0fd-29f6-4492-b37f-269c2cdb133c)
+![liq-flow-fixed](https://github.com/user-attachments/assets/00b35131-5c30-418b-aea1-dd447ee12f49)
 
 ## Components
 1. **Liquidsoap**: Acts as the primary audio router and transcoder.
