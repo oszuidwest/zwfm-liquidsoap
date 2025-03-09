@@ -7,7 +7,8 @@ This repository contains an audio streaming solution tailored for [ZuidWest FM](
 1. **Liquidsoap**: Acts as the primary audio router and transcoder.
 2. **Icecast**: Functions as a public server for distributing the audio stream.
 3. **StereoTool**: Used as [MicroMPX](https://www.thimeo.com/micrompx/) encoder for feeding FM transmitters.
-4. **ODR-AudioEnc**: Used as DAB+ encoder for feeding a DAB+ muxer.
+4. **ODR-AudioEnc**: Used as DAB+ audio encoder for feeding a DAB+ muxer.
+4. **ODR-PadEnc**: Used as DAB+ metadata encoder for feeding a DAB+ muxer.
 
 ## System design
 The system design involves delivering the broadcast through two pathways. Liquidsoap uses the main input (SRT 1) as much as possible. If it becomes unavailable or silent, the system switches to SRT 2. Should SRT 2 also become unavailable or silent, it then switches to an emergency track. Ideally, the broadcast is delivered synchronously over the two inputs via separate pathways.
@@ -21,7 +22,7 @@ The system design involves delivering the broadcast through two pathways. Liquid
 - **radio.liq**: A production-ready Liquidsoap configuration that incorporates StereoTool as a MicroMPX encoder.
 - **docker-compose.yml**: Basic Liquidsoap configuration in Docker.
 - **docker-compose.stereotool.yml**: Extended configuration for StereoTool in Docker.
-- **docker-compose.dabenc.yml**: Extended configuration for ODR-AudioEnc in Docker.
+- **docker-compose.dabenc.yml**: Extended configuration for ODR-AudioEnc and ODR-PadEnc in Docker.
 
 ## Compatibility
 1. Tested on Ubuntu 24.04 and Debian 12.
