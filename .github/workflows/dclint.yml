@@ -6,11 +6,12 @@ on:
     paths:
       - 'docker-compose.yml'
       - 'docker-compose.stereotool.yml'
+      - 'docker-compose.dabplus.yml'
   pull_request:
     paths:
       - 'docker-compose.yml'
       - 'docker-compose.stereotool.yml'
-
+      - 'docker-compose.dabplus.yml'
 jobs:
   lint:
     name: lint
