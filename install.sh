@@ -49,7 +49,7 @@ ODR_AUD_INSTALL_DIR="${INSTALL_DIR}/dabplus"
 ODR_SOCKETS_DIR="${INSTALL_DIR}/dabplus/sockets"
 
 # ODR PAD Encoder configuration
-ODR_PAD_VERSION="v3.0.0"
+ODR_PAD_VERSION="v3.1.0"
 ODR_PAD_BASE_URL="https://github.com/oszuidwest/zwfm-odrbuilds/releases/download/odr-padenc-${ODR_PAD_VERSION}"
 ODR_PAD_INSTALL_DIR="${INSTALL_DIR}/dabplus"
 ODR_PAD_DLS_DIR="${INSTALL_DIR}/dabplus/dls"
