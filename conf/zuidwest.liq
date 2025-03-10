@@ -200,6 +200,6 @@ output_icecast_stream(
 output.external(
   %wav(channels = 2, samplerate = 48000),
   "/bin/odr-audioenc -i - --bitrate=112 --stats=/dabplus/sockets/dab_stats \
-   --pad-socket=/dabplus/sockets/dab_pad --edi='tcp://localhost:7000'",
+   --pad-socket=/tmp/sockets/dab_pad --edi='tcp://localhost:7000'",
   audio_to_rnn
 )

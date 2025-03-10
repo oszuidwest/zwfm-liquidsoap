@@ -3,14 +3,18 @@ services:
   liquidsoap:
     volumes:
       - ./dabplus/odr-audioenc:/bin/odr-audioenc
-      - ./dabplus/sockets:/dabplus/sockets
+      - ./dabplus/sockets:/tmp/sockets
   
   metadata:
-    image: debian:bookworm-slim
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: metadata
     volumes:
       - ./dabplus/odr-padenc:/bin/odr-padenc
-      - ./dabplus/sockets:/dabplus/sockets
+      - ./dabplus/sockets:/tmp/sockets
       - ./dabplus/slides:/dabplus/slides
       - ./dabplus/dls:/dabplus/dls
-    command: bash -c "apt-get update && apt-get install -y libmagickwand-6.q16-6 && /bin/odr-padenc --dir=/dabplus/slides --dls=/dabplus/dls/dls.txt --output=/dabplus/sockets/dab_pad"
+    command: /bin/odr-padenc --dir=/dabplus/slides --dls=/dabplus/dls/dls.txt --output=sockets/dab_pad
+    user: 10000:10001
     restart: always
