@@ -1,0 +1,97 @@
+name: Build and Push Docker Image to GHCR
+
+on:
+  schedule:
+    - cron: '0 3 * * *'  # Run daily at 3:00 AM
+  push:
+    branches:
+      - main
+  workflow_dispatch:  # Allow manual trigger
+
+jobs:
+  check-versions:
+    runs-on: ubuntu-latest
+    outputs:
+      liquidsoap_version: ${{ steps.get_liquidsoap.outputs.version }}
+      odr_audioenc_version: ${{ steps.get_odr_audioenc.outputs.version }}
+      odr_padenc_version: ${{ steps.get_odr_padenc.outputs.version }}
+      new_version: ${{ steps.check_version.outputs.new_version }}
+    steps:
+      - name: Get Latest Liquidsoap Version
+        id: get_liquidsoap
+        run: |
+          LATEST_VERSION=$(curl -s https://api.github.com/repos/savonet/liquidsoap/releases/latest | jq -r .tag_name | sed 's/v//')
+          echo "Latest Liquidsoap version: $LATEST_VERSION"
+          echo "version=$LATEST_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Get Latest ODR-AudioEnc Version
+        id: get_odr_audioenc
+        run: |
+          LATEST_VERSION=$(curl -s https://api.github.com/repos/oszuidwest/zwfm-odrbuilds/releases | 
+                          jq -r 'map(select(.tag_name | startswith("odr-audioenc"))) | 
+                          max_by(.created_at) | .tag_name' | sed 's/odr-audioenc-v//')
+          echo "Latest ODR-AudioEnc version: $LATEST_VERSION"
+          echo "version=$LATEST_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Get Latest ODR-PadEnc Version
+        id: get_odr_padenc
+        run: |
+          LATEST_VERSION=$(curl -s https://api.github.com/repos/oszuidwest/zwfm-odrbuilds/releases | 
+                          jq -r 'map(select(.tag_name | startswith("odr-padenc"))) | 
+                          max_by(.created_at) | .tag_name' | sed 's/odr-padenc-v//')
+          echo "Latest ODR-PadEnc version: $LATEST_VERSION"
+          echo "version=$LATEST_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Check if Version Exists in GHCR
+        id: check_version
+        run: |
+          LIQUIDSOAP_VERSION="${{ steps.get_liquidsoap.outputs.version }}"
+          ODR_AUDIOENC_VERSION="${{ steps.get_odr_audioenc.outputs.version }}"
+          ODR_PADENC_VERSION="${{ steps.get_odr_padenc.outputs.version }}"
+          
+          COMBINED_TAG="$LIQUIDSOAP_VERSION-$ODR_AUDIOENC_VERSION-$ODR_PADENC_VERSION"
+          
+          GHCR_TAG_EXISTS=$(curl -s -H "Authorization: Bearer $(echo ${{ secrets.GITHUB_TOKEN }} | base64)" \
+                           "https://ghcr.io/v2/${{ github.repository }}/tags/list" | 
+                           jq -r '.tags | index("'$COMBINED_TAG'")')
+          
+          if [ "$GHCR_TAG_EXISTS" == "null" ]; then
+            echo "New version found: $COMBINED_TAG"
+            echo "new_version=true" >> $GITHUB_OUTPUT
+          else
+            echo "Version already exists. Skipping build."
+            echo "new_version=false" >> $GITHUB_OUTPUT
+          fi
+
+  build:
+    needs: check-versions
+    if: needs.check-versions.outputs.new_version == 'true'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u $GITHUB_ACTOR --password-stdin
+
+      - name: Build and Push Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          build-args: |
+            LIQUIDSOAP_VERSION=${{ needs.check-versions.outputs.liquidsoap_version }}
+            ODR_AUDIOENC_VERSION=${{ needs.check-versions.outputs.odr_audioenc_version }}
+            ODR_PADENC_VERSION=${{ needs.check-versions.outputs.odr_padenc_version }}
+          tags: |
+            ghcr.io/${{ github.repository }}:${{ needs.check-versions.outputs.liquidsoap_version }}-${{ needs.check-versions.outputs.odr_audioenc_version }}-${{ needs.check-versions.outputs.odr_padenc_version }}
+            ghcr.io/${{ github.repository }}:latest
