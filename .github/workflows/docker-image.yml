@@ -49,14 +49,6 @@ jobs:
     needs: check-versions
     if: needs.check-versions.outputs.new_version == 'true'
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        arch: [amd64, arm64]
-        include:
-          - arch: amd64
-            platform: linux/amd64
-          - arch: arm64
-            platform: linux/arm64
 
     steps:
       - name: Checkout Repository
@@ -76,25 +68,11 @@ jobs:
         with:
           context: .
           file: Dockerfile
-          platforms: ${{ matrix.platform }}
+          platforms: linux/amd64,linux/arm64
           push: true
           build-args: |
             LIQUIDSOAP_VERSION=${{ needs.check-versions.outputs.latest_liquidsoap }}
             ODR_AUDIOENC_VERSION=${{ needs.check-versions.outputs.latest_odr_audioenc }}
-            TARGETARCH=${{ matrix.arch }}
           tags: |
-            ghcr.io/${{ github.repository }}:${{ needs.check-versions.outputs.latest_liquidsoap }}-${{ needs.check-versions.outputs.latest_odr_audioenc }}-${{ matrix.arch }}
-
-  manifest:
-    needs: [ build, check-versions ]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Log in to GitHub Container Registry
-        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u $GITHUB_ACTOR --password-stdin
-
-      - name: Create and Push Manifest
-        run: |
-          docker manifest create ghcr.io/${{ github.repository }}:${{ needs.check-versions.outputs.latest_liquidsoap }}-${{ needs.check-versions.outputs.latest_odr_audioenc }} \
-            --amend ghcr.io/${{ github.repository }}:${{ needs.check-versions.outputs.latest_liquidsoap }}-${{ needs.check-versions.outputs.latest_odr_audioenc }}-amd64 \
-            --amend ghcr.io/${{ github.repository }}:${{ needs.check-versions.outputs.latest_liquidsoap }}-${{ needs.check-versions.outputs.latest_odr_audioenc }}-arm64
-          docker manifest push ghcr.io/${{ github.repository }}:${{ needs.check-versions.outputs.latest_liquidsoap }}-${{ needs.check-versions.outputs.latest_odr_audioenc }}
+            ghcr.io/${{ github.repository }}:${{ needs.check-versions.outputs.latest_liquidsoap }}-${{ needs.check-versions.outputs.latest_odr_audioenc }}
+            ghcr.io/${{ github.repository }}:latest
