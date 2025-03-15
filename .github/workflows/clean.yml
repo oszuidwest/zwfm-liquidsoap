@@ -1,0 +1,23 @@
+name: Clean Up Workflow Runs
+
+on:
+  # Run on schedule (elke zondag om middernacht)
+  schedule:
+    - cron: '0 0 * * 0'
+  
+  # Optioneel: Handmatig uitvoeren mogelijk maken
+  workflow_dispatch:
+
+jobs:
+  delete-runs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete workflow runs
+        uses: Mattraks/delete-workflow-runs@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          # Bewaar runs van de laatste 2 dagen
+          retain_days: 1
+          # Bewaar de laatste 10 runs
+          keep_minimum_runs: 10
