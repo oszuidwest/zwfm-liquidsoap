@@ -12,8 +12,8 @@ jobs:
   check-versions:
     runs-on: ubuntu-latest
     outputs:
-      latest_liquidsoap: ${{ steps.get_liquidsoap.outputs.version }}
-      latest_odr_audioenc: ${{ steps.get_odr_audioenc.outputs.version }}
+      latest_liquidsoap: ${{ steps.get_liquidsoap.outputs.liquidsoap_version }}
+      latest_odr_audioenc: ${{ steps.get_odr_audioenc.outputs.odr_audioenc_version }}
       new_version: ${{ steps.check_version.outputs.new_version }}
     steps:
       - name: Get Latest Liquidsoap Version
@@ -21,16 +21,16 @@ jobs:
         run: |
           LATEST_VERSION=$(curl -s https://api.github.com/repos/savonet/liquidsoap/releases/latest | jq -r .tag_name | sed 's/v//')
           echo "Latest Liquidsoap version: $LATEST_VERSION"
-          echo "version=$LATEST_VERSION" >> $GITHUB_ENV
-          echo "version=$LATEST_VERSION" >> $GITHUB_OUTPUT
+          echo "liquidsoap_version=$LATEST_VERSION" >> $GITHUB_ENV
+          echo "liquidsoap_version=$LATEST_VERSION" >> $GITHUB_OUTPUT
 
       - name: Get Latest ODR-AudioEnc Version
         id: get_odr_audioenc
         run: |
           LATEST_VERSION=$(curl -s https://api.github.com/repos/oszuidwest/zwfm-odrbuilds/releases/latest | jq -r .tag_name | sed 's/odr-audioenc-v//')
           echo "Latest ODR-AudioEnc version: $LATEST_VERSION"
-          echo "version=$LATEST_VERSION" >> $GITHUB_ENV
-          echo "version=$LATEST_VERSION" >> $GITHUB_OUTPUT
+          echo "odr_audioenc_version=$LATEST_VERSION" >> $GITHUB_ENV
+          echo "odr_audioenc_version=$LATEST_VERSION" >> $GITHUB_OUTPUT
 
       - name: Check if Version Exists in GHCR
         id: check_version
@@ -38,7 +38,7 @@ jobs:
           GHCR_TAG_EXISTS=$(curl -s -H "Authorization: Bearer $(echo ${{ secrets.GITHUB_TOKEN }} | base64)" \
             "https://ghcr.io/v2/${{ github.repository }}/tags/list" | jq -r '.tags | index("${{ env.version }}-${{ env.odr_audioenc_version }}")')
           if [ "$GHCR_TAG_EXISTS" == "null" ]; then
-            echo "New version found: ${{ env.version }}-${{ env.odr_audioenc_version }}"
+            echo "New version found: ${{ env.liquidsoap_version }}-${{ env.odr_audioenc_version }}"
             echo "new_version=true" >> $GITHUB_ENV
           else
             echo "Version already exists. Skipping build."
