@@ -1,12 +1,12 @@
-name: Build and Push Multi-Arch Docker Image to GHCR
+name: Build and Push Docker Image to GHCR
 
 on:
   schedule:
-    - cron: '0 3 * * *'  # Runs daily at 03:00 UTC
+    - cron: '0 3 * * *'
   push:
     branches:
       - main
-  workflow_dispatch:  # Allow manual triggers
+  workflow_dispatch:
 
 jobs:
   check-versions:
@@ -14,6 +14,7 @@ jobs:
     outputs:
       latest_liquidsoap: ${{ steps.get_liquidsoap.outputs.liquidsoap_version }}
       latest_odr_audioenc: ${{ steps.get_odr_audioenc.outputs.odr_audioenc_version }}
+      latest_odr_padenc: ${{ steps.get_odr_padenc.outputs.odr_padenc_version }}
       new_version: ${{ steps.check_version.outputs.new_version }}
     steps:
       - name: Get Latest Liquidsoap Version
@@ -32,13 +33,21 @@ jobs:
           echo "odr_audioenc_version=$LATEST_VERSION" >> $GITHUB_ENV
           echo "odr_audioenc_version=$LATEST_VERSION" >> $GITHUB_OUTPUT
 
+      - name: Get Latest ODR-PadEnc Version
+        id: get_odr_padenc
+        run: |
+          LATEST_VERSION=$(curl -s https://api.github.com/repos/oszuidwest/zwfm-odrbuilds/releases | jq -r 'map(select(.tag_name | startswith("odr-padenc"))) | max_by(.created_at) | .tag_name' | sed 's/odr-padenc-v//')
+          echo "Latest ODR-PadEnc version: $LATEST_VERSION"
+          echo "odr_padenc_version=$LATEST_VERSION" >> $GITHUB_ENV
+          echo "odr_padenc_version=$LATEST_VERSION" >> $GITHUB_OUTPUT
+
       - name: Check if Version Exists in GHCR
         id: check_version
         run: |
           GHCR_TAG_EXISTS=$(curl -s -H "Authorization: Bearer $(echo ${{ secrets.GITHUB_TOKEN }} | base64)" \
-            "https://ghcr.io/v2/${{ github.repository }}/tags/list" | jq -r '.tags | index("${{ env.liquidsoap_version }}-${{ env.odr_audioenc_version }}")')
+            "https://ghcr.io/v2/${{ github.repository }}/tags/list" | jq -r '.tags | index("${{ env.liquidsoap_version }}-${{ env.odr_audioenc_version }}-${{ env.odr_padenc_version }}")')
           if [ "$GHCR_TAG_EXISTS" == "null" ]; then
-            echo "New version found: ${{ env.liquidsoap_version }}-${{ env.odr_audioenc_version }}"
+            echo "New version found: ${{ env.liquidsoap_version }}-${{ env.odr_audioenc_version }}-${{ env.odr_padenc_version }}"
             echo "new_version=true" >> $GITHUB_OUTPUT
           else
             echo "Version already exists. Skipping build."
@@ -73,6 +82,7 @@ jobs:
           build-args: |
             LIQUIDSOAP_VERSION=${{ needs.check-versions.outputs.latest_liquidsoap }}
             ODR_AUDIOENC_VERSION=${{ needs.check-versions.outputs.latest_odr_audioenc }}
+            ODR_PADENC_VERSION=${{ needs.check-versions.outputs.latest_odr_padenc }}
           tags: |
-            ghcr.io/${{ github.repository }}:${{ needs.check-versions.outputs.latest_liquidsoap }}-${{ needs.check-versions.outputs.latest_odr_audioenc }}
+            ghcr.io/${{ github.repository }}:${{ needs.check-versions.outputs.latest_liquidsoap }}-${{ needs.check-versions.outputs.latest_odr_audioenc }}-${{ needs.check-versions.outputs.latest_odr_padenc }}
             ghcr.io/${{ github.repository }}:latest
