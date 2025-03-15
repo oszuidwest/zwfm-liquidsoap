@@ -39,10 +39,10 @@ jobs:
             "https://ghcr.io/v2/${{ github.repository }}/tags/list" | jq -r '.tags | index("${{ env.liquidsoap_version }}-${{ env.odr_audioenc_version }}")')
           if [ "$GHCR_TAG_EXISTS" == "null" ]; then
             echo "New version found: ${{ env.liquidsoap_version }}-${{ env.odr_audioenc_version }}"
-            echo "new_version=true" >> $GITHUB_ENV
+            echo "new_version=true" >> $GITHUB_OUTPUT
           else
             echo "Version already exists. Skipping build."
-            echo "new_version=false" >> $GITHUB_ENV
+            echo "new_version=false" >> $GITHUB_OUTPUT
           fi
 
   build:
