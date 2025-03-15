@@ -86,7 +86,7 @@ jobs:
             ghcr.io/${{ github.repository }}:${{ needs.check-versions.outputs.latest_liquidsoap }}-${{ needs.check-versions.outputs.latest_odr_audioenc }}-${{ matrix.arch }}
 
   manifest:
-    needs: build
+    needs: [ build, check-versions ]
     runs-on: ubuntu-latest
     steps:
       - name: Log in to GitHub Container Registry
