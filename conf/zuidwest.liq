@@ -17,6 +17,11 @@ def log_event(input_name, event) =
   )
 end
 
+process.run(
+  "/bin/odr-padenc --dir=/dabplus/slides --dls=/dabplus/dls/dls.txt \
+   --output=/tmp/dab_pad"
+)
+
 # Backup file to be played when no audio is coming from the studio
 noodband = source.drop.metadata(id="noodband", single(fallbackfile))
 
