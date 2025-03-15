@@ -27,7 +27,7 @@ jobs:
       - name: Get Latest ODR-AudioEnc Version
         id: get_odr_audioenc
         run: |
-          LATEST_VERSION=$(curl -s https://api.github.com/repos/oszuidwest/zwfm-odrbuilds/releases/latest | jq -r .tag_name | sed 's/odr-audioenc-v//')
+          LATEST_VERSION=$(curl -s https://api.github.com/repos/oszuidwest/zwfm-odrbuilds/releases | jq -r 'map(select(.tag_name | startswith("odr-audioenc"))) | max_by(.created_at) | .tag_name' | sed 's/odr-audioenc-v//')
           echo "Latest ODR-AudioEnc version: $LATEST_VERSION"
           echo "odr_audioenc_version=$LATEST_VERSION" >> $GITHUB_ENV
           echo "odr_audioenc_version=$LATEST_VERSION" >> $GITHUB_OUTPUT
