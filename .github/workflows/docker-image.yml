@@ -1,0 +1,98 @@
+name: Build and Push Multi-Arch Docker Image to GHCR
+
+on:
+  schedule:
+    - cron: '0 3 * * *'  # Runs daily at 03:00 UTC
+  push:
+    branches:
+      - main
+  workflow_dispatch:  # Allow manual triggers
+
+jobs:
+  check-versions:
+    runs-on: ubuntu-latest
+    outputs:
+      latest_liquidsoap: ${{ steps.get_liquidsoap.outputs.version }}
+      latest_odr_audioenc: ${{ steps.get_odr_audioenc.outputs.version }}
+      new_version: ${{ steps.check_version.outputs.new_version }}
+    steps:
+      - name: Get Latest Liquidsoap Version
+        id: get_liquidsoap
+        run: |
+          LATEST_VERSION=$(curl -s https://api.github.com/repos/savonet/liquidsoap/releases/latest | jq -r .tag_name | sed 's/v//')
+          echo "Latest Liquidsoap version: $LATEST_VERSION"
+          echo "version=$LATEST_VERSION" >> $GITHUB_ENV
+          echo "version=$LATEST_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Get Latest ODR-AudioEnc Version
+        id: get_odr_audioenc
+        run: |
+          LATEST_VERSION=$(curl -s https://api.github.com/repos/oszuidwest/zwfm-odrbuilds/releases/latest | jq -r .tag_name | sed 's/odr-audioenc-v//')
+          echo "Latest ODR-AudioEnc version: $LATEST_VERSION"
+          echo "version=$LATEST_VERSION" >> $GITHUB_ENV
+          echo "version=$LATEST_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Check if Version Exists in GHCR
+        id: check_version
+        run: |
+          GHCR_TAG_EXISTS=$(curl -s -H "Authorization: Bearer $(echo ${{ secrets.GITHUB_TOKEN }} | base64)" \
+            "https://ghcr.io/v2/${{ github.repository }}/tags/list" | jq -r '.tags | index("${{ env.version }}-${{ env.odr_audioenc_version }}")')
+          if [ "$GHCR_TAG_EXISTS" == "null" ]; then
+            echo "New version found: ${{ env.version }}-${{ env.odr_audioenc_version }}"
+            echo "new_version=true" >> $GITHUB_ENV
+          else
+            echo "Version already exists. Skipping build."
+            echo "new_version=false" >> $GITHUB_ENV
+
+  build:
+    needs: check-versions
+    if: needs.check-versions.outputs.new_version == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        arch: [amd64, arm64]
+        include:
+          - arch: amd64
+            platform: linux/amd64
+          - arch: arm64
+            platform: linux/arm64
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u $GITHUB_ACTOR --password-stdin
+
+      - name: Build and Push Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: Dockerfile
+          platforms: ${{ matrix.platform }}
+          push: true
+          build-args: |
+            LIQUIDSOAP_VERSION=${{ needs.check-versions.outputs.latest_liquidsoap }}
+            ODR_AUDIOENC_VERSION=${{ needs.check-versions.outputs.latest_odr_audioenc }}
+          tags: |
+            ghcr.io/${{ github.repository }}:${{ needs.check-versions.outputs.latest_liquidsoap }}-${{ needs.check-versions.outputs.latest_odr_audioenc }}-${{ matrix.arch }}
+
+  manifest:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Log in to GitHub Container Registry
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u $GITHUB_ACTOR --password-stdin
+
+      - name: Create and Push Manifest
+        run: |
+          docker manifest create ghcr.io/${{ github.repository }}:${{ needs.check-versions.outputs.latest_liquidsoap }}-${{ needs.check-versions.outputs.latest_odr_audioenc }} \
+            --amend ghcr.io/${{ github.repository }}:${{ needs.check-versions.outputs.latest_liquidsoap }}-${{ needs.check-versions.outputs.latest_odr_audioenc }}-amd64 \
+            --amend ghcr.io/${{ github.repository }}:${{ needs.check-versions.outputs.latest_liquidsoap }}-${{ needs.check-versions.outputs.latest_odr_audioenc }}-arm64
+          docker manifest push ghcr.io/${{ github.repository }}:${{ needs.check-versions.outputs.latest_liquidsoap }}-${{ needs.check-versions.outputs.latest_odr_audioenc }}
