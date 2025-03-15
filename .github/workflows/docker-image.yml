@@ -36,7 +36,7 @@ jobs:
         id: check_version
         run: |
           GHCR_TAG_EXISTS=$(curl -s -H "Authorization: Bearer $(echo ${{ secrets.GITHUB_TOKEN }} | base64)" \
-            "https://ghcr.io/v2/${{ github.repository }}/tags/list" | jq -r '.tags | index("${{ env.version }}-${{ env.odr_audioenc_version }}")')
+            "https://ghcr.io/v2/${{ github.repository }}/tags/list" | jq -r '.tags | index("${{ env.liquidsoap_version }}-${{ env.odr_audioenc_version }}")')
           if [ "$GHCR_TAG_EXISTS" == "null" ]; then
             echo "New version found: ${{ env.liquidsoap_version }}-${{ env.odr_audioenc_version }}"
             echo "new_version=true" >> $GITHUB_ENV
