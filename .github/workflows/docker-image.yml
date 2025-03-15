@@ -81,6 +81,7 @@ jobs:
           build-args: |
             LIQUIDSOAP_VERSION=${{ needs.check-versions.outputs.latest_liquidsoap }}
             ODR_AUDIOENC_VERSION=${{ needs.check-versions.outputs.latest_odr_audioenc }}
+            TARGETARCH=${{ matrix.arch }}
           tags: |
             ghcr.io/${{ github.repository }}:${{ needs.check-versions.outputs.latest_liquidsoap }}-${{ needs.check-versions.outputs.latest_odr_audioenc }}-${{ matrix.arch }}
 

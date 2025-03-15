@@ -4,6 +4,10 @@ ARG TARGETARCH
 
 FROM savonet/liquidsoap:v${LIQUIDSOAP_VERSION}
 
+RUN echo "Liquidsoap version: ${LIQUIDSOAP_VERSION}"
+RUN echo "ODR-AudioEnc version: ${ODR_AUDIOENC_VERSION}"
+RUN echo "Target architecture: ${TARGETARCH}"
+
 USER root
 
 RUN apt-get update && \
