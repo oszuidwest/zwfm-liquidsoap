@@ -6,7 +6,8 @@ ARG TARGETARCH
 
 USER root
 
-RUN apt-get update && \
+RUN echo "Installing ODR-AudioEnc ${ODR_AUDIOENC_VERSION} for ${TARGETARCH}" &&  \
+    apt-get update && \
     apt-get install -y wget && \
     wget -O /bin/odr-audioenc https://github.com/oszuidwest/zwfm-odrbuilds/releases/download/${ODR_AUDIOENC_VERSION}/${ODR_AUDIOENC_VERSION}-minimal-debian-${TARGETARCH} && \
     chmod +x /bin/odr-audioenc && \
