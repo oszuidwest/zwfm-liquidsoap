@@ -17,7 +17,7 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           repository: ${{ github.repository }}
-          # Bewaar runs van de laatste 7 dagen
-          retain_days: 7
+          # Bewaar runs van de laatste 2 dagen
+          retain_days: 1
           # Bewaar de laatste 10 runs
           keep_minimum_runs: 10
