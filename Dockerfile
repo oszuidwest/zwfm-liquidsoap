@@ -9,7 +9,7 @@ USER root
 RUN echo "Installing ODR-AudioEnc ${ODR_AUDIOENC_VERSION} for ${TARGETARCH}" &&  \
     apt-get update && \
     apt-get install -y wget && \
-    wget -O /bin/odr-audioenc https://github.com/oszuidwest/zwfm-odrbuilds/releases/download/${ODR_AUDIOENC_VERSION}/${ODR_AUDIOENC_VERSION}-minimal-debian-${TARGETARCH} && \
+    wget -O /bin/odr-audioenc https://github.com/oszuidwest/zwfm-odrbuilds/releases/download/odr-audioenc-v${ODR_AUDIOENC_VERSION}/odr-audioenc-v${ODR_AUDIOENC_VERSION}-minimal-debian-${TARGETARCH} && \
     chmod +x /bin/odr-audioenc && \
     apt-get remove -y wget && \
     apt-get autoremove -y && \
