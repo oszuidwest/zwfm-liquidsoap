@@ -43,6 +43,7 @@ jobs:
           else
             echo "Version already exists. Skipping build."
             echo "new_version=false" >> $GITHUB_ENV
+          fi
 
   build:
     needs: check-versions
