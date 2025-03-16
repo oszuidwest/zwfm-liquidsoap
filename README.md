@@ -22,7 +22,6 @@ The system design involves delivering the broadcast through two pathways. Liquid
 - **radio.liq**: A production-ready Liquidsoap configuration that incorporates StereoTool as a MicroMPX encoder.
 - **docker-compose.yml**: Basic Liquidsoap configuration in Docker.
 - **docker-compose.stereotool.yml**: Extended configuration for StereoTool in Docker.
-- **docker-compose.dabenc.yml**: Extended configuration for ODR-AudioEnc and ODR-PadEnc in Docker.
 
 ## Compatibility
 1. Tested on Ubuntu 24.04 and Debian 12.
