@@ -3,20 +3,24 @@ This repository contains an audio streaming solution tailored for [ZuidWest FM](
 
 ![liq-flow-fixed](https://github.com/user-attachments/assets/00b35131-5c30-418b-aea1-dd447ee12f49)
 
-## Components
+## System design
+The system design involves delivering the broadcast through two pathways. Liquidsoap uses the main input (SRT 1) as much as possible. If it becomes unavailable or silent, the system switches to SRT 2. Should SRT 2 also become unavailable or silent, it then switches to an emergency track. Ideally, the broadcast is delivered synchronously over the two inputs via separate pathways.
+
+### Components
 1. **Liquidsoap**: Acts as the primary audio router and transcoder.
 2. **Icecast**: Functions as a public server for distributing the audio stream.
 3. **StereoTool**: Used as [MicroMPX](https://www.thimeo.com/micrompx/) encoder for feeding FM transmitters.
 4. **ODR-AudioEnc**: Used as DAB+ audio encoder for feeding a DAB+ muxer.
 4. **ODR-PadEnc**: Used as DAB+ metadata encoder for feeding a DAB+ muxer.
 
-## System design
-The system design involves delivering the broadcast through two pathways. Liquidsoap uses the main input (SRT 1) as much as possible. If it becomes unavailable or silent, the system switches to SRT 2. Should SRT 2 also become unavailable or silent, it then switches to an emergency track. Ideally, the broadcast is delivered synchronously over the two inputs via separate pathways.
+### Satellites
+1. **[rpi-audio-encoder](https://github.com/oszuidwest/rpi-audio-encoder)**: Software to turn a Raspberry Pi into a production grade SRT audio encoder.
+2. **[rpi-umpx-decoder](https://github.com/oszuidwest/rpi-audio-encoder)**: Software to turn a Raspberry Pi into a production grade μMPX decoder.
+3. **[odr-webapi](https://github.com/oszuidwest/odr-webapi)**: API for managing `ODR-PadEnc` input (Work in progress)
 
 ## Scripts
 - **icecast2.sh**: This script installs Icecast 2 and provides SSL support via Let's Encrypt/Certbot. Execute it using `/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/oszuidwest/zwfm-liquidsoap/main/icecast2.sh)"`
 - **install.sh**: Installs Liquidsoap with fdkaac support in a Docker container. Execute it using `/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/oszuidwest/zwfm-liquidsoap/main/install.sh)"`
-- **monitor.sh**: Experimental log parser for Liquidsoap status. Not installed by default. Work in progress. (⚠️ BROKEN - Needs rewrite to work with Docker logs)
 
 ## Configurations
 - **radio.liq**: A production-ready Liquidsoap configuration that incorporates StereoTool as a MicroMPX encoder.
@@ -30,7 +34,7 @@ The system design involves delivering the broadcast through two pathways. Liquid
 
 # MIT License
 
-Copyright 2025 Streekomroep ZuidWest
+Copyright 2025 Omroepstichting ZuidWest & Stichting BredaNu
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the “Software”), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
 
