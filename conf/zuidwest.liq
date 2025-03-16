@@ -196,16 +196,35 @@ output_icecast_stream(
   source=audio_to_icecast
 )
 
+# Start ODR-PadEnc on a thread (NOT DEF!)
+def pad() =
+  print(
+    "Running PadEnc"
+  )
+  p =
+    process.run(
+      timeout=2.,
+      "/bin/odr-padenc --dls=/tmp/rds_rt.txt --output=dab_pad.sock"
+    )
+  print(
+    "Program status: #{p.status} (#{p.status.code})"
+  )
+  print(
+    "Standard output:"
+  )
+  print(p.stdout)
+  print(
+    "Standard error:"
+  )
+  print(p.stderr)
+end
+
+thread.run(pad)
+
 # Feed the audio to ODR-AudioEnc
 output.external(
   %wav(channels = 2, samplerate = 48000),
   "/bin/odr-audioenc -i - --bitrate=112 --stats=/tmp/dab_stats.sock \
-   --pad-socket=/tmp/dab_pad.sock --edi='tcp://localhost:7000'",
+   --pad-socket=dab_pad.sock --edi='tcp://localhost:7000'",
   audio_to_rnn
-)
-
-# Run ODR-PadEnc for DAB+ metadata
-process.run(
-  "/bin/odr-padenc --dir=/tmp/dab_slides --dls=/tmp/dab_dls.txt \
-   --output=/tmp/dab_pad.sock"
 )
