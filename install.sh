@@ -24,8 +24,6 @@ DOCKER_COMPOSE_URL="${GITHUB_BASE}/docker-compose.yml"
 DOCKER_COMPOSE_PATH="${INSTALL_DIR}/docker-compose.yml"
 DOCKER_COMPOSE_ST_URL="${GITHUB_BASE}/docker-compose.stereotool.yml"
 DOCKER_COMPOSE_ST_PATH="${INSTALL_DIR}/docker-compose.stereotool.yml"
-DOCKER_COMPOSE_DAB_URL="${GITHUB_BASE}/docker-compose.dabplus.yml"
-DOCKER_COMPOSE_DAB_PATH="${INSTALL_DIR}/docker-compose.dabplus.yml"
 
 # Liquidsoap configuration
 LIQUIDSOAP_CONFIG_URL_ZUIDWEST="${GITHUB_BASE}/conf/zuidwest.liq"
@@ -41,19 +39,6 @@ STEREO_TOOL_BASE_URL="https://download.thimeo.com"
 STEREO_TOOL_ZIP_URL="${STEREO_TOOL_BASE_URL}/Stereo_Tool_Generic_plugin_${STEREO_TOOL_VERSION}.zip"
 STEREO_TOOL_ZIP_PATH="/tmp/stereotool.zip"
 STEREO_TOOL_INSTALL_DIR="${INSTALL_DIR}/stereotool"
-
-# Open Digital Radio Encoder configuration
-ODR_AUD_VERSION="v3.6.0"
-ODR_AUD_BASE_URL="https://github.com/oszuidwest/zwfm-odrbuilds/releases/download/odr-audioenc-${ODR_AUD_VERSION}"
-ODR_AUD_INSTALL_DIR="${INSTALL_DIR}/dabplus"
-ODR_SOCKETS_DIR="${INSTALL_DIR}/dabplus/sockets"
-
-# ODR PAD Encoder configuration
-ODR_PAD_VERSION="v3.1.0"
-ODR_PAD_BASE_URL="https://github.com/oszuidwest/zwfm-odrbuilds/releases/download/odr-padenc-${ODR_PAD_VERSION}"
-ODR_PAD_INSTALL_DIR="${INSTALL_DIR}/dabplus"
-ODR_PAD_DLS_DIR="${INSTALL_DIR}/dabplus/dls"
-ODR_PAD_SLIDES_DIR="${INSTALL_DIR}/dabplus/slides"
 
 # RDS configuration
 RDS_RADIOTEXT_URL="https://rds.zuidwestfm.nl/?rt"
@@ -99,7 +84,6 @@ if [[ ! "$STATION_CONFIG" =~ ^(zuidwest|rucphen)$ ]]; then
     exit 1
 fi
 ask_user "USE_ST" "n" "Would you like to use StereoTool for sound processing? (y/n)" "y/n"
-ask_user "USE_DAB" "n" "Would you like to install DAB+ encoding support? (y/n)" "y/n"
 ask_user "DO_UPDATES" "y" "Would you like to perform all OS updates? (y/n)" "y/n"
 
 if [ "${DO_UPDATES}" == "y" ]; then
@@ -214,68 +198,6 @@ EOL
 else
   # Remove StereoTool configuration from the Liquidsoap script if not in use
   sed -i '/# StereoTool implementation/,/output.dummy(.*)/d' "${LIQUIDSOAP_CONFIG_PATH}"
-fi
-
-# Install DAB+ encoder if requested
-if [ "${USE_DAB}" == "y" ]; then
-  echo -e "${BLUE}►► Installing DAB+ components...${NC}"
-  
-  # Create DAB installation directory
-  mkdir -p "${ODR_AUD_INSTALL_DIR}"
-
-  # Create DAB metadata sockets directory
-  mkdir -p "${ODR_SOCKETS_DIR}"  
-  
-  # Create DAB PAD encoder directories
-  mkdir -p "${ODR_PAD_DLS_DIR}"
-  mkdir -p "${ODR_PAD_SLIDES_DIR}"
-  
-  # Determine the correct package based on architecture
-  case "${OS_ARCH}" in
-    amd64)
-      ODR_AUD_PACKAGE="odr-audioenc-${ODR_AUD_VERSION}-minimal-debian-amd64"
-      ODR_PAD_PACKAGE="odr-padenc-${ODR_PAD_VERSION}-debian-amd64"
-      ;;
-    arm64)
-      ODR_AUD_PACKAGE="odr-audioenc-${ODR_AUD_VERSION}-minimal-debian-arm64"
-      ODR_PAD_PACKAGE="odr-padenc-${ODR_PAD_VERSION}-debian-arm64"
-      ;;
-    *)
-      echo -e "${RED}Unsupported architecture: ${OS_ARCH}${NC}"
-      exit 1
-      ;;
-  esac
-
-  # Download the appropriate ODR AudioEnc package
-  ODR_AUD_DOWNLOAD_URL="${ODR_AUD_BASE_URL}/${ODR_AUD_PACKAGE}"
-
-  echo -e "${BLUE}►► Downloading and installing ODR AudioEnc...${NC}"
-  if ! curl -sLo "${ODR_AUD_INSTALL_DIR}/odr-audioenc" "${ODR_AUD_DOWNLOAD_URL}"; then
-    echo -e "${RED}Error: Unable to download ODR AudioEnc package.${NC}"
-    exit 1
-  fi
-
-  # Set executable permission
-  chmod +x "${ODR_AUD_INSTALL_DIR}/odr-audioenc"
-  
-  # Download the appropriate ODR PADEnc package
-  ODR_PAD_DOWNLOAD_URL="${ODR_PAD_BASE_URL}/${ODR_PAD_PACKAGE}"
-  
-  echo -e "${BLUE}►► Downloading and installing ODR PADEnc...${NC}"
-  if ! curl -sLo "${ODR_PAD_INSTALL_DIR}/odr-padenc" "${ODR_PAD_DOWNLOAD_URL}"; then
-    echo -e "${RED}Error: Unable to download ODR PADEnc package.${NC}"
-    exit 1
-  fi
-  
-  # Set executable permission
-  chmod +x "${ODR_PAD_INSTALL_DIR}/odr-padenc"
-
-  # Download the DAB-specific docker-compose configuration
-  backup_file "${DOCKER_COMPOSE_DAB_PATH}"
-  if ! curl -sLo "${DOCKER_COMPOSE_DAB_PATH}" "${DOCKER_COMPOSE_DAB_URL}"; then
-    echo -e "${RED}Error: Unable to download docker-compose.dabplus.yml.${NC}"
-    exit 1
-  fi
 fi
 
 # Adjust ownership for the directories

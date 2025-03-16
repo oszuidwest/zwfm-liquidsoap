@@ -19,26 +19,28 @@ jobs:
     steps:
       - name: Get Latest Liquidsoap Version
         id: get_liquidsoap
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          LATEST_VERSION=$(curl -s https://api.github.com/repos/savonet/liquidsoap/releases/latest | jq -r .tag_name | sed 's/v//')
+          LATEST_VERSION=$(gh api repos/savonet/liquidsoap/releases/latest --jq '.tag_name' | sed 's/v//')
           echo "Latest Liquidsoap version: $LATEST_VERSION"
           echo "version=$LATEST_VERSION" >> $GITHUB_OUTPUT
 
       - name: Get Latest ODR-AudioEnc Version
         id: get_odr_audioenc
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          LATEST_VERSION=$(curl -s https://api.github.com/repos/oszuidwest/zwfm-odrbuilds/releases | 
-                          jq -r 'map(select(.tag_name | startswith("odr-audioenc"))) | 
-                          max_by(.created_at) | .tag_name' | sed 's/odr-audioenc-v//')
+          LATEST_VERSION=$(gh api repos/oszuidwest/zwfm-odrbuilds/releases --jq 'map(select(.tag_name | startswith("odr-audioenc"))) | max_by(.created_at) | .tag_name' | sed 's/odr-audioenc-v//')
           echo "Latest ODR-AudioEnc version: $LATEST_VERSION"
           echo "version=$LATEST_VERSION" >> $GITHUB_OUTPUT
 
       - name: Get Latest ODR-PadEnc Version
         id: get_odr_padenc
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          LATEST_VERSION=$(curl -s https://api.github.com/repos/oszuidwest/zwfm-odrbuilds/releases | 
-                          jq -r 'map(select(.tag_name | startswith("odr-padenc"))) | 
-                          max_by(.created_at) | .tag_name' | sed 's/odr-padenc-v//')
+          LATEST_VERSION=$(gh api repos/oszuidwest/zwfm-odrbuilds/releases --jq 'map(select(.tag_name | startswith("odr-padenc"))) | max_by(.created_at) | .tag_name' | sed 's/odr-padenc-v//')
           echo "Latest ODR-PadEnc version: $LATEST_VERSION"
           echo "version=$LATEST_VERSION" >> $GITHUB_OUTPUT
 
@@ -88,6 +90,7 @@ jobs:
           file: Dockerfile
           platforms: linux/amd64,linux/arm64
           push: true
+          provenance: false
           build-args: |
             LIQUIDSOAP_VERSION=${{ needs.check-versions.outputs.liquidsoap_version }}
             ODR_AUDIOENC_VERSION=${{ needs.check-versions.outputs.odr_audioenc_version }}

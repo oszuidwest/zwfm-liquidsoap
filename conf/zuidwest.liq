@@ -17,11 +17,6 @@ def log_event(input_name, event) =
   )
 end
 
-process.run(
-  "/bin/odr-padenc --dir=/dabplus/slides --dls=/dabplus/dls/dls.txt \
-   --output=/tmp/dab_pad"
-)
-
 # Backup file to be played when no audio is coming from the studio
 noodband = source.drop.metadata(id="noodband", single(fallbackfile))
 
@@ -204,7 +199,13 @@ output_icecast_stream(
 # Feed the audio to ODR-AudioEnc
 output.external(
   %wav(channels = 2, samplerate = 48000),
-  "/bin/odr-audioenc -i - --bitrate=112 --stats=/dabplus/sockets/dab_stats \
-   --pad-socket=/tmp/sockets/dab_pad --edi='tcp://localhost:7000'",
+  "/bin/odr-audioenc -i - --bitrate=112 --stats=/tmp/dab_stats.sock \
+   --pad-socket=/tmp/dab_pad.sock --edi='tcp://localhost:7000'",
   audio_to_rnn
+)
+
+# Run ODR-PadEnc for DAB+ metadata
+process.run(
+  "/bin/odr-padenc --dir=/tmp/dab_slides --dls=/tmp/dab_dls.txt \
+   --output=/tmp/dab_pad.sock"
 )
