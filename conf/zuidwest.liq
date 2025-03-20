@@ -224,7 +224,7 @@ thread.run(pad)
 # Feed the audio to ODR-AudioEnc
 output.external(
   %wav(channels = 2, samplerate = 48000),
-  "/bin/odr-audioenc -i - --bitrate=112 --stats=/tmp/dab_stats.sock \
+  "/bin/odr-audioenc -i - --bitrate=96 --stats=/tmp/dab_stats.sock \
    --pad-socket=dab_pad.sock --edi='tcp://localhost:7000'",
   audio_to_rnn
 )
