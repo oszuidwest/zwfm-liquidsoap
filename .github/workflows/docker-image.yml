@@ -10,6 +10,12 @@ on:
       - 'Dockerfile'
       - '.github/workflows/docker-image.yml'
   workflow_dispatch:  # Allow manual trigger
+    inputs:
+      force_build:
+        description: 'Force build even if version exists'
+        required: false
+        default: 'false'
+        type: boolean
 
 jobs:
   check-versions:
@@ -51,6 +57,13 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           COMBINED_TAG="${{ steps.get_versions.outputs.combined_tag }}"
+          FORCE_BUILD="${{ github.event.inputs.force_build }}"
+          
+          if [[ "$FORCE_BUILD" == "true" ]]; then
+            echo "Force build enabled, proceeding with build regardless of version status"
+            echo "new_version=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
           
           STATUS_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
             -H "Authorization: Bearer ${{ github.token }}" \
@@ -116,3 +129,6 @@ jobs:
           echo "- **Combined Tag**: ${{ needs.check-versions.outputs.combined_tag }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Image**: ghcr.io/${{ github.repository }}:${{ needs.check-versions.outputs.combined_tag }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Digest**: ${{ steps.docker_build.outputs.digest }}" >> $GITHUB_STEP_SUMMARY
+          if [[ "${{ github.event.inputs.force_build }}" == "true" ]]; then
+            echo "- **Force Build**: Enabled" >> $GITHUB_STEP_SUMMARY
+          fi
