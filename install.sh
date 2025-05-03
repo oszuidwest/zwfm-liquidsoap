@@ -30,6 +30,10 @@ LIQUIDSOAP_CONFIG_URL_ZUIDWEST="${GITHUB_BASE}/conf/zuidwest.liq"
 LIQUIDSOAP_CONFIG_URL_RUCPHEN="${GITHUB_BASE}/conf/rucphen.liq"
 LIQUIDSOAP_CONFIG_PATH="${INSTALL_DIR}/scripts/radio.liq"
 
+LIQUIDSOAP_ENV_URL_ZUIDWEST="${GITHUB_BASE}/.env.zuidwest.example"
+LIQUIDSOAP_ENV_URL_RUCPHEN="${GITHUB_BASE}/.env.rucphen.example"
+LIQUIDSOAP_ENV_PATH="${INSTALL_DIR}/.env"
+
 AUDIO_FALLBACK_URL="https://upload.wikimedia.org/wikipedia/commons/6/66/Aaron_Dunn_-_Sonata_No_1_-_Movement_2.ogg"
 AUDIO_FALLBACK_PATH="${INSTALL_DIR}/audio/fallback.ogg"
 
@@ -104,13 +108,21 @@ echo -e "${BLUE}►► Downloading configuration files...${NC}"
 # Set configuration URL based on user choice
 if [ "${STATION_CONFIG}" == "zuidwest" ]; then
   LIQUIDSOAP_CONFIG_URL="${LIQUIDSOAP_CONFIG_URL_ZUIDWEST}"
+  LIQUIDSOAP_ENV_URL="${LIQUIDSOAP_ENV_URL_ZUIDWEST}"
 else
   LIQUIDSOAP_CONFIG_URL="${LIQUIDSOAP_CONFIG_URL_RUCPHEN}"
+  LIQUIDSOAP_ENV_URL="${LIQUIDSOAP_ENV_URL_RUCPHEN}"
 fi
 
 backup_file "${LIQUIDSOAP_CONFIG_PATH}"
 if ! curl -sLo "${LIQUIDSOAP_CONFIG_PATH}" "${LIQUIDSOAP_CONFIG_URL}"; then
   echo -e "${RED}Error: Unable to download the Liquidsoap configuration for ${STATION_CONFIG}.${NC}"
+  exit 1
+fi
+
+backup_file "${LIQUIDSOAP_ENV_PATH}"
+if ! curl -sLo "${LIQUIDSOAP_ENV_PATH}" "${LIQUIDSOAP_ENV_URL}"; then
+  echo -e "${RED}Error: Unable to download the Liquidsoap env for ${STATION_CONFIG}.${NC}"
   exit 1
 fi
 

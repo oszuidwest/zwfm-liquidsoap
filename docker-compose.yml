@@ -7,6 +7,8 @@ services:
       - ./scripts:/scripts
       - ./audio:/audio
       - ./use_noodband.txt:/use_noodband.txt
+    env_file:
+      - .env
     environment:
       - TZ=Europe/Amsterdam
     ports:

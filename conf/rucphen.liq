@@ -1,13 +1,45 @@
+# Configuration variables
+ICECAST_NAME = environment.get("ICECAST_NAME")
+ICECAST_SERVER = environment.get("ICECAST_SERVER")
+ICECAST_PORT = int_of_string(environment.get("ICECAST_PORT", default="80"))
+ICECAST_PASSWORD = environment.get("ICECAST_PASSWORD")
+FALLBACK_FILE = environment.get("FALLBACK_FILE", default="/audio/fallback.mp3")
+USE_NOODBAND_FILE =
+  environment.get("USE_NOODBAND_FILE", default="/use_noodband.txt")
+UPSTREAM_PASSWORD = environment.get("UPSTREAM_PASSWORD")
+
+# StereoTool configuration
+STEREOTOOL_LICENSE_KEY = environment.get("STEREOTOOL_LICENSE_KEY")
+
+# Dutch Media Exchange (DME) configuration
+DME_HOST = environment.get("DME_HOST", default="in1.media-exchange.nl")
+DME_PORT = int_of_string(environment.get("DME_PORT", default="8005"))
+DME_PASSWORD = environment.get("DME_PASSWORD")
+DME_MOUNT = environment.get("DME_MOUNT")
+DME_NAME = environment.get("DME_NAME")
+DME_DESCRIPTION = environment.get("DME_DESCRIPTION")
+DME_USER = environment.get("DME_USER")
+
+# ODR-AudioEnc configuration
+ODR_AUDIOENC_BITRATE = int_of_string(environment.get("ODR_AUDIOENC_BITRATE"))
+ODR_AUDIOENC_EDI_URL = environment.get("ODR_AUDIOENC_EDI_URL")
+
+# Icecast stream descriptions and mounts
+ICECAST_MOUNTPOINT = environment.get("ICECAST_MOUNTPOINT")
+HIGH_QUALITY_MOUNT =
+  environment.get("HIGH_QUALITY_MOUNT", default="/#{ICECAST_MOUNTPOINT}.mp3")
+MOBILE_MOUNT =
+  environment.get("MOBILE_MOUNT", default="/#{ICECAST_MOUNTPOINT}.aac")
+TRANSPORT_MOUNT =
+  environment.get("TRANSPORT_MOUNT", default="/#{ICECAST_MOUNTPOINT}.stl")
+
+# Silence detection configuration
+MAX_BLANK = float_of_string(environment.get("MAX_BLANK", default="15.0"))
+MIN_NOISE = float_of_string(environment.get("MIN_NOISE", default="15.0"))
+
 # Audio defaults
 settings.frame.audio.channels := 2
 settings.frame.audio.samplerate := 48000
-
-# Streaming configuration (do change this)
-icecastserver = "icecast.zuidwest.cloud"
-icecastport = 80
-icecastpassword = "hackme"
-fallbackfile = "/audio/fallback.mp3"
-upstreampassword = "foxtrot-uniform-charlie-kilo"
 
 # Logging function for various events
 def log_event(input_name, event) =
@@ -18,7 +50,7 @@ def log_event(input_name, event) =
 end
 
 # The noodband source file
-noodband_file = source.drop.metadata(id="noodband_file", single(fallbackfile))
+noodband_file = source.drop.metadata(id="noodband_file", single(FALLBACK_FILE))
 silence = blank()
 
 # Get the current noodband source
@@ -26,9 +58,9 @@ def get_noodband_source() =
   use_noodband = ref(true)
 
   if
-    file.exists(use_noodband_file)
+    file.exists(USE_NOODBAND_FILE)
   then
-    x = file.contents(use_noodband_file)
+    x = file.contents(USE_NOODBAND_FILE)
     check = list.hd(string.chars(x))
     use_noodband := check == "1"
   end
@@ -65,7 +97,7 @@ studio_a =
     max=10.0,
     streamid="studio_a",
     enforced_encryption=true,
-    passphrase=upstreampassword,
+    passphrase=UPSTREAM_PASSWORD,
     on_connect=fun () -> log_event("studio_a", "connected"),
     on_disconnect=fun () -> log_event("studio_a", "disconnected")
   )
@@ -79,7 +111,7 @@ studio_b =
     max=10.0,
     streamid="studio_b",
     enforced_encryption=true,
-    passphrase=upstreampassword,
+    passphrase=UPSTREAM_PASSWORD,
     on_connect=fun () -> log_event("studio_b", "connected"),
     on_disconnect=fun () -> log_event("studio_b", "disconnected")
   )
@@ -88,8 +120,8 @@ studio_b =
 studio_a =
   blank.detect(
     id="detect_studio_a",
-    max_blank=15.0,
-    min_noise=15.0,
+    max_blank=MAX_BLANK,
+    min_noise=MIN_NOISE,
     fun () ->
       log_event(
         "studio_a",
@@ -107,8 +139,8 @@ studio_a =
 studio_b =
   blank.detect(
     id="detect_studio_b",
-    max_blank=15.0,
-    min_noise=15.0,
+    max_blank=MAX_BLANK,
+    min_noise=MIN_NOISE,
     fun () ->
       log_event(
         "studio_b",
@@ -125,9 +157,13 @@ studio_b =
 
 # Consider inputs unavailable when silent
 studio_a =
-  blank.strip(id="stripped_studio_a", max_blank=15., min_noise=15., studio_a)
+  blank.strip(
+    id="stripped_studio_a", max_blank=MAX_BLANK, min_noise=MIN_NOISE, studio_a
+  )
 studio_b =
-  blank.strip(id="stripped_studio_b", max_blank=15., min_noise=15., studio_b)
+  blank.strip(
+    id="stripped_studio_b", max_blank=MAX_BLANK, min_noise=MIN_NOISE, studio_b
+  )
 
 # Wrap it in a buffer to prevent latency from connection/disconnection to impact downstream operators/output
 studio_a = buffer(id="buffered_studio_a", fallible=true, studio_a)
@@ -143,8 +179,7 @@ radio =
 radioproc =
   stereotool(
     library_file="/var/cache/liquidsoap/st_plugin.so",
-    license_key=
-      "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    license_key=STEREOTOOL_LICENSE_KEY,
     preset="/var/cache/liquidsoap/.st_plugin.so.rc",
     radio
   )
@@ -180,11 +215,10 @@ def output_icecast_stream(~format, ~description, ~mount, ~source) =
   output.icecast(
     format,
     fallible=false,
-    host=icecastserver,
-    port=icecastport,
-    password=icecastpassword,
-    name=
-      "Radio Rucphen",
+    host=ICECAST_SERVER,
+    port=ICECAST_PORT,
+    password=ICECAST_PASSWORD,
+    name=ICECAST_NAME,
     description=description,
     mount=mount,
     source
@@ -196,7 +230,7 @@ output_icecast_stream(
   format=%mp3(bitrate = 192, samplerate = 48000, internal_quality = 0),
   description=
     "Hoge Kwaliteit Stream (192kbit MP3)",
-  mount="/radiorucphen.mp3",
+  mount=HIGH_QUALITY_MOUNT,
   source=audio_to_icecast
 )
 
@@ -214,7 +248,7 @@ output_icecast_stream(
     ),
   description=
     "Mobile Stream (96kbit AAC)",
-  mount="/radiorucphen.aac",
+  mount=MOBILE_MOUNT,
   source=audio_to_icecast
 )
 
@@ -232,7 +266,7 @@ output_icecast_stream(
     ),
   description=
     "Transport Stream (576kbit AAC)",
-  mount="/radiorucphen.stl",
+  mount=TRANSPORT_MOUNT,
   source=audio_to_icecast
 )
 
@@ -247,22 +281,20 @@ output.icecast(
     transmux = 'adts',
     sbr_mode = true
   ),
-  host="xxxxxxx",
-  port=0000,
-  password="xxxxx",
-  mount="/xxxx",
-  name=
-    "Rucphen RTV",
-  description=
-    "Altijd nieuws, altijd muziek",
-  user="xxxx",
+  host=DME_HOST,
+  port=DME_PORT,
+  password=DME_PASSWORD,
+  mount=DME_MOUNT,
+  name=DME_NAME,
+  description=DME_DESCRIPTION,
+  user=DME_USER,
   audio_to_dme
 )
 
 # Feed the audio to ODR-AudioEnc
 output.external(
   %wav(channels = 2, samplerate = 48000),
-  "/bin/odr-audioenc -i - --bitrate=112 --stats=/dabplus/sockets/dab_stats \
-   --edi='tcp://localhost:6000'",
+  "/bin/odr-audioenc -i - --bitrate=#{ODR_AUDIOENC_BITRATE} \
+   --stats=/dabplus/sockets/dab_stats --edi='#{ODR_AUDIOENC_EDI_URL}'",
   audio_to_rnn
 )
