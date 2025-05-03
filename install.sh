@@ -33,6 +33,8 @@ LIQUIDSOAP_CONFIG_PATH="${INSTALL_DIR}/scripts/radio.liq"
 AUDIO_FALLBACK_URL="https://upload.wikimedia.org/wikipedia/commons/6/66/Aaron_Dunn_-_Sonata_No_1_-_Movement_2.ogg"
 AUDIO_FALLBACK_PATH="${INSTALL_DIR}/audio/fallback.ogg"
 
+AUDIO_FALLBACK_ENABLE_PATH="${INSTALL_DIR}/use_noodband.txt"
+
 # StereoTool configuration
 STEREO_TOOL_VERSION="1051"
 STEREO_TOOL_BASE_URL="https://download.thimeo.com"
@@ -123,6 +125,8 @@ if ! curl -sLo "${AUDIO_FALLBACK_PATH}" "${AUDIO_FALLBACK_URL}"; then
   echo -e "${RED}Error: Unable to download the audio fallback file.${NC}"
   exit 1
 fi
+
+echo "1" > $AUDIO_FALLBACK_ENABLE_PATH
 
 if [ "${USE_ST}" == "y" ]; then
   echo -e "${BLUE}►► Installing StereoTool...${NC}"

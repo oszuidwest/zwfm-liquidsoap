@@ -6,6 +6,7 @@ services:
     volumes:
       - ./scripts:/scripts
       - ./audio:/audio
+      - ./use_noodband.txt:/use_noodband.txt
     environment:
       - TZ=Europe/Amsterdam
     ports:

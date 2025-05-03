@@ -17,8 +17,44 @@ def log_event(input_name, event) =
   )
 end
 
-# Backup file to be played when no audio is coming from the studio
-noodband = source.drop.metadata(id="noodband", single(fallbackfile))
+# The noodband source file
+noodband_file = source.drop.metadata(id="noodband_file", single(fallbackfile))
+silence = blank()
+
+# Get the current noodband source
+def get_noodband_source() =
+  use_noodband = ref(true)
+
+  if
+    file.exists(use_noodband_file)
+  then
+    x = file.contents(use_noodband_file)
+    check = list.hd(string.chars(x))
+    use_noodband := check == "1"
+  end
+
+  if use_noodband() then noodband_file else silence end
+end
+
+# Backup file to be played when no audio is coming from the studio, or silence when noodband is disabled.
+noodband =
+  source.dynamic(
+    id="Noodband",
+    infallible=true,
+    init=blank(),
+    fun () -> get_noodband_source()
+  )
+
+# TODO: Log when the source changes, instead of logging every x seconds
+# Log the current noodband source every 5 seconds
+thread.run(
+  every=5.,
+  {
+    log(
+      "Noodband is using #{noodband.current_source()}"
+    )
+  }
+)
 
 # Input for primary studio stream
 studio_a =
