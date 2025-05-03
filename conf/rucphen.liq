@@ -12,13 +12,23 @@ UPSTREAM_PASSWORD = environment.get("UPSTREAM_PASSWORD")
 STEREOTOOL_LICENSE_KEY = environment.get("STEREOTOOL_LICENSE_KEY")
 
 # Dutch Media Exchange (DME) configuration
-DME_HOST = environment.get("DME_HOST", default="in1.media-exchange.nl")
-DME_PORT = int_of_string(environment.get("DME_PORT", default="8005"))
-DME_PASSWORD = environment.get("DME_PASSWORD")
+DME_INGEST_A_HOST =
+  environment.get("DME_INGEST_A_HOST", default="in1.media-exchange.nl")
+DME_INGEST_A_PORT =
+  int_of_string(environment.get("DME_INGEST_A_PORT", default="8005"))
+DME_INGEST_A_USER = environment.get("DME_INGEST_A_USER")
+DME_INGEST_A_PASSWORD = environment.get("DME_INGEST_A_PASSWORD")
+
+DME_INGEST_B_HOST =
+  environment.get("DME_INGEST_B_HOST", default="in2.media-exchange.nl")
+DME_INGEST_B_PORT =
+  int_of_string(environment.get("DME_INGEST_B_PORT", default="8210"))
+DME_INGEST_B_USER = environment.get("DME_INGEST_B_USER")
+DME_INGEST_B_PASSWORD = environment.get("DME_INGEST_B_PASSWORD")
+
 DME_MOUNT = environment.get("DME_MOUNT")
 DME_NAME = environment.get("DME_NAME")
 DME_DESCRIPTION = environment.get("DME_DESCRIPTION")
-DME_USER = environment.get("DME_USER")
 
 # ODR-AudioEnc configuration
 ODR_AUDIOENC_BITRATE = int_of_string(environment.get("ODR_AUDIOENC_BITRATE"))
@@ -203,8 +213,11 @@ audio_to_icecast = mksafe(buffer(radioproc))
 clock.assign_new(id="icecast_clock", [audio_to_icecast])
 
 # Create a clock for output to Dutch Media Exchange
-audio_to_dme = mksafe(buffer(radioproc))
-clock.assign_new(id="dme_clock", [audio_to_dme])
+audio_to_dme_a = mksafe(buffer(radioproc))
+clock.assign_new(id="dme_a_clock", [audio_to_dme_a])
+
+audio_to_dme_b = mksafe(buffer(radioproc))
+clock.assign_new(id="dme_b_clock", [audio_to_dme_b])
 
 # Create a clock for output to Radio Netwerk Nederland
 audio_to_rnn = mksafe(buffer(radioproc))
@@ -281,14 +294,34 @@ output.icecast(
     transmux = 'adts',
     sbr_mode = true
   ),
-  host=DME_HOST,
-  port=DME_PORT,
-  password=DME_PASSWORD,
+  host=DME_INGEST_A_HOST,
+  port=DME_INGEST_A_PORT,
+  user=DME_INGEST_A_USER,
+  password=DME_INGEST_A_PASSWORD,
   mount=DME_MOUNT,
   name=DME_NAME,
   description=DME_DESCRIPTION,
-  user=DME_USER,
-  audio_to_dme
+  audio_to_dme_a
+)
+
+output.icecast(
+  %fdkaac(
+    channels = 2,
+    samplerate = 48000,
+    bitrate = 576,
+    afterburner = true,
+    aot = 'mpeg4_aac_lc',
+    transmux = 'adts',
+    sbr_mode = true
+  ),
+  host=DME_INGEST_B_HOST,
+  port=DME_INGEST_B_PORT,
+  user=DME_INGEST_B_USER,
+  password=DME_INGEST_B_PASSWORD,
+  mount=DME_MOUNT,
+  name=DME_NAME,
+  description=DME_DESCRIPTION,
+  audio_to_dme_b
 )
 
 # Feed the audio to ODR-AudioEnc
