@@ -16,7 +16,7 @@ The system design involves delivering the broadcast through two pathways. Liquid
 ### Satellites
 1. **[rpi-audio-encoder](https://github.com/oszuidwest/rpi-audio-encoder)**: Software to turn a Raspberry Pi into a production grade SRT audio encoder.
 2. **[rpi-umpx-decoder](https://github.com/oszuidwest/rpi-audio-encoder)**: Software to turn a Raspberry Pi into a production grade μMPX decoder.
-3. **[odr-webapi](https://github.com/oszuidwest/odr-webapi)**: API for managing `ODR-PadEnc` input (Work in progress)
+3. **[padenc-api](https://github.com/oszuidwest/padenc-api)**: API for managing `ODR-PadEnc` input (Work in progress)
 
 ## Scripts
 - **icecast2.sh**: This script installs Icecast 2 and provides SSL support via Let's Encrypt/Certbot. Execute it using `/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/oszuidwest/zwfm-liquidsoap/main/icecast2.sh)"`
