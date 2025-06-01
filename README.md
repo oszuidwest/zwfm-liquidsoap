@@ -18,9 +18,57 @@ The system design involves delivering the broadcast through two pathways. Liquid
 2. **[rpi-umpx-decoder](https://github.com/oszuidwest/rpi-audio-encoder)**: Software to turn a Raspberry Pi into a production grade μMPX decoder.
 3. **[odr-webapi](https://github.com/oszuidwest/odr-webapi)**: API for managing `ODR-PadEnc` input (Work in progress)
 
+## Installation & Usage
+
+### Quick Install
+```bash
+# Install Liquidsoap
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/oszuidwest/zwfm-liquidsoap/main/install.sh)"
+
+# Optional: Install Icecast server
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/oszuidwest/zwfm-liquidsoap/main/icecast2.sh)"
+```
+
+### Configuration
+After installation, edit the environment file at `/opt/liquidsoap/.env` to configure:
+- Stream passwords and mount points
+- Server addresses
+- StereoTool license key (if using)
+- DAB+ encoder settings
+
+### Running with Docker
+```bash
+cd /opt/liquidsoap
+
+# Start Liquidsoap (without StereoTool)
+docker-compose up -d
+
+# OR start with StereoTool
+docker-compose -f docker-compose.yml -f docker-compose.stereotool.yml up -d
+
+# View logs
+docker-compose logs -f
+
+# Stop services
+docker-compose down
+```
+
+### StereoTool GUI
+If using StereoTool, access the web interface at: `http://localhost:8080`
+
+### Emergency Broadcast Control
+Control the emergency broadcast (noodband) fallback:
+```bash
+# Enable emergency broadcast
+echo '1' > /opt/liquidsoap/use_noodband.txt
+
+# Disable (use silence instead)
+echo '0' > /opt/liquidsoap/use_noodband.txt
+```
+
 ## Scripts
-- **icecast2.sh**: This script installs Icecast 2 and provides SSL support via Let's Encrypt/Certbot. Execute it using `/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/oszuidwest/zwfm-liquidsoap/main/icecast2.sh)"`
-- **install.sh**: Installs Liquidsoap with fdkaac support in a Docker container. Execute it using `/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/oszuidwest/zwfm-liquidsoap/main/install.sh)"`
+- **icecast2.sh**: Installs Icecast 2 with SSL support via Let's Encrypt/Certbot
+- **install.sh**: Installs Liquidsoap with fdkaac and ODR tools support in Docker containers
 
 ## Configurations
 - **radio.liq**: A production-ready Liquidsoap configuration that incorporates StereoTool as a MicroMPX encoder.

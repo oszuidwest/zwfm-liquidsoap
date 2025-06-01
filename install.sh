@@ -245,3 +245,30 @@ echo -e "${BLUE}►► Setting ownership for ${INSTALL_DIR}...${NC}"
 chown -R 10000:10001 "${INSTALL_DIR}"
 
 echo -e "${GREEN}Installation completed successfully for ${STATION_CONFIG} configuration!${NC}"
+
+# Display usage instructions
+echo -e "\n${BLUE}►► How to run Liquidsoap:${NC}"
+echo -e "${YELLOW}Important: Before starting, make sure to edit the .env file with your configuration:${NC}"
+echo -e "  ${CYAN}nano ${LIQUIDSOAP_ENV_PATH}${NC}"
+echo -e ""
+echo -e "${YELLOW}To start Liquidsoap:${NC}"
+if [ "${USE_ST}" == "y" ]; then
+  echo -e "  ${CYAN}cd ${INSTALL_DIR}${NC}"
+  echo -e "  ${CYAN}docker-compose -f docker-compose.yml -f docker-compose.stereotool.yml up -d${NC}"
+  echo -e ""
+  echo -e "${YELLOW}To access StereoTool GUI:${NC}"
+  echo -e "  Open http://localhost:8080 in your browser"
+else
+  echo -e "  ${CYAN}cd ${INSTALL_DIR}${NC}"
+  echo -e "  ${CYAN}docker-compose up -d${NC}"
+fi
+echo -e ""
+echo -e "${YELLOW}To view logs:${NC}"
+echo -e "  ${CYAN}docker-compose logs -f${NC}"
+echo -e ""
+echo -e "${YELLOW}To stop Liquidsoap:${NC}"
+echo -e "  ${CYAN}docker-compose down${NC}"
+echo -e ""
+echo -e "${YELLOW}To control the emergency broadcast (noodband):${NC}"
+echo -e "  Enable:  ${CYAN}echo '1' > ${AUDIO_FALLBACK_ENABLE_PATH}${NC}"
+echo -e "  Disable: ${CYAN}echo '0' > ${AUDIO_FALLBACK_ENABLE_PATH}${NC}"
