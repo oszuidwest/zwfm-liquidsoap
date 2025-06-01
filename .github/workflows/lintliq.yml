@@ -33,7 +33,7 @@ jobs:
 
       - name: Run Prettier on Liquidsoap Files
         run: |
-          npx liquidsoap-prettier -w "**/*.liq"
+          npx prettier --write "**/*.liq" --plugin liquidsoap-prettier --print-width 100 --tab-width 2
 
       - name: Commit changes
         run: |
