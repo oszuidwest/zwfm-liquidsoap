@@ -30,6 +30,12 @@ LIQUIDSOAP_CONFIG_URL_ZUIDWEST="${GITHUB_BASE}/conf/zuidwest.liq"
 LIQUIDSOAP_CONFIG_URL_RUCPHEN="${GITHUB_BASE}/conf/rucphen.liq"
 LIQUIDSOAP_CONFIG_PATH="${INSTALL_DIR}/scripts/radio.liq"
 
+# Liquidsoap library files
+LIQUIDSOAP_LIB_DIR="${INSTALL_DIR}/scripts/lib"
+LIQUIDSOAP_LIB_DEFAULTS_URL="${GITHUB_BASE}/conf/lib/defaults.liq"
+LIQUIDSOAP_LIB_STUDIO_INPUTS_URL="${GITHUB_BASE}/conf/lib/studio_inputs.liq"
+LIQUIDSOAP_LIB_ICECAST_OUTPUTS_URL="${GITHUB_BASE}/conf/lib/icecast_outputs.liq"
+
 LIQUIDSOAP_ENV_URL_ZUIDWEST="${GITHUB_BASE}/.env.zuidwest.example"
 LIQUIDSOAP_ENV_URL_RUCPHEN="${GITHUB_BASE}/.env.rucphen.example"
 LIQUIDSOAP_ENV_PATH="${INSTALL_DIR}/.env"
@@ -54,6 +60,7 @@ RDS_RADIOTEXT_PATH="${INSTALL_DIR}/metadata/rds_rt.txt"
 TIMEZONE="Europe/Amsterdam"
 DIRECTORIES=(
   "${INSTALL_DIR}/scripts"
+  "${INSTALL_DIR}/scripts/lib"
   "${INSTALL_DIR}/audio"
   "${INSTALL_DIR}/metadata"
 )
@@ -117,6 +124,23 @@ fi
 backup_file "${LIQUIDSOAP_CONFIG_PATH}"
 if ! curl -sLo "${LIQUIDSOAP_CONFIG_PATH}" "${LIQUIDSOAP_CONFIG_URL}"; then
   echo -e "${RED}Error: Unable to download the Liquidsoap configuration for ${STATION_CONFIG}.${NC}"
+  exit 1
+fi
+
+# Download library files
+echo -e "${BLUE}►► Downloading Liquidsoap library files...${NC}"
+if ! curl -sLo "${LIQUIDSOAP_LIB_DIR}/defaults.liq" "${LIQUIDSOAP_LIB_DEFAULTS_URL}"; then
+  echo -e "${RED}Error: Unable to download defaults.liq library file.${NC}"
+  exit 1
+fi
+
+if ! curl -sLo "${LIQUIDSOAP_LIB_DIR}/studio_inputs.liq" "${LIQUIDSOAP_LIB_STUDIO_INPUTS_URL}"; then
+  echo -e "${RED}Error: Unable to download studio_inputs.liq library file.${NC}"
+  exit 1
+fi
+
+if ! curl -sLo "${LIQUIDSOAP_LIB_DIR}/icecast_outputs.liq" "${LIQUIDSOAP_LIB_ICECAST_OUTPUTS_URL}"; then
+  echo -e "${RED}Error: Unable to download icecast_outputs.liq library file.${NC}"
   exit 1
 fi
 
