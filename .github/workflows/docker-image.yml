@@ -1,3 +1,4 @@
+---
 name: Build and Publish Docker Image
 
 on:
@@ -35,7 +36,9 @@ jobs:
 
           # Get ODR versions from our own build repository
           ODR_RELEASES=$(gh api repos/oszuidwest/zwfm-odrbuilds/releases)
-          ODR_AUDIOENC_VERSION=$(echo "$ODR_RELEASES" | jq -r 'map(select(.tag_name | startswith("odr-audioenc"))) | max_by(.created_at) | .tag_name' | sed 's/odr-audioenc-v//')
+          ODR_AUDIOENC_VERSION=$(echo "$ODR_RELEASES" | \
+            jq -r 'map(select(.tag_name | startswith("odr-audioenc"))) | max_by(.created_at) | .tag_name' | \
+            sed 's/odr-audioenc-v//')
 
           COMBINED_TAG="$LIQUIDSOAP_VERSION-$ODR_AUDIOENC_VERSION"
 
@@ -121,7 +124,8 @@ jobs:
         run: |
           echo "## Build completed successfully" >> $GITHUB_STEP_SUMMARY
           echo "- **Combined Tag**: ${{ needs.check-versions.outputs.combined_tag }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Image**: ghcr.io/${{ github.repository }}:${{ needs.check-versions.outputs.combined_tag }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Image**: ghcr.io/${{ github.repository }}:${{ needs.check-versions.outputs.combined_tag }}" \
+            >> $GITHUB_STEP_SUMMARY
           echo "- **Digest**: ${{ steps.docker_build.outputs.digest }}" >> $GITHUB_STEP_SUMMARY
           if [[ "${{ github.event.inputs.force_build }}" == "true" ]]; then
             echo "- **Force Build**: Enabled" >> $GITHUB_STEP_SUMMARY

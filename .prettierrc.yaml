@@ -15,24 +15,24 @@ overrides:
   - files: "*.yml"
     options:
       singleQuote: false
-      
+
   - files: "*.yaml"
     options:
       singleQuote: false
-      
+
   - files: "*.sh"
     options:
       keepPadding: false
       functionNextLine: false
-      
+
   - files: "Dockerfile*"
     options:
       parser: dockerfile
-      
+
   - files: "*.json"
     options:
       printWidth: 80
-      
+
   - files: ".prettierrc.yaml"
     options:
       singleQuote: false

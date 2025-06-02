@@ -54,6 +54,46 @@ def log_event(input_name, event) =
   )
 end
 
+# Track the last known silence detection state
+silence_detection_state = ref(true)
+
+# Function to check if silence detection is enabled
+def is_silence_detection_enabled() =
+  current_state =
+    if
+      file.exists(SILENCE_DETECTION_FILE)
+    then
+      file_content = file.contents(SILENCE_DETECTION_FILE)
+      first_char = list.hd(string.chars(file_content))
+      first_char == "1"
+    else
+      # Default to enabled if file doesn't exist
+      true
+    end
+
+  # Log if state has changed
+  if
+    current_state != silence_detection_state()
+  then
+    silence_detection_state := current_state
+    if
+      current_state
+    then
+      log(
+        "Silence detection ENABLED",
+        level=3
+      )
+    else
+      log(
+        "Silence detection DISABLED",
+        level=3
+      )
+    end
+  end
+
+  current_state
+end
+
 # Create fallback source - either from file or blank audio
 fallback_file =
   if

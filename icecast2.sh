@@ -228,7 +228,7 @@ echo -e "\n${GREEN}✓ Icecast installation completed!${NC}"
 echo -e "${BLUE}►► Installation Summary:${NC}"
 echo -e "  Primary hostname: ${CYAN}$PRIMARY_HOSTNAME${NC}"
 if [ ${#HOSTNAMES_ARRAY[@]} -gt 1 ]; then
-  echo -e "  Additional hostnames: ${CYAN}${HOSTNAMES_ARRAY[@]:1}${NC}"
+  echo -e "  Additional hostnames: ${CYAN}${HOSTNAMES_ARRAY[*]:1}${NC}"
 fi
 echo -e "  Admin interface: ${CYAN}http://$PRIMARY_HOSTNAME:$PORT/admin/${NC}"
 echo -e "  Admin username: ${CYAN}admin${NC}"

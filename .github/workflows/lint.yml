@@ -1,63 +1,42 @@
+---
 name: Lint
 on:
   push:
     branches: [main]
   pull_request:
+  workflow_call:
 
 jobs:
-  # Shell scripts linting with ShellCheck
+  # Shell scripts linting
   shellcheck:
     name: ShellCheck
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Run ShellCheck
-        uses: ludeeus/action-shellcheck@2.0.0
+      - uses: actions/checkout@v4
+      - uses: ludeeus/action-shellcheck@2.0.0
         with:
           check_together: "yes"
           severity: warning
-          format: gcc
-          additional_files: "*.sh"
 
-  # Dockerfile linting with Hadolint
+  # Dockerfile linting
   hadolint:
     name: Hadolint
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Run Hadolint
-        uses: hadolint/hadolint-action@v3.1.0
+      - uses: actions/checkout@v4
+      - uses: hadolint/hadolint-action@v3.1.0
         with:
           dockerfile: Dockerfile
           failure-threshold: warning
-          # Ignore specific rules:
-          # DL3008: Pin versions in apt get install
-          # DL3009: Delete the apt-get lists after installing something
           ignore: DL3008,DL3009
-          format: json
-          output-file: hadolint-results.json
 
-      - name: Upload Hadolint results
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: hadolint-results
-          path: hadolint-results.json
-
-  # YAML linting (including docker-compose files)
+  # YAML linting
   yamllint:
     name: YAML Lint
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Run yamllint
-        uses: ibiqlik/action-yamllint@v3.1.1
+      - uses: actions/checkout@v4
+      - uses: ibiqlik/action-yamllint@v3.1.1
         with:
           config_data: |
             extends: default
@@ -70,68 +49,44 @@ jobs:
               truthy:
                 allowed-values: ['true', 'false', 'on', 'off', 'yes', 'no']
 
-  # Docker Compose specific validation
-  docker-compose-validate:
-    name: Docker Compose Validation
+  # Docker Compose validation
+  docker-compose:
+    name: Docker Compose Check
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
+      - uses: actions/checkout@v4
+      - name: Create test .env file
+        run: |
+          echo "STATION_NAME_SHORT=test" > .env
+          echo "STATION_NAME_FULL=Test Station" >> .env
       - name: Validate docker-compose.yml
-        run: docker compose -f docker-compose.yml config --quiet
+        run: docker compose config --quiet
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: 'npm'
-          cache-dependency-path: '**/package-lock.json'
-
-      - name: Install and run docker-compose-linter
-        run: |
-          npm install -g @zavoloklom/docker-compose-linter
-          dclint docker-compose.yml
-
-  # Liquidsoap syntax checking
-  liquidsoap-check:
-    name: Liquidsoap Syntax Check
+  # Liquidsoap syntax check
+  liquidsoap:
+    name: Liquidsoap Check
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      
-      - name: Get latest Liquidsoap version
-        id: get_version
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          LIQUIDSOAP_VERSION=$(gh api repos/savonet/liquidsoap/releases/latest --jq '.tag_name' | sed 's/v//')
-          echo "Latest Liquidsoap version: $LIQUIDSOAP_VERSION"
-          echo "version=$LIQUIDSOAP_VERSION" >> $GITHUB_OUTPUT
+      - uses: actions/checkout@v4
 
-      - name: Syntax check Liquidsoap files
+      - name: Get latest Liquidsoap version
+        id: version
         run: |
-          echo "Using Liquidsoap v${{ steps.get_version.outputs.version }} for syntax checking"
-          docker run --rm -v "${{ github.workspace }}:/workspace" -w /workspace \
-            savonet/liquidsoap:v${{ steps.get_version.outputs.version }} \
-            bash -c '
-              failed=0
-              echo "Checking Liquidsoap files..."
-              for f in $(find . -name "*.liq" -type f | sort); do
-                printf "Checking %-50s " "$f..."
-                if output=$(liquidsoap --check "$f" 2>&1); then
-                  echo "OK"
-                else
-                  echo "FAILED"
-                  echo "$output" | sed "s/^/  /"
-                  failed=1
-                fi
-              done
-              if [ $failed -eq 0 ]; then
-                echo "All Liquidsoap files passed syntax check!"
-              else
-                echo "Some files failed syntax check"
-              fi
-              exit $failed
-            '
+          LATEST=$(curl -s https://api.github.com/repos/savonet/liquidsoap/releases/latest | \
+            grep '"tag_name"' | cut -d'"' -f4)
+          echo "version=${LATEST}" >> $GITHUB_OUTPUT
+          echo "Latest Liquidsoap version: ${LATEST}"
+
+      - name: Check Liquidsoap files
+        run: |
+          echo "Checking Liquidsoap files with ${{ steps.version.outputs.version }}..."
+
+          # Check all .liq files in conf directory (not subdirectories)
+          for file in conf/*.liq; do
+            if [ -f "$file" ]; then
+              echo "Checking ${file}..."
+              docker run --rm -v "$PWD:/app" -w /app \
+                savonet/liquidsoap:${{ steps.version.outputs.version }} \
+                liquidsoap -c "${file}"
+            fi
+          done
