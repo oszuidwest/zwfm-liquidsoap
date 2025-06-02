@@ -33,7 +33,7 @@ radio =
 # Create processed/unprocessed audio sources
 # When StereoTool is enabled (STEREOTOOL_LICENSE_KEY is set), it provides:
 # - Audio processing (AGC, compression, limiting, etc.)
-# - MicroMPX encoding for FM transmitters (available on separate StereoTool output)
+# - MicroMPX encoding for FM transmitters (available in StereoTool itself)
 # Two audio sources are available:
 # - 'radio': Unprocessed audio (direct from studio/fallback)
 # - 'radio_processed': Either StereoTool-processed audio (if enabled) or unprocessed audio (if disabled)
@@ -45,8 +45,6 @@ clock.assign_new(id="dab_clock", [audio_to_dab])
 
 # Include Icecast outputs configuration
 %include "lib/icecast_outputs.liq"
-
-# Note: Each Icecast output automatically creates its own clock for stability
 
 # Output a high bitrate mp3 stream
 output_icecast_stream(

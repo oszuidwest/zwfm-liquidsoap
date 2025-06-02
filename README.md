@@ -2,6 +2,7 @@
 
 [![CI](https://github.com/oszuidwest/zwfm-liquidsoap/actions/workflows/ci.yml/badge.svg)](https://github.com/oszuidwest/zwfm-liquidsoap/actions/workflows/ci.yml)
 [![Docker Image](https://github.com/oszuidwest/zwfm-liquidsoap/actions/workflows/docker-image.yml/badge.svg)](https://github.com/oszuidwest/zwfm-liquidsoap/actions/workflows/docker-image.yml)
+
 This repository contains an audio streaming solution tailored for [ZuidWest FM](https://www.zuidwestfm.nl/), [Radio Rucphen](https://www.rucphenrtv.nl/), and [BredaNu](https://www.bredanu.nl/) in the Netherlands. Leveraging [Liquidsoap](https://www.liquidsoap.info), it facilitates internet streaming with a reliable fallback mechanism and is capable of pushing MPX to broadcast transmitters via MicroMPX.
 
 ![liq-flow-fixed](https://github.com/user-attachments/assets/00b35131-5c30-418b-aea1-dd447ee12f49)
@@ -33,7 +34,7 @@ The system design involves delivering the broadcast through two pathways. Liquid
 ### Configuration
 After installation, edit the environment file at `/opt/liquidsoap/.env` to configure your station settings.
 
-**Note**: Most configuration variables are now centralized in `conf/lib/defaults.liq` for all stations. Station-specific files only contain DME configuration (for Rucphen/BredaNu).
+Most configuration variables are centralized. Station-specific files only contain DME configuration (for Rucphen/BredaNu).
 
 ## Environment Variables Reference
 
@@ -60,7 +61,7 @@ This table lists ALL environment variables used in the system. Variables without
 | `FALLBACK_FILE` | Path to emergency audio file | `/audio/fallback.ogg` | `/audio/noodband.mp3` | `conf/lib/defaults.liq` | All |
 | `SILENCE_DETECTION_FILE` | Silence detection control file | `/silence_detection.txt` | `/opt/silence.txt` | `conf/lib/defaults.liq` | All |
 | `MAX_BLANK` | Max silence duration (seconds) | `15.0` | `20.0` | `conf/lib/defaults.liq` | All |
-| `MIN_NOISE` | Min noise level (dB) | `15.0` | `10.0` | `conf/lib/defaults.liq` | All |
+| `MIN_NOISE` | Min noise duration (seconds) | `15.0` | `10.0` | `conf/lib/defaults.liq` | All |
 | **DAB+ Configuration** |
 | `ODR_AUDIOENC_BITRATE` | DAB+ encoder bitrate | *(required)* | `128` | `conf/lib/defaults.liq` | All |
 | `ODR_AUDIOENC_EDI_URL` | DAB+ EDI destination | *(required)* | `tcp://dab-mux.local:9001` | `conf/lib/defaults.liq` | All |
@@ -81,7 +82,7 @@ This table lists ALL environment variables used in the system. Variables without
 - **Required variables**: Must be set in `.env` file or Liquidsoap will fail to start
 - **Station column**: "All" means used by all stations, "Rucphen/BredaNu" means used only by stations with DME
 - **Default conventions**: `#{VARIABLE}` means the value is interpolated from another variable
-- **File locations**: Most configuration variables are now centralized in `conf/lib/defaults.liq`
+- **File locations**: Most configuration variables are centralized in `conf/lib/defaults.liq`
 - **Station-specific files**: Only contain DME configuration (for Rucphen/BredaNu) and station-specific logic
 
 ### Running with Docker
@@ -145,7 +146,7 @@ Changes take effect immediately without restarting the service.
 ### Silence thresholds
 The default silence detection parameters can be adjusted via environment variables:
 - `MAX_BLANK`: Maximum silence duration in seconds (default: 15.0)
-- `MIN_NOISE`: Minimum noise level in dB (default: 15.0)
+- `MIN_NOISE`: The minimum duration of continuous audio required for an input to be considered valid (default: 15.0)
 
 ## Streaming to SRT Inputs
 
@@ -218,33 +219,42 @@ echo '0' > /opt/liquidsoap/use_noodband.txt
 ## Development
 
 ### CI/CD Pipeline
-All code quality checks are handled automatically by GitHub Actions:
 
-#### Linting (runs on all PRs and pushes)
-- **ShellCheck**: Shell script analysis using `ludeeus/action-shellcheck@2.0.0`
-- **Hadolint**: Dockerfile best practices using `hadolint/hadolint-action@v3.1.0`
-- **yamllint**: YAML syntax validation using `ibiqlik/action-yamllint@v3.1.1`
-- **docker-compose-linter**: Docker Compose validation with built-in docker and dclint
-- **Liquidsoap**: Syntax checking using latest stable Liquidsoap version
+The project uses GitHub Actions for automated quality control and builds:
 
-#### Auto-formatting (runs after successful main branch builds)
-- **Prettier**: Formats YAML, JSON, shell scripts, and Dockerfiles
-- **liquidsoap-prettier**: Formats Liquidsoap `.liq` files
-- **dclint**: Auto-fixes Docker Compose issues
+#### Continuous Integration (`ci.yml`)
+Runs on all pushes to `main` and pull requests:
+1. **Linting** - All checks run in parallel:
+   - **ShellCheck**: Shell script analysis with warning-level severity
+   - **Hadolint**: Dockerfile linting (ignores DL3008/DL3009 for apt packages)
+   - **yamllint**: YAML validation with 120-char line limit
+   - **Docker Compose**: Syntax validation with test environment
+   - **Liquidsoap**: Syntax checking for all `.liq` files
 
-#### Build Validation
-- Multi-platform Docker image build test (amd64/arm64)
-- Uses GitHub Actions cache for faster builds
+2. **Auto-formatting** (main branch only, after linting passes):
+   - **Prettier**: Formats YAML files
+   - **liquidsoap-prettier**: Formats Liquidsoap `.liq` files
+   - **dclint**: Formats Docker Compose files
+   - Auto-commits changes with `[skip ci]` to prevent loops
+
+3. **Build Test**: Multi-platform Docker build validation (amd64/arm64)
+
+#### Docker Image Builds (`docker-image.yml`)
+- **Schedule**: Daily at 3:00 AM UTC
+- **Triggers**: Dockerfile changes or manual dispatch
+- **Features**:
+  - Automatically detects new versions of Liquidsoap and ODR-AudioEnc
+  - Only builds when new version combinations are available
+  - Multi-platform support (linux/amd64, linux/arm64)
+  - Combined version tagging: `liquidsoap_version-odr_version`
+  - Pushes to GitHub Container Registry (ghcr.io)
+
+#### Maintenance
+- **Workflow Cleanup** (`clean.yml`): Weekly cleanup of old workflow runs
+- **Dependabot**: Automated updates for GitHub Actions and Docker base images
 
 ### Workflow Status
-The CI pipeline runs all checks in parallel for efficiency. Check the badges at the top of this README for current status.
-
-### Automated Dependency Updates
-Dependabot creates weekly pull requests to update:
-- GitHub Actions versions
-- Docker base image versions
-
-No local setup required - just push your code and GitHub Actions handles everything!
+Check the badges at the top of this README for current CI/CD status. The pipeline uses concurrency control to cancel duplicate runs and caching for faster builds.
 
 ## Compatibility
 1. Tested on Ubuntu 24.04 and Debian 12.
