@@ -132,7 +132,7 @@ fi
 
 # Download library files
 echo -e "${BLUE}►► Downloading Liquidsoap library files...${NC}"
-if ! download_file -m "${LIQUIDSOAP_LIB_DIR}" "Liquidsoap library" \
+if ! download_file -m "${LIQUIDSOAP_LIB_DIR}" "Liquidsoap library files" \
   "${LIQUIDSOAP_LIB_DEFAULTS_URL}:defaults.liq" \
   "${LIQUIDSOAP_LIB_STUDIO_INPUTS_URL}:studio_inputs.liq" \
   "${LIQUIDSOAP_LIB_ICECAST_OUTPUTS_URL}:icecast_outputs.liq" \
