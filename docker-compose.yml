@@ -8,14 +8,14 @@ services:
       - ./audio:/audio
       - ./silence_detection.txt:/silence_detection.txt
       - ./stereotool:/var/cache/liquidsoap/
-    env_file:
-      - .env
     environment:
       - TZ=Europe/Amsterdam
+    env_file:
+      - .env
     ports:
-      - "0.0.0.0:8888:8888/udp" # SRT Input 1
-      - "0.0.0.0:9999:9999/udp" # SRT Input 2
-      - "0.0.0.0:8080:8080" # StereoTool GUI (TCP)
+      - '0.0.0.0:8080:8080' # StereoTool GUI (TCP)
+      - '0.0.0.0:8888:8888/udp' # SRT Input 1
+      - '0.0.0.0:9999:9999/udp' # SRT Input 2
     command: /scripts/radio.liq
     restart: unless-stopped
     user: "10000:10001"
