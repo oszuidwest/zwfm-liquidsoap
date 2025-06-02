@@ -1,0 +1,92 @@
+---
+name: Lint
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_call:
+
+jobs:
+  # Shell scripts linting
+  shellcheck:
+    name: ShellCheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ludeeus/action-shellcheck@2.0.0
+        with:
+          check_together: "yes"
+          severity: warning
+
+  # Dockerfile linting
+  hadolint:
+    name: Hadolint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: Dockerfile
+          failure-threshold: warning
+          ignore: DL3008,DL3009
+
+  # YAML linting
+  yamllint:
+    name: YAML Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ibiqlik/action-yamllint@v3.1.1
+        with:
+          config_data: |
+            extends: default
+            rules:
+              line-length:
+                max: 120
+                level: warning
+              comments:
+                min-spaces-from-content: 1
+              truthy:
+                allowed-values: ['true', 'false', 'on', 'off', 'yes', 'no']
+
+  # Docker Compose validation
+  docker-compose:
+    name: Docker Compose Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create test .env file
+        run: |
+          echo "STATION_NAME_SHORT=test" > .env
+          echo "STATION_NAME_FULL=Test Station" >> .env
+      - name: Validate docker-compose.yml
+        run: docker compose config --quiet
+
+  # Liquidsoap syntax check
+  liquidsoap:
+    name: Liquidsoap Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get latest Liquidsoap version
+        id: version
+        run: |
+          LATEST=$(curl -s https://api.github.com/repos/savonet/liquidsoap/releases/latest | \
+            grep '"tag_name"' | cut -d'"' -f4)
+          echo "version=${LATEST}" >> $GITHUB_OUTPUT
+          echo "Latest Liquidsoap version: ${LATEST}"
+
+      - name: Check Liquidsoap files
+        run: |
+          echo "Checking Liquidsoap files with ${{ steps.version.outputs.version }}..."
+
+          # Check all .liq files in conf directory (not subdirectories)
+          for file in conf/*.liq; do
+            if [ -f "$file" ]; then
+              echo "Checking ${file}..."
+              docker run --rm -v "$PWD:/app" -w /app \
+                savonet/liquidsoap:${{ steps.version.outputs.version }} \
+                liquidsoap -c "${file}"
+            fi
+          done

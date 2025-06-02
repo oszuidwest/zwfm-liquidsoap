@@ -1,9 +1,14 @@
 # Studio inputs configuration - common for all stations
 
+# Get upstream password for SRT encryption
+UPSTREAM_PASSWORD = environment.get("UPSTREAM_PASSWORD")
+
+# Note: SILENCE_DETECTION_FILE and is_silence_detection_enabled() are defined in defaults.liq
+
 # Function to create a studio SRT input with silence detection and buffering
 def create_studio_input(~id, ~port) =
   # Create SRT input
-  s =
+  studio =
     input.srt(
       id=id,
       port=port,
@@ -16,8 +21,8 @@ def create_studio_input(~id, ~port) =
       on_disconnect=fun () -> log_event(id, "disconnected")
     )
 
-  # Add silence detection with logging
-  s =
+  # Create version with silence detection and stripping
+  studio_with_detect =
     blank.detect(
       id="detect_#{id}",
       max_blank=MAX_BLANK,
@@ -33,12 +38,29 @@ def create_studio_input(~id, ~port) =
             id,
             "audio resumed"
           ),
-      s
+      studio
     )
 
-  # Strip blanks to make source unavailable when silent
-  s = blank.strip(id="stripped_#{id}", max_blank=MAX_BLANK, min_noise=MIN_NOISE, s)
+  studio_stripped =
+    blank.strip(
+      id="stripped_#{id}",
+      max_blank=MAX_BLANK,
+      min_noise=MIN_NOISE,
+      studio_with_detect
+    )
+
+  # Use switch to select between stripped version and original
+  studio_switchable =
+    switch(
+      id="switch_silence_#{id}",
+      track_sensitive=false,
+      [
+        ({is_silence_detection_enabled()}, studio_stripped),
+        # When silence detection is disabled, use raw studio source
+        ({true}, studio)
+      ]
+    )
 
   # Buffer to prevent connection/disconnection latency impact
-  buffer(id="buffered_#{id}", fallible=true, s)
+  buffer(id="buffered_#{id}", fallible=true, studio_switchable)
 end

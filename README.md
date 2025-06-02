@@ -1,5 +1,8 @@
 # zwfm-liquidsoap
-This repository contains an audio streaming solution tailored for [ZuidWest FM](https://www.zuidwestfm.nl/), [Radio Rucphen](https://www.rucphenrtv.nl/) and [BredaNu](https://www.bredanu.nl/) in the Netherlands. Leveraging [Liquidsoap](https://www.liquidsoap.info), it facilitates internet streaming with a reliable fallback mechanism and is capable of pushing MPX to broadcast transmitters via MicroMPX.
+
+[![CI](https://github.com/oszuidwest/zwfm-liquidsoap/actions/workflows/ci.yml/badge.svg)](https://github.com/oszuidwest/zwfm-liquidsoap/actions/workflows/ci.yml)
+[![Docker Image](https://github.com/oszuidwest/zwfm-liquidsoap/actions/workflows/docker-image.yml/badge.svg)](https://github.com/oszuidwest/zwfm-liquidsoap/actions/workflows/docker-image.yml)
+This repository contains an audio streaming solution tailored for [ZuidWest FM](https://www.zuidwestfm.nl/), [Radio Rucphen](https://www.rucphenrtv.nl/), and [BredaNu](https://www.bredanu.nl/) in the Netherlands. Leveraging [Liquidsoap](https://www.liquidsoap.info), it facilitates internet streaming with a reliable fallback mechanism and is capable of pushing MPX to broadcast transmitters via MicroMPX.
 
 ![liq-flow-fixed](https://github.com/user-attachments/assets/00b35131-5c30-418b-aea1-dd447ee12f49)
 
@@ -11,12 +14,150 @@ The system design involves delivering the broadcast through two pathways. Liquid
 2. **Icecast**: Functions as a public server for distributing the audio stream.
 3. **StereoTool**: Used as [MicroMPX](https://www.thimeo.com/micrompx/) encoder for feeding FM transmitters.
 4. **ODR-AudioEnc**: Used as DAB+ audio encoder for feeding a DAB+ muxer.
-4. **ODR-PadEnc**: Used as DAB+ metadata encoder for feeding a DAB+ muxer.
 
 ### Satellites
 1. **[rpi-audio-encoder](https://github.com/oszuidwest/rpi-audio-encoder)**: Software to turn a Raspberry Pi into a production grade SRT audio encoder.
 2. **[rpi-umpx-decoder](https://github.com/oszuidwest/rpi-audio-encoder)**: Software to turn a Raspberry Pi into a production grade μMPX decoder.
-3. **[odr-webapi](https://github.com/oszuidwest/odr-webapi)**: API for managing `ODR-PadEnc` input (Work in progress)
+
+## Installation & Usage
+
+### Quick Install
+```bash
+# Install Liquidsoap
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/oszuidwest/zwfm-liquidsoap/main/install.sh)"
+
+# Optional: Install Icecast server
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/oszuidwest/zwfm-liquidsoap/main/icecast2.sh)"
+```
+
+### Configuration
+After installation, edit the environment file at `/opt/liquidsoap/.env` to configure your station settings.
+
+**Note**: Most configuration variables are now centralized in `conf/lib/defaults.liq` for all stations. Station-specific files only contain DME configuration (for Rucphen/BredaNu).
+
+## Environment Variables Reference
+
+This table lists ALL environment variables used in the system. Variables without defaults are **required** and will cause Liquidsoap to fail if not set.
+
+| Variable | Description | Default | Example | Used In | Station |
+|----------|-------------|---------|---------|---------|---------|
+| **Station Configuration** |
+| `STATION_NAME_SHORT` | Short station name | *(required)* | `ZuidWest` | `conf/lib/defaults.liq` | All |
+| `STATION_NAME_FULL` | Full station name for metadata | *(required)* | `Radio Rucphen` | `conf/lib/defaults.liq` | All |
+| **Icecast Configuration** |
+| `ICECAST_SERVER` | Icecast server hostname | *(required)* | `icecast.bredanu.nl` | `conf/lib/defaults.liq` | All |
+| `ICECAST_PORT` | Icecast server port | *(required)* | `8000` | `conf/lib/defaults.liq` | All |
+| `ICECAST_PASSWORD` | Icecast source password | *(required)* | `s3cur3p4ss` | `conf/lib/defaults.liq` | All |
+| `ICECAST_MOUNTPOINT` | Base mount point name | lowercase(`STATION_NAME_SHORT`) | `zuidwest` | `conf/lib/defaults.liq` | All |
+| **Stream Mount Points** |
+| `HIGH_QUALITY_MOUNT` | MP3 stream mount | `/#{ICECAST_MOUNTPOINT}.mp3` | `/rucphen.mp3` | `conf/lib/defaults.liq` | All |
+| `MOBILE_MOUNT` | AAC mobile stream mount | `/#{ICECAST_MOUNTPOINT}.aac` | `/bredanu.aac` | `conf/lib/defaults.liq` | All |
+| `TRANSPORT_MOUNT` | AAC STL stream mount | `/#{ICECAST_MOUNTPOINT}.stl` | `/zuidwest.stl` | `conf/lib/defaults.liq` | All |
+| **Audio Processing** |
+| `UPSTREAM_PASSWORD` | SRT encryption passphrase | *(required)* | `alpha-bravo-charlie-delta` | `conf/lib/studio_inputs.liq` | All |
+| `STEREOTOOL_LICENSE_KEY` | StereoTool license key | *(none)* | `ABC123DEF456...` | `conf/lib/stereotool.liq` | All |
+| **Fallback & Control** |
+| `FALLBACK_FILE` | Path to emergency audio file | `/audio/fallback.ogg` | `/audio/noodband.mp3` | `conf/lib/defaults.liq` | All |
+| `SILENCE_DETECTION_FILE` | Silence detection control file | `/silence_detection.txt` | `/opt/silence.txt` | `conf/lib/defaults.liq` | All |
+| `MAX_BLANK` | Max silence duration (seconds) | `15.0` | `20.0` | `conf/lib/defaults.liq` | All |
+| `MIN_NOISE` | Min noise level (dB) | `15.0` | `10.0` | `conf/lib/defaults.liq` | All |
+| **DAB+ Configuration** |
+| `ODR_AUDIOENC_BITRATE` | DAB+ encoder bitrate | *(required)* | `128` | `conf/lib/defaults.liq` | All |
+| `ODR_AUDIOENC_EDI_URL` | DAB+ EDI destination | *(required)* | `tcp://dab-mux.local:9001` | `conf/lib/defaults.liq` | All |
+| **DME Configuration** |
+| `DME_INGEST_A_HOST` | Primary DME server | *(required)* | `ingest1.dme.nl` | `conf/rucphen.liq`, `conf/bredanu.liq` | Rucphen/BredaNu |
+| `DME_INGEST_A_PORT` | Primary DME port | *(required)* | `8010` | `conf/rucphen.liq`, `conf/bredanu.liq` | Rucphen/BredaNu |
+| `DME_INGEST_A_USER` | Primary DME username | *(required)* | `rucphen-live` | `conf/rucphen.liq`, `conf/bredanu.liq` | Rucphen/BredaNu |
+| `DME_INGEST_A_PASSWORD` | Primary DME password | *(required)* | `dme123pass` | `conf/rucphen.liq`, `conf/bredanu.liq` | Rucphen/BredaNu |
+| `DME_INGEST_B_HOST` | Secondary DME server | *(required)* | `ingest2.dme.nl` | `conf/rucphen.liq`, `conf/bredanu.liq` | Rucphen/BredaNu |
+| `DME_INGEST_B_PORT` | Secondary DME port | *(required)* | `8020` | `conf/rucphen.liq`, `conf/bredanu.liq` | Rucphen/BredaNu |
+| `DME_INGEST_B_USER` | Secondary DME username | *(required)* | `bredanu-backup` | `conf/rucphen.liq`, `conf/bredanu.liq` | Rucphen/BredaNu |
+| `DME_INGEST_B_PASSWORD` | Secondary DME password | *(required)* | `backup456pwd` | `conf/rucphen.liq`, `conf/bredanu.liq` | Rucphen/BredaNu |
+| `DME_MOUNT` | DME mount point | *(required)* | `/live-stream` | `conf/rucphen.liq`, `conf/bredanu.liq` | Rucphen/BredaNu |
+| **Docker Configuration** |
+| `TZ` | Container timezone | `Europe/Amsterdam` | `Europe/Amsterdam` | `docker-compose.yml` | All |
+
+### Notes:
+- **Required variables**: Must be set in `.env` file or Liquidsoap will fail to start
+- **Station column**: "All" means used by all stations, "Rucphen/BredaNu" means used only by stations with DME
+- **Default conventions**: `#{VARIABLE}` means the value is interpolated from another variable
+- **File locations**: Most configuration variables are now centralized in `conf/lib/defaults.liq`
+- **Station-specific files**: Only contain DME configuration (for Rucphen/BredaNu) and station-specific logic
+
+### Running with Docker
+```bash
+cd /opt/liquidsoap
+
+# Start Liquidsoap
+docker-compose up -d
+
+# View logs
+docker-compose logs -f
+
+# Stop services
+docker-compose down
+```
+
+### StereoTool GUI
+When StereoTool is enabled (by providing a `STEREOTOOL_LICENSE_KEY` in the `.env` file), access the web interface at: `http://localhost:8080`
+
+### Audio Processing with StereoTool
+
+StereoTool is always included in the installation. When enabled (by providing a `STEREOTOOL_LICENSE_KEY`), the system creates two audio paths:
+
+1. **Unprocessed audio (`radio`)**: The raw combined audio from studios/fallback
+
+2. **Processed audio (`radio_processed`)**: Audio processed by StereoTool
+   - Audio processing (AGC, compression, limiting, EQ, etc.)
+   - MicroMPX encoding for FM transmitters (available via StereoTool's separate output)
+
+**Note**: The `output.dummy()` call is required to activate StereoTool's processing chain, even though this output isn't used directly.
+
+## Silence Detection
+
+The system includes automatic silence detection that monitors studio inputs and manages fallback behavior. This feature is **enabled by default**.
+
+### How it works
+When silence detection is **enabled** (default):
+- Studio inputs automatically switch away when silent for more than 15 seconds
+- If both studios are silent/disconnected, the system plays the fallback file
+- If no fallback file exists, the system plays silence
+- Provides automatic redundancy for unattended operation
+
+When silence detection is **disabled**:
+- Studio inputs continue playing even when silent
+- No automatic switching between sources
+- Fallback file is never used
+- Useful for testing or when manual control is preferred
+
+### Configuration
+Control silence detection via the control file:
+```bash
+# Enable silence detection (default)
+echo '1' > /opt/liquidsoap/silence_detection.txt
+
+# Disable silence detection
+echo '0' > /opt/liquidsoap/silence_detection.txt
+```
+
+Changes take effect immediately without restarting the service.
+
+### Silence thresholds
+The default silence detection parameters can be adjusted via environment variables:
+- `MAX_BLANK`: Maximum silence duration in seconds (default: 15.0)
+- `MIN_NOISE`: Minimum noise level in dB (default: 15.0)
+
+## Streaming to SRT Inputs
+
+The system accepts two SRT input streams on ports 8888 (primary) and 9999 (secondary). All connections must use encryption with the passphrase configured in `UPSTREAM_PASSWORD`.
+
+### Live audio capture
+```bash
+# Stream from ALSA audio device (WAV in Matroska container)
+ffmpeg -f alsa -channels 2 -sample_rate 48000 -i hw:0 \
+  -codec:a pcm_s16le -vn -f matroska \
+  "srt://liquidsoap.example.com:8888?passphrase=your_passphrase&mode=caller&transtype=live&latency=10000"
+```
 
 ## Installation & Usage
 
@@ -72,13 +213,44 @@ echo '0' > /opt/liquidsoap/use_noodband.txt
 
 ## Configurations
 - **radio.liq**: A production-ready Liquidsoap configuration that incorporates StereoTool as a MicroMPX encoder.
-- **docker-compose.yml**: Basic Liquidsoap configuration in Docker.
-- **docker-compose.stereotool.yml**: Extended configuration for StereoTool in Docker.
+- **docker-compose.yml**: Docker Compose configuration including StereoTool support.
+
+## Development
+
+### CI/CD Pipeline
+All code quality checks are handled automatically by GitHub Actions:
+
+#### Linting (runs on all PRs and pushes)
+- **ShellCheck**: Shell script analysis using `ludeeus/action-shellcheck@2.0.0`
+- **Hadolint**: Dockerfile best practices using `hadolint/hadolint-action@v3.1.0`
+- **yamllint**: YAML syntax validation using `ibiqlik/action-yamllint@v3.1.1`
+- **docker-compose-linter**: Docker Compose validation with built-in docker and dclint
+- **Liquidsoap**: Syntax checking using latest stable Liquidsoap version
+
+#### Auto-formatting (runs after successful main branch builds)
+- **Prettier**: Formats YAML, JSON, shell scripts, and Dockerfiles
+- **liquidsoap-prettier**: Formats Liquidsoap `.liq` files
+- **dclint**: Auto-fixes Docker Compose issues
+
+#### Build Validation
+- Multi-platform Docker image build test (amd64/arm64)
+- Uses GitHub Actions cache for faster builds
+
+### Workflow Status
+The CI pipeline runs all checks in parallel for efficiency. Check the badges at the top of this README for current status.
+
+### Automated Dependency Updates
+Dependabot creates weekly pull requests to update:
+- GitHub Actions versions
+- Docker base image versions
+
+No local setup required - just push your code and GitHub Actions handles everything!
 
 ## Compatibility
 1. Tested on Ubuntu 24.04 and Debian 12.
 2. Supports x86_64 or ARM64 system architectures (e.g., Ampere Altra, Raspberry Pi). Note: StereoTool MicroMPX is currently not well-supported on ARM architectures.
 3. Requires an internet connection for script dependencies.
+
 
 # MIT License
 

@@ -1,5 +1,0 @@
-{
-  "plugins": ["liquidsoap-prettier"],
-  "printWidth": 100,
-  "tabWidth": 2
-}

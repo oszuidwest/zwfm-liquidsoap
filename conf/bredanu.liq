@@ -46,15 +46,13 @@ clock.assign_new(id="dab_clock", [audio_to_dab])
 # Include Icecast outputs configuration
 %include "lib/icecast_outputs.liq"
 
-# Note: Each Icecast output automatically creates its own clock for stability
-
 # Output a high bitrate mp3 stream
 output_icecast_stream(
   format=%mp3(bitrate = 192, samplerate = 48000, internal_quality = 0),
   description=
     "Hoge Kwaliteit Stream (192kbit MP3)",
   mount=HIGH_QUALITY_MOUNT,
-  source=radio_processed
+  source=radio
 )
 
 # Output a low bitrate AAC stream
@@ -72,7 +70,7 @@ output_icecast_stream(
   description=
     "Mobile Stream (96kbit AAC)",
   mount=MOBILE_MOUNT,
-  source=radio_processed
+  source=radio
 )
 
 # Output a high bitrate AAC STL stream
@@ -90,7 +88,7 @@ output_icecast_stream(
   description=
     "Transport Stream (576kbit AAC)",
   mount=TRANSPORT_MOUNT,
-  source=radio_processed
+  source=radio
 )
 
 # Output high bitrate AAC streams to Dutch Media Exchange (dual ingestion points)
@@ -107,12 +105,12 @@ output_icecast_stream(
     ),
   description="",
   mount=DME_MOUNT,
-  source=radio_processed,
+  source=radio,
   host=DME_INGEST_A_HOST,
   port=DME_INGEST_A_PORT,
+  user=DME_INGEST_A_USER,
   password=DME_INGEST_A_PASSWORD,
-  name=STATION_NAME_FULL,
-  user=DME_INGEST_A_USER
+  name=STATION_NAME_FULL
 )
 
 output_icecast_stream(
@@ -128,12 +126,12 @@ output_icecast_stream(
     ),
   description="",
   mount=DME_MOUNT,
-  source=radio_processed,
+  source=radio,
   host=DME_INGEST_B_HOST,
   port=DME_INGEST_B_PORT,
+  user=DME_INGEST_B_USER,
   password=DME_INGEST_B_PASSWORD,
-  name=STATION_NAME_FULL,
-  user=DME_INGEST_B_USER
+  name=STATION_NAME_FULL
 )
 
 # Feed the audio to ODR-AudioEnc

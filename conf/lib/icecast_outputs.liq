@@ -1,59 +1,37 @@
-# Icecast outputs configuration - common for all stations
-
-# Function to output an icecast stream with common parameters
-# Automatically creates a clock for each output to ensure stability
+# Function to create an Icecast output with its own clock for stability
 def output_icecast_stream(
   ~format,
   ~description,
   ~mount,
   ~source,
-  ~clock_id=null(),
   ~host=null(),
   ~port=null(),
+  ~user=null(),
   ~password=null(),
-  ~name=null(),
-  ~user=null()
+  ~name=null()
 ) =
-  # Create a unique clock ID if not provided
-  clock_name = if null.defined(clock_id) then null.get(clock_id) else "icecast_#{mount}" end
-
-  # Create a clock-assigned source
+  # Create a buffered source with its own clock
   clocked_source = mksafe(buffer(source))
-  clock.assign_new(id=clock_name, [clocked_source])
+  clock_id = "icecast_clock_#{mount}"
+  clock.assign_new(id=clock_id, [clocked_source])
 
-  # Use provided values or fall back to globals
-  server_host = if null.defined(host) then null.get(host) else ICECAST_SERVER end
-  server_port = if null.defined(port) then null.get(port) else ICECAST_PORT end
-  server_password = if null.defined(password) then null.get(password) else ICECAST_PASSWORD end
-  server_name = if null.defined(name) then null.get(name) else ICECAST_NAME end
+  # Use provided parameters or defaults
+  actual_host = host ?? ICECAST_SERVER
+  actual_port = port ?? ICECAST_PORT
+  actual_user = user ?? "source"
+  actual_password = password ?? ICECAST_PASSWORD
+  actual_name = name ?? STATION_NAME_FULL
 
-  # Create the output with optional user parameter
-  if
-    null.defined(user)
-  then
-    output.icecast(
-      format,
-      fallible=false,
-      host=server_host,
-      port=server_port,
-      password=server_password,
-      name=server_name,
-      description=description,
-      mount=mount,
-      user=null.get(user),
-      clocked_source
-    )
-  else
-    output.icecast(
-      format,
-      fallible=false,
-      host=server_host,
-      port=server_port,
-      password=server_password,
-      name=server_name,
-      description=description,
-      mount=mount,
-      clocked_source
-    )
-  end
+  # Output to Icecast
+  output.icecast(
+    format,
+    host=actual_host,
+    port=actual_port,
+    user=actual_user,
+    password=actual_password,
+    mount=mount,
+    name=actual_name,
+    description=description,
+    clocked_source
+  )
 end
