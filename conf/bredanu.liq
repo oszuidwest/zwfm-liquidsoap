@@ -1,6 +1,19 @@
 # Include default configuration values
 %include "lib/defaults.liq"
 
+# Dutch Media Exchange (DME) configuration
+DME_INGEST_A_HOST = environment.get("DME_INGEST_A_HOST")
+DME_INGEST_A_PORT = int_of_string(environment.get("DME_INGEST_A_PORT"))
+DME_INGEST_A_USER = environment.get("DME_INGEST_A_USER")
+DME_INGEST_A_PASSWORD = environment.get("DME_INGEST_A_PASSWORD")
+
+DME_INGEST_B_HOST = environment.get("DME_INGEST_B_HOST")
+DME_INGEST_B_PORT = int_of_string(environment.get("DME_INGEST_B_PORT"))
+DME_INGEST_B_USER = environment.get("DME_INGEST_B_USER")
+DME_INGEST_B_PASSWORD = environment.get("DME_INGEST_B_PASSWORD")
+
+DME_MOUNT = environment.get("DME_MOUNT")
+
 # Include library configurations
 %include "lib/studio_inputs.liq"
 %include "lib/stereotool.liq"
@@ -76,6 +89,49 @@ output_icecast_stream(
     "Transport Stream (576kbit AAC)",
   mount=TRANSPORT_MOUNT,
   source=radio
+)
+
+# Output high bitrate AAC streams to Dutch Media Exchange (dual ingestion points)
+output_icecast_stream(
+  format=
+    %fdkaac(
+      channels = 2,
+      samplerate = 48000,
+      bitrate = 576,
+      afterburner = true,
+      aot = 'mpeg4_aac_lc',
+      transmux = 'adts',
+      sbr_mode = true
+    ),
+  description="",
+  mount=DME_MOUNT,
+  source=radio,
+  host=DME_INGEST_A_HOST,
+  port=DME_INGEST_A_PORT,
+  user=DME_INGEST_A_USER,
+  password=DME_INGEST_A_PASSWORD,
+  name=STATION_NAME_FULL
+)
+
+output_icecast_stream(
+  format=
+    %fdkaac(
+      channels = 2,
+      samplerate = 48000,
+      bitrate = 576,
+      afterburner = true,
+      aot = 'mpeg4_aac_lc',
+      transmux = 'adts',
+      sbr_mode = true
+    ),
+  description="",
+  mount=DME_MOUNT,
+  source=radio,
+  host=DME_INGEST_B_HOST,
+  port=DME_INGEST_B_PORT,
+  user=DME_INGEST_B_USER,
+  password=DME_INGEST_B_PASSWORD,
+  name=STATION_NAME_FULL
 )
 
 # Feed the audio to ODR-AudioEnc

@@ -2,19 +2,19 @@ name: Build and Publish Docker Image
 
 on:
   schedule:
-    - cron: '0 3 * * *'  # Run daily at 3:00 AM
+    - cron: "0 3 * * *" # Run daily at 3:00 AM
   push:
     branches:
       - main
     paths:
-      - 'Dockerfile'
-      - '.github/workflows/docker-image.yml'
-  workflow_dispatch:  # Allow manual trigger
+      - "Dockerfile"
+      - ".github/workflows/docker-image.yml"
+  workflow_dispatch: # Allow manual trigger
     inputs:
       force_build:
-        description: 'Force build even if version exists'
+        description: "Force build even if version exists"
         required: false
-        default: 'false'
+        default: "false"
         type: boolean
 
 jobs:
@@ -23,7 +23,6 @@ jobs:
     outputs:
       liquidsoap_version: ${{ steps.get_versions.outputs.liquidsoap_version }}
       odr_audioenc_version: ${{ steps.get_versions.outputs.odr_audioenc_version }}
-      odr_padenc_version: ${{ steps.get_versions.outputs.odr_padenc_version }}
       combined_tag: ${{ steps.get_versions.outputs.combined_tag }}
       new_version: ${{ steps.check_version.outputs.new_version }}
     steps:
@@ -33,22 +32,19 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           LIQUIDSOAP_VERSION=$(gh api repos/savonet/liquidsoap/releases/latest --jq '.tag_name' | sed 's/v//')
-          
+
           # Get ODR versions from our own build repository
           ODR_RELEASES=$(gh api repos/oszuidwest/zwfm-odrbuilds/releases)
           ODR_AUDIOENC_VERSION=$(echo "$ODR_RELEASES" | jq -r 'map(select(.tag_name | startswith("odr-audioenc"))) | max_by(.created_at) | .tag_name' | sed 's/odr-audioenc-v//')
-          ODR_PADENC_VERSION=$(echo "$ODR_RELEASES" | jq -r 'map(select(.tag_name | startswith("odr-padenc"))) | max_by(.created_at) | .tag_name' | sed 's/odr-padenc-v//')
-          
-          COMBINED_TAG="$LIQUIDSOAP_VERSION-$ODR_AUDIOENC_VERSION-$ODR_PADENC_VERSION"
-          
+
+          COMBINED_TAG="$LIQUIDSOAP_VERSION-$ODR_AUDIOENC_VERSION"
+
           echo "Latest Liquidsoap version: $LIQUIDSOAP_VERSION"
           echo "Latest ODR-AudioEnc version: $ODR_AUDIOENC_VERSION"
-          echo "Latest ODR-PadEnc version: $ODR_PADENC_VERSION"
           echo "Combined tag: $COMBINED_TAG"
-          
+
           echo "liquidsoap_version=$LIQUIDSOAP_VERSION" >> $GITHUB_OUTPUT
           echo "odr_audioenc_version=$ODR_AUDIOENC_VERSION" >> $GITHUB_OUTPUT
-          echo "odr_padenc_version=$ODR_PADENC_VERSION" >> $GITHUB_OUTPUT
           echo "combined_tag=$COMBINED_TAG" >> $GITHUB_OUTPUT
 
       - name: Check if Version Exists in GHCR
@@ -58,17 +54,17 @@ jobs:
         run: |
           COMBINED_TAG="${{ steps.get_versions.outputs.combined_tag }}"
           FORCE_BUILD="${{ github.event.inputs.force_build }}"
-          
+
           if [[ "$FORCE_BUILD" == "true" ]]; then
             echo "Force build enabled, proceeding with build regardless of version status"
             echo "new_version=true" >> $GITHUB_OUTPUT
             exit 0
           fi
-          
+
           STATUS_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
             -H "Authorization: Bearer ${{ github.token }}" \
             "https://ghcr.io/v2/${{ github.repository }}/manifests/$COMBINED_TAG")
-          
+
           if [ "$STATUS_CODE" == "404" ]; then
             echo "New version found: $COMBINED_TAG"
             echo "new_version=true" >> $GITHUB_OUTPUT
@@ -111,7 +107,6 @@ jobs:
           build-args: |
             LIQUIDSOAP_VERSION=${{ needs.check-versions.outputs.liquidsoap_version }}
             ODR_AUDIOENC_VERSION=${{ needs.check-versions.outputs.odr_audioenc_version }}
-            ODR_PADENC_VERSION=${{ needs.check-versions.outputs.odr_padenc_version }}
           tags: |
             ghcr.io/${{ github.repository }}:${{ needs.check-versions.outputs.combined_tag }}
             ghcr.io/${{ github.repository }}:latest
@@ -121,7 +116,6 @@ jobs:
             org.opencontainers.image.revision=${{ github.sha }}
             liquidsoap.version=${{ needs.check-versions.outputs.liquidsoap_version }}
             odr-audioenc.version=${{ needs.check-versions.outputs.odr_audioenc_version }}
-            odr-padenc.version=${{ needs.check-versions.outputs.odr_padenc_version }}
 
       - name: Build Summary
         run: |

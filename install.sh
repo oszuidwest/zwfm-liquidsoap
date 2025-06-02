@@ -22,22 +22,29 @@ GITHUB_BASE="https://raw.githubusercontent.com/oszuidwest/zwfm-liquidsoap/main"
 # Docker files
 DOCKER_COMPOSE_URL="${GITHUB_BASE}/docker-compose.yml"
 DOCKER_COMPOSE_PATH="${INSTALL_DIR}/docker-compose.yml"
-DOCKER_COMPOSE_ST_URL="${GITHUB_BASE}/docker-compose.stereotool.yml"
-DOCKER_COMPOSE_ST_PATH="${INSTALL_DIR}/docker-compose.stereotool.yml"
 
 # Liquidsoap configuration
 LIQUIDSOAP_CONFIG_URL_ZUIDWEST="${GITHUB_BASE}/conf/zuidwest.liq"
 LIQUIDSOAP_CONFIG_URL_RUCPHEN="${GITHUB_BASE}/conf/rucphen.liq"
+LIQUIDSOAP_CONFIG_URL_BREDANU="${GITHUB_BASE}/conf/bredanu.liq"
 LIQUIDSOAP_CONFIG_PATH="${INSTALL_DIR}/scripts/radio.liq"
 
 LIQUIDSOAP_ENV_URL_ZUIDWEST="${GITHUB_BASE}/.env.zuidwest.example"
 LIQUIDSOAP_ENV_URL_RUCPHEN="${GITHUB_BASE}/.env.rucphen.example"
+LIQUIDSOAP_ENV_URL_BREDANU="${GITHUB_BASE}/.env.bredanu.example"
 LIQUIDSOAP_ENV_PATH="${INSTALL_DIR}/.env"
+
+# Liquidsoap library files
+LIQUIDSOAP_LIB_DIR="${INSTALL_DIR}/scripts/lib"
+LIQUIDSOAP_LIB_DEFAULTS_URL="${GITHUB_BASE}/conf/lib/defaults.liq"
+LIQUIDSOAP_LIB_STUDIO_INPUTS_URL="${GITHUB_BASE}/conf/lib/studio_inputs.liq"
+LIQUIDSOAP_LIB_ICECAST_OUTPUTS_URL="${GITHUB_BASE}/conf/lib/icecast_outputs.liq"
+LIQUIDSOAP_LIB_STEREOTOOL_URL="${GITHUB_BASE}/conf/lib/stereotool.liq"
 
 AUDIO_FALLBACK_URL="https://upload.wikimedia.org/wikipedia/commons/6/66/Aaron_Dunn_-_Sonata_No_1_-_Movement_2.ogg"
 AUDIO_FALLBACK_PATH="${INSTALL_DIR}/audio/fallback.ogg"
 
-AUDIO_FALLBACK_ENABLE_PATH="${INSTALL_DIR}/use_noodband.txt"
+SILENCE_DETECTION_PATH="${INSTALL_DIR}/silence_detection.txt"
 
 # StereoTool configuration
 STEREO_TOOL_VERSION="1051"
@@ -46,16 +53,13 @@ STEREO_TOOL_ZIP_URL="${STEREO_TOOL_BASE_URL}/Stereo_Tool_Generic_plugin_${STEREO
 STEREO_TOOL_ZIP_PATH="/tmp/stereotool.zip"
 STEREO_TOOL_INSTALL_DIR="${INSTALL_DIR}/stereotool"
 
-# RDS configuration
-RDS_RADIOTEXT_URL="https://rds.zuidwestfm.nl/?rt"
-RDS_RADIOTEXT_PATH="${INSTALL_DIR}/metadata/rds_rt.txt"
 
 # General configuration
 TIMEZONE="Europe/Amsterdam"
 DIRECTORIES=(
   "${INSTALL_DIR}/scripts"
+  "${INSTALL_DIR}/scripts/lib"
   "${INSTALL_DIR}/audio"
-  "${INSTALL_DIR}/metadata"
 )
 OS_ARCH=$(dpkg --print-architecture)
 
@@ -82,14 +86,13 @@ EOF
 echo -e "${GREEN}⎎ Liquidsoap and StereoTool Installation${NC}\n"
 
 # Prompt user for input
-ask_user "STATION_CONFIG" "zuidwest" "Which station configuration would you like to use? (zuidwest/rucphen)" "str"
+ask_user "STATION_CONFIG" "zuidwest" "Which station configuration would you like to use? (zuidwest/rucphen/bredanu)" "str"
 
 # Validate station configuration
-if [[ ! "$STATION_CONFIG" =~ ^(zuidwest|rucphen)$ ]]; then
-    echo -e "${RED}Error: Invalid station configuration. Must be either 'zuidwest' or 'rucphen'.${NC}"
-    exit 1
+if [[ ! "$STATION_CONFIG" =~ ^(zuidwest|rucphen|bredanu)$ ]]; then
+  echo -e "${RED}Error: Invalid station configuration. Must be 'zuidwest', 'rucphen', or 'bredanu'.${NC}"
+  exit 1
 fi
-ask_user "USE_ST" "n" "Would you like to use StereoTool for sound processing? (y/n)" "y/n"
 ask_user "DO_UPDATES" "y" "Would you like to perform all OS updates? (y/n)" "y/n"
 
 if [ "${DO_UPDATES}" == "y" ]; then
@@ -109,115 +112,125 @@ echo -e "${BLUE}►► Downloading configuration files...${NC}"
 if [ "${STATION_CONFIG}" == "zuidwest" ]; then
   LIQUIDSOAP_CONFIG_URL="${LIQUIDSOAP_CONFIG_URL_ZUIDWEST}"
   LIQUIDSOAP_ENV_URL="${LIQUIDSOAP_ENV_URL_ZUIDWEST}"
-else
+elif [ "${STATION_CONFIG}" == "rucphen" ]; then
   LIQUIDSOAP_CONFIG_URL="${LIQUIDSOAP_CONFIG_URL_RUCPHEN}"
   LIQUIDSOAP_ENV_URL="${LIQUIDSOAP_ENV_URL_RUCPHEN}"
+else
+  LIQUIDSOAP_CONFIG_URL="${LIQUIDSOAP_CONFIG_URL_BREDANU}"
+  LIQUIDSOAP_ENV_URL="${LIQUIDSOAP_ENV_URL_BREDANU}"
 fi
 
-backup_file "${LIQUIDSOAP_CONFIG_PATH}"
-if ! curl -sLo "${LIQUIDSOAP_CONFIG_PATH}" "${LIQUIDSOAP_CONFIG_URL}"; then
-  echo -e "${RED}Error: Unable to download the Liquidsoap configuration for ${STATION_CONFIG}.${NC}"
+if ! download_file "${LIQUIDSOAP_CONFIG_URL}" "${LIQUIDSOAP_CONFIG_PATH}" "Liquidsoap configuration for ${STATION_CONFIG}" backup; then
   exit 1
 fi
 
-backup_file "${LIQUIDSOAP_ENV_PATH}"
-if ! curl -sLo "${LIQUIDSOAP_ENV_PATH}" "${LIQUIDSOAP_ENV_URL}"; then
-  echo -e "${RED}Error: Unable to download the Liquidsoap env for ${STATION_CONFIG}.${NC}"
+# Download library files
+echo -e "${BLUE}►► Downloading Liquidsoap library files...${NC}"
+if ! download_file -m "${LIQUIDSOAP_LIB_DIR}" "Liquidsoap library" \
+  "${LIQUIDSOAP_LIB_DEFAULTS_URL}:defaults.liq" \
+  "${LIQUIDSOAP_LIB_STUDIO_INPUTS_URL}:studio_inputs.liq" \
+  "${LIQUIDSOAP_LIB_ICECAST_OUTPUTS_URL}:icecast_outputs.liq" \
+  "${LIQUIDSOAP_LIB_STEREOTOOL_URL}:stereotool.liq"; then
   exit 1
 fi
 
-backup_file "${DOCKER_COMPOSE_PATH}"
-if ! curl -sLo "${DOCKER_COMPOSE_PATH}" "${DOCKER_COMPOSE_URL}"; then
-  echo -e "${RED}Error: Unable to download docker-compose.yml.${NC}"
+if ! download_file "${LIQUIDSOAP_ENV_URL}" "${LIQUIDSOAP_ENV_PATH}" "Liquidsoap env for ${STATION_CONFIG}" backup; then
   exit 1
 fi
 
-backup_file "${AUDIO_FALLBACK_PATH}"
-if ! curl -sLo "${AUDIO_FALLBACK_PATH}" "${AUDIO_FALLBACK_URL}"; then
-  echo -e "${RED}Error: Unable to download the audio fallback file.${NC}"
+if ! download_file "${DOCKER_COMPOSE_URL}" "${DOCKER_COMPOSE_PATH}" "docker-compose.yml" backup; then
   exit 1
 fi
 
-echo "1" > $AUDIO_FALLBACK_ENABLE_PATH
+if ! download_file "${AUDIO_FALLBACK_URL}" "${AUDIO_FALLBACK_PATH}" "audio fallback file" backup; then
+  exit 1
+fi
 
-if [ "${USE_ST}" == "y" ]; then
-  echo -e "${BLUE}►► Installing StereoTool...${NC}"
-  install_packages silent unzip
+echo "1" > $SILENCE_DETECTION_PATH
 
-  # Add RDS update cronjob if it doesn't exist yet (TODO: Integrate this in Liquidsoap)
-  if ! crontab -l | grep -q "${RDS_RADIOTEXT_PATH}"; then
-    echo "0 * * * * curl -s ${RDS_RADIOTEXT_URL} > ${RDS_RADIOTEXT_PATH} 2>/dev/null" | crontab -
-  fi
+# Always install StereoTool (whether it's used depends on STEREOTOOL_LICENSE_KEY in .env)
+echo -e "${BLUE}►► Installing StereoTool...${NC}"
+install_packages silent unzip
 
-  # Download the StereoTool-specific docker-compose configuration
-  backup_file "${DOCKER_COMPOSE_ST_PATH}"
-  if ! curl -sLo "${DOCKER_COMPOSE_ST_PATH}" "${DOCKER_COMPOSE_ST_URL}"; then
-    echo -e "${RED}Error: Unable to download docker-compose.stereotool.yml.${NC}"
+
+# Create installation directory
+mkdir -p "${STEREO_TOOL_INSTALL_DIR}"
+
+# Download and extract StereoTool
+if ! download_file "${STEREO_TOOL_ZIP_URL}" "${STEREO_TOOL_ZIP_PATH}" "StereoTool"; then
+  exit 1
+fi
+TMP_DIR=$(mktemp -d)
+unzip -o "${STEREO_TOOL_ZIP_PATH}" -d "${TMP_DIR}"
+
+# Locate the extracted directory
+EXTRACTED_DIR=$(find "${TMP_DIR}" -maxdepth 1 -type d -name "libStereoTool_*" | head -n 1)
+if [ ! -d "${EXTRACTED_DIR}" ]; then
+  echo -e "${RED}Error: Unable to find the extracted StereoTool directory.${NC}"
+  exit 1
+fi
+
+# Copy the appropriate library based on the architecture
+case "${OS_ARCH}" in
+  amd64)
+    LIB_PATH="${EXTRACTED_DIR}/lib/Linux/IntelAMD/64/libStereoTool_intel64.so"
+    ;;
+  arm64)
+    LIB_PATH="${EXTRACTED_DIR}/lib/Linux/ARM/64/libStereoTool_arm64.so"
+    ;;
+  *)
+    echo -e "${RED}Unsupported architecture: ${OS_ARCH}${NC}"
     exit 1
-  fi
+    ;;
+esac
 
-  # Download RDS metadata
-  if ! curl -sLo "${RDS_RADIOTEXT_PATH}" "${RDS_RADIOTEXT_URL}"; then
-    echo -e "${RED}Error: Unable to download RDS metadata.${NC}"
-    exit 1
-  fi
+if [ ! -f "${LIB_PATH}" ]; then
+  echo -e "${RED}Error: StereoTool library not found at ${LIB_PATH}.${NC}"
+  exit 1
+fi
 
-  # Create installation directory
-  mkdir -p "${STEREO_TOOL_INSTALL_DIR}"
+cp "${LIB_PATH}" "${STEREO_TOOL_INSTALL_DIR}/st_plugin.so"
 
-  # Download and extract StereoTool
-  if ! curl -sLo "${STEREO_TOOL_ZIP_PATH}" "${STEREO_TOOL_ZIP_URL}"; then
-    echo -e "${RED}Error: Unable to download StereoTool.${NC}"
-    exit 1
-  fi
-  TMP_DIR=$(mktemp -d)
-  unzip -o "${STEREO_TOOL_ZIP_PATH}" -d "${TMP_DIR}"
+# Clean up temporary files
+rm -rf "${TMP_DIR}" "${STEREO_TOOL_ZIP_PATH}"
 
-  # Locate the extracted directory
-  EXTRACTED_DIR=$(find "${TMP_DIR}" -maxdepth 1 -type d -name "libStereoTool_*" | head -n 1)
-  if [ ! -d "${EXTRACTED_DIR}" ]; then
-    echo -e "${RED}Error: Unable to find the extracted StereoTool directory.${NC}"
-    exit 1
-  fi
-
-  # Copy the appropriate library based on the architecture
-  case "${OS_ARCH}" in
-    amd64)
-      LIB_PATH="${EXTRACTED_DIR}/lib/Linux/IntelAMD/64/libStereoTool_intel64.so"
-      ;;
-    arm64)
-      LIB_PATH="${EXTRACTED_DIR}/lib/Linux/ARM/64/libStereoTool_arm64.so"
-      ;;
-    *)
-      echo -e "${RED}Unsupported architecture: ${OS_ARCH}${NC}"
-      exit 1
-      ;;
-  esac
-
-  if [ ! -f "${LIB_PATH}" ]; then
-    echo -e "${RED}Error: StereoTool library not found at ${LIB_PATH}.${NC}"
-    exit 1
-  fi
-
-  cp "${LIB_PATH}" "${STEREO_TOOL_INSTALL_DIR}/st_plugin.so"
-
-  # Clean up temporary files
-  rm -rf "${TMP_DIR}" "${STEREO_TOOL_ZIP_PATH}"
-
-  # Write StereoTool configuration
-  STEREOTOOL_RC_PATH="${STEREO_TOOL_INSTALL_DIR}/.st_plugin.so.rc"
-  cat <<EOL > "${STEREOTOOL_RC_PATH}"
+# Write StereoTool configuration
+STEREOTOOL_RC_PATH="${STEREO_TOOL_INSTALL_DIR}/.st_plugin.so.rc"
+cat << EOL > "${STEREOTOOL_RC_PATH}"
 [Stereo Tool Configuration]
 Enable web interface=1
 Whitelist=/0
 EOL
-else
-  # Remove StereoTool configuration from the Liquidsoap script if not in use
-  sed -i '/# StereoTool implementation/,/output.dummy(.*)/d' "${LIQUIDSOAP_CONFIG_PATH}"
-fi
 
 # Adjust ownership for the directories
 echo -e "${BLUE}►► Setting ownership for ${INSTALL_DIR}...${NC}"
 chown -R 10000:10001 "${INSTALL_DIR}"
 
 echo -e "${GREEN}Installation completed successfully for ${STATION_CONFIG} configuration!${NC}"
+
+# Display usage instructions
+echo -e "\n${BLUE}►► How to run Liquidsoap:${NC}"
+echo -e "${YELLOW}Important: Before starting, make sure to edit the .env file with your configuration:${NC}"
+echo -e "  ${CYAN}nano ${LIQUIDSOAP_ENV_PATH}${NC}"
+echo -e ""
+echo -e "${YELLOW}To start Liquidsoap:${NC}"
+echo -e "  ${CYAN}cd ${INSTALL_DIR}${NC}"
+echo -e "  ${CYAN}docker-compose up -d${NC}"
+echo -e ""
+echo -e "${YELLOW}To access StereoTool GUI (if STEREOTOOL_LICENSE_KEY is set):${NC}"
+echo -e "  Open http://localhost:8080 in your browser"
+echo -e ""
+echo -e "${YELLOW}To view logs:${NC}"
+echo -e "  ${CYAN}docker-compose logs -f${NC}"
+echo -e ""
+echo -e "${YELLOW}To stop Liquidsoap:${NC}"
+echo -e "  ${CYAN}docker-compose down${NC}"
+echo -e ""
+echo -e "${YELLOW}To control silence detection and fallback:${NC}"
+echo -e "  Enable:  ${CYAN}echo '1' > ${SILENCE_DETECTION_PATH}${NC}"
+echo -e "  Disable: ${CYAN}echo '0' > ${SILENCE_DETECTION_PATH}${NC}"
+echo -e ""
+echo -e "${YELLOW}When silence detection is disabled:${NC}"
+echo -e "  - Studio inputs will not switch on silence"
+echo -e "  - Emergency fallback file will not be used"
+echo -e "  - Silent studio streams will continue playing"

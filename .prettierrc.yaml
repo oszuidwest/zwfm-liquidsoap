@@ -1,0 +1,38 @@
+# Prettier configuration
+printWidth: 100
+tabWidth: 2
+useTabs: false
+semi: true
+singleQuote: false
+trailingComma: es5
+bracketSpacing: true
+arrowParens: always
+proseWrap: preserve
+endOfLine: lf
+
+# File-specific overrides
+overrides:
+  - files: "*.yml"
+    options:
+      singleQuote: false
+      
+  - files: "*.yaml"
+    options:
+      singleQuote: false
+      
+  - files: "*.sh"
+    options:
+      keepPadding: false
+      functionNextLine: false
+      
+  - files: "Dockerfile*"
+    options:
+      parser: dockerfile
+      
+  - files: "*.json"
+    options:
+      printWidth: 80
+      
+  - files: ".prettierrc.yaml"
+    options:
+      singleQuote: false

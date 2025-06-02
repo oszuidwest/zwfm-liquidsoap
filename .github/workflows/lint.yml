@@ -1,0 +1,137 @@
+name: Lint
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  # Shell scripts linting with ShellCheck
+  shellcheck:
+    name: ShellCheck
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run ShellCheck
+        uses: ludeeus/action-shellcheck@2.0.0
+        with:
+          check_together: "yes"
+          severity: warning
+          format: gcc
+          additional_files: "*.sh"
+
+  # Dockerfile linting with Hadolint
+  hadolint:
+    name: Hadolint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Hadolint
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: Dockerfile
+          failure-threshold: warning
+          # Ignore specific rules:
+          # DL3008: Pin versions in apt get install
+          # DL3009: Delete the apt-get lists after installing something
+          ignore: DL3008,DL3009
+          format: json
+          output-file: hadolint-results.json
+
+      - name: Upload Hadolint results
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hadolint-results
+          path: hadolint-results.json
+
+  # YAML linting (including docker-compose files)
+  yamllint:
+    name: YAML Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run yamllint
+        uses: ibiqlik/action-yamllint@v3.1.1
+        with:
+          config_data: |
+            extends: default
+            rules:
+              line-length:
+                max: 120
+                level: warning
+              comments:
+                min-spaces-from-content: 1
+              truthy:
+                allowed-values: ['true', 'false', 'on', 'off', 'yes', 'no']
+
+  # Docker Compose specific validation
+  docker-compose-validate:
+    name: Docker Compose Validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Validate docker-compose.yml
+        run: docker compose -f docker-compose.yml config --quiet
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: 'npm'
+          cache-dependency-path: '**/package-lock.json'
+
+      - name: Install and run docker-compose-linter
+        run: |
+          npm install -g @zavoloklom/docker-compose-linter
+          dclint docker-compose.yml
+
+  # Liquidsoap syntax checking
+  liquidsoap-check:
+    name: Liquidsoap Syntax Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Get latest Liquidsoap version
+        id: get_version
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          LIQUIDSOAP_VERSION=$(gh api repos/savonet/liquidsoap/releases/latest --jq '.tag_name' | sed 's/v//')
+          echo "Latest Liquidsoap version: $LIQUIDSOAP_VERSION"
+          echo "version=$LIQUIDSOAP_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Syntax check Liquidsoap files
+        run: |
+          echo "Using Liquidsoap v${{ steps.get_version.outputs.version }} for syntax checking"
+          docker run --rm -v "${{ github.workspace }}:/workspace" -w /workspace \
+            savonet/liquidsoap:v${{ steps.get_version.outputs.version }} \
+            bash -c '
+              failed=0
+              echo "Checking Liquidsoap files..."
+              for f in $(find . -name "*.liq" -type f | sort); do
+                printf "Checking %-50s " "$f..."
+                if output=$(liquidsoap --check "$f" 2>&1); then
+                  echo "OK"
+                else
+                  echo "FAILED"
+                  echo "$output" | sed "s/^/  /"
+                  failed=1
+                fi
+              done
+              if [ $failed -eq 0 ]; then
+                echo "All Liquidsoap files passed syntax check!"
+              else
+                echo "Some files failed syntax check"
+              fi
+              exit $failed
+            '

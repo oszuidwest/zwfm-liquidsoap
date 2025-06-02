@@ -6,14 +6,16 @@ services:
     volumes:
       - ./scripts:/scripts
       - ./audio:/audio
-      - ./use_noodband.txt:/use_noodband.txt
+      - ./silence_detection.txt:/silence_detection.txt
+      - ./stereotool:/var/cache/liquidsoap/
     env_file:
       - .env
     environment:
       - TZ=Europe/Amsterdam
     ports:
-      - '0.0.0.0:8888:8888/udp' # SRT Input 1
-      - '0.0.0.0:9999:9999/udp' # SRT Input 2
+      - "0.0.0.0:8888:8888/udp" # SRT Input 1
+      - "0.0.0.0:9999:9999/udp" # SRT Input 2
+      - "0.0.0.0:8080:8080" # StereoTool GUI (TCP)
     command: /scripts/radio.liq
     restart: unless-stopped
     user: "10000:10001"

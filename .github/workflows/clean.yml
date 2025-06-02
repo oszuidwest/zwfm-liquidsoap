@@ -3,8 +3,8 @@ name: Clean Up Workflow Runs
 on:
   # Run on schedule (elke zondag om middernacht)
   schedule:
-    - cron: '0 0 * * 0'
-  
+    - cron: "0 0 * * 0"
+
   # Optioneel: Handmatig uitvoeren mogelijk maken
   workflow_dispatch:
 
