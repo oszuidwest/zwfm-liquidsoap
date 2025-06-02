@@ -39,7 +39,7 @@ output_icecast_stream(
   description=
     "Hoge Kwaliteit Stream (192kbit MP3)",
   mount=HIGH_QUALITY_MOUNT,
-  source=radio
+  source=radio_processed
 )
 
 # Output a low bitrate AAC stream
@@ -57,7 +57,7 @@ output_icecast_stream(
   description=
     "Mobile Stream (96kbit AAC)",
   mount=MOBILE_MOUNT,
-  source=radio
+  source=radio_processed
 )
 
 # Output a high bitrate AAC STL stream
@@ -75,7 +75,7 @@ output_icecast_stream(
   description=
     "Transport Stream (576kbit AAC)",
   mount=TRANSPORT_MOUNT,
-  source=radio
+  source=radio_processed
 )
 
 # Feed the audio to ODR-AudioEnc

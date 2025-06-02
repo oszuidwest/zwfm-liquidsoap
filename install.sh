@@ -29,6 +29,12 @@ LIQUIDSOAP_CONFIG_URL_RUCPHEN="${GITHUB_BASE}/conf/rucphen.liq"
 LIQUIDSOAP_CONFIG_URL_BREDANU="${GITHUB_BASE}/conf/bredanu.liq"
 LIQUIDSOAP_CONFIG_PATH="${INSTALL_DIR}/scripts/radio.liq"
 
+# Liquidsoap library files
+LIQUIDSOAP_LIB_DIR="${INSTALL_DIR}/scripts/lib"
+LIQUIDSOAP_LIB_DEFAULTS_URL="${GITHUB_BASE}/conf/lib/defaults.liq"
+LIQUIDSOAP_LIB_STUDIO_INPUTS_URL="${GITHUB_BASE}/conf/lib/studio_inputs.liq"
+LIQUIDSOAP_LIB_ICECAST_OUTPUTS_URL="${GITHUB_BASE}/conf/lib/icecast_outputs.liq"
+
 LIQUIDSOAP_ENV_URL_ZUIDWEST="${GITHUB_BASE}/.env.zuidwest.example"
 LIQUIDSOAP_ENV_URL_RUCPHEN="${GITHUB_BASE}/.env.rucphen.example"
 LIQUIDSOAP_ENV_URL_BREDANU="${GITHUB_BASE}/.env.bredanu.example"
