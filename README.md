@@ -5,7 +5,7 @@
 
 This repository contains an audio streaming solution tailored for [ZuidWest FM](https://www.zuidwestfm.nl/), [Radio Rucphen](https://www.rucphenrtv.nl/), and [BredaNu](https://www.bredanu.nl/) in the Netherlands. Leveraging [Liquidsoap](https://www.liquidsoap.info), it facilitates internet streaming with a reliable fallback mechanism and is capable of pushing MPX to broadcast transmitters via MicroMPX.
 
-![liq-flow-fixed](https://github.com/user-attachments/assets/00b35131-5c30-418b-aea1-dd447ee12f49)
+![Image](https://github.com/user-attachments/assets/e5bc7888-fb5d-4649-b42b-1474f0bd55f9)
 
 ## System design
 The system design involves delivering the broadcast through two pathways. Liquidsoap uses the main input (SRT 1) as much as possible. If it becomes unavailable or silent, the system switches to SRT 2. Should SRT 2 also become unavailable or silent, it then switches to an emergency track. Ideally, the broadcast is delivered synchronously over the two inputs via separate pathways.
@@ -19,6 +19,9 @@ The system design involves delivering the broadcast through two pathways. Liquid
 ### Satellites
 1. **[rpi-audio-encoder](https://github.com/oszuidwest/rpi-audio-encoder)**: Software to turn a Raspberry Pi into a production grade SRT audio encoder.
 2. **[rpi-umpx-decoder](https://github.com/oszuidwest/rpi-audio-encoder)**: Software to turn a Raspberry Pi into a production grade μMPX decoder.
+3. **[ODR-PadEnc](https://wip)**: Work in progress. Metadata injector for ODR-AudioEnc.
+4. **[padenc-api](https://github.com/oszuidwest/padenc-api)**: REST server and metadata formatter for ODR-PadEnc.
+5. **[zwfm-metadata](https://www.github.com/oszuidwest/zwfm-metadata)**: Metadata routing middleware.
 
 ## Installation & Usage
 
