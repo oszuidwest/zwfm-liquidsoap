@@ -35,9 +35,13 @@ jobs:
           # Liquidsoap files
           liquidsoap-prettier -w "**/*.liq"
 
-          # Docker Compose files
-          dclint docker-compose.yml --fix || true
-          dclint docker-compose.stereotool.yml --fix || true
+          # Docker Compose files (find all docker-compose*.yml files)
+          for file in docker-compose*.yml; do
+            if [ -f "$file" ]; then
+              echo "Formatting $file..."
+              dclint "$file" --fix
+            fi
+          done
 
       - name: Commit changes
         if: github.event_name == 'push'
