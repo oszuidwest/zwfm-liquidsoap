@@ -15,6 +15,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+          ref: ${{ github.head_ref || github.ref_name }}
 
       - uses: actions/setup-node@v4
         with:
@@ -39,6 +40,7 @@ jobs:
           dclint docker-compose.stereotool.yml --fix || true
 
       - name: Commit changes
+        if: github.event_name == 'push'
         run: |
           if [[ -n "$(git status --porcelain)" ]]; then
             git config --local user.email "github-actions[bot]@users.noreply.github.com"
