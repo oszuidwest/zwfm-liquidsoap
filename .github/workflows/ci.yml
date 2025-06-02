@@ -10,11 +10,15 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # Run all linting checks
+  format:
+    uses: ./.github/workflows/format.yml
+    permissions:
+      contents: write
+
   lint:
+    needs: format
     uses: ./.github/workflows/lint.yml
 
-  # Build Docker image
   build:
     name: Build Docker Image
     runs-on: ubuntu-latest
@@ -32,10 +36,3 @@ jobs:
           push: false
           cache-from: type=gha
           cache-to: type=gha,mode=max
-
-  # Run formatting on pushes and pull requests
-  format:
-    needs: [lint, build]
-    uses: ./.github/workflows/format.yml
-    permissions:
-      contents: write
