@@ -31,9 +31,6 @@ jobs:
           # YAML files
           prettier --write "**/*.yml" "**/*.yaml"
 
-          # JSON files
-          prettier --write "**/*.json" --tab-width 2
-
           # Liquidsoap files
           liquidsoap-prettier -w "**/*.liq"
 
