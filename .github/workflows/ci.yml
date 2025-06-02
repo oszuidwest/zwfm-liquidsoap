@@ -10,19 +10,19 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  lint:
+    uses: ./.github/workflows/lint.yml
+
   format:
+    needs: lint
     uses: ./.github/workflows/format.yml
     permissions:
       contents: write
 
-  lint:
-    needs: format
-    uses: ./.github/workflows/lint.yml
-
   build:
     name: Build Docker Image
     runs-on: ubuntu-latest
-    needs: lint
+    needs: format
     steps:
       - uses: actions/checkout@v4
       - uses: docker/setup-qemu-action@v3
