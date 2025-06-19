@@ -1,7 +1,7 @@
 name: zwfm-liquidsoap
 services:
   liquidsoap:
-    image: ghcr.io/oszuidwest/zwfm-liquidsoap:2.3.2-3.6.0
+    image: ghcr.io/oszuidwest/zwfm-liquidsoap:2.3.3-3.6.0
     container_name: liquidsoap
     volumes:
       - ./scripts:/scripts
