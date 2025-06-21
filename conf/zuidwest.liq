@@ -82,6 +82,6 @@ output_icecast_stream(
 output.external(
   %wav(channels = 2, samplerate = 48000),
   "/bin/odr-audioenc -i - --bitrate=#{ODR_AUDIOENC_BITRATE} \
-   --stats=/tmp/dab_stats.sock --edi='#{ODR_AUDIOENC_EDI_URL}'",
+   --edi=\"#{ODR_AUDIOENC_EDI_URL}\"",
   audio_to_dab
 )
