@@ -26,7 +26,6 @@ radio =
 # - 'radio_processed': Either StereoTool-processed audio (if enabled) or unprocessed audio (if disabled)
 radio_processed = create_processed_audio(radio)
 
-
 # Include output configurations
 %include "lib/icecast_outputs.liq"
 %include "lib/dab_output.liq"
