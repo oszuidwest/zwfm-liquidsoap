@@ -208,9 +208,9 @@ Enable web interface=1
 Whitelist=/0
 EOL
 
-# Adjust ownership for the directories
-echo -e "${BLUE}►► Setting ownership for ${INSTALL_DIR}...${NC}"
-chown -R 10000:10001 "${INSTALL_DIR}"
+# Adjust ownership for the directories (the liquidsoap container runs as UID 100 and GID 101)
+echo -e "${BLUE}►► Setting ownership for ${STEREO_TOOL_INSTALL_DIR}...${NC}"
+chown -R 100:101 "${STEREO_TOOL_INSTALL_DIR}"
 
 echo -e "${GREEN}Installation completed successfully for ${STATION_CONFIG} configuration!${NC}"
 

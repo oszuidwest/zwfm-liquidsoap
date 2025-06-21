@@ -18,4 +18,4 @@ services:
       - '0.0.0.0:9999:9999/udp' # SRT Input 2
     command: /scripts/radio.liq
     restart: unless-stopped
-    user: "10000:10001"
+    user: "liquidsoap:liquidsoap"
