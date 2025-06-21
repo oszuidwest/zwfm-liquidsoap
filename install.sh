@@ -182,7 +182,7 @@ case "${OS_ARCH}" in
     LIB_PATH="${EXTRACTED_DIR}/lib/Linux/IntelAMD/64/libStereoTool_intel64.so"
     ;;
   arm64)
-    LIB_PATH="${EXTRACTED_DIR}/lib/Linux/ARM/64/libStereoTool_arm64.so"
+    LIB_PATH="${EXTRACTED_DIR}/lib/Linux/ARM/64/libStereoTool_noX11_arm64.so"
     ;;
   *)
     echo -e "${RED}Unsupported architecture: ${OS_ARCH}${NC}"
