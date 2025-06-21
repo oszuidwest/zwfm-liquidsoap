@@ -46,6 +46,7 @@ LIQUIDSOAP_LIB_DEFAULTS_URL="${GITHUB_BASE}/conf/lib/defaults.liq"
 LIQUIDSOAP_LIB_STUDIO_INPUTS_URL="${GITHUB_BASE}/conf/lib/studio_inputs.liq"
 LIQUIDSOAP_LIB_ICECAST_OUTPUTS_URL="${GITHUB_BASE}/conf/lib/icecast_outputs.liq"
 LIQUIDSOAP_LIB_STEREOTOOL_URL="${GITHUB_BASE}/conf/lib/stereotool.liq"
+LIQUIDSOAP_LIB_DAB_OUTPUT_URL="${GITHUB_BASE}/conf/lib/dab_output.liq"
 
 AUDIO_FALLBACK_URL="https://upload.wikimedia.org/wikipedia/commons/6/66/Aaron_Dunn_-_Sonata_No_1_-_Movement_2.ogg"
 AUDIO_FALLBACK_PATH="${INSTALL_DIR}/audio/fallback.ogg"
@@ -136,7 +137,8 @@ if ! download_file -m "${LIQUIDSOAP_LIB_DIR}" "Liquidsoap library files" \
   "${LIQUIDSOAP_LIB_DEFAULTS_URL}:defaults.liq" \
   "${LIQUIDSOAP_LIB_STUDIO_INPUTS_URL}:studio_inputs.liq" \
   "${LIQUIDSOAP_LIB_ICECAST_OUTPUTS_URL}:icecast_outputs.liq" \
-  "${LIQUIDSOAP_LIB_STEREOTOOL_URL}:stereotool.liq"; then
+  "${LIQUIDSOAP_LIB_STEREOTOOL_URL}:stereotool.liq" \
+  "${LIQUIDSOAP_LIB_DAB_OUTPUT_URL}:dab_output.liq"; then
   exit 1
 fi
 
