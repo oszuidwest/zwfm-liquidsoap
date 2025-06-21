@@ -39,12 +39,10 @@ radio =
 # - 'radio_processed': Either StereoTool-processed audio (if enabled) or unprocessed audio (if disabled)
 radio_processed = create_processed_audio(radio)
 
-# Create a clock for DAB+ output
-audio_to_dab = mksafe(buffer(radio_processed))
-clock.assign_new(id="dab_clock", [audio_to_dab])
 
-# Include Icecast outputs configuration
+# Include output configurations
 %include "lib/icecast_outputs.liq"
+%include "lib/dab_output.liq"
 
 # Output a high bitrate mp3 stream
 output_icecast_stream(
@@ -134,10 +132,5 @@ output_icecast_stream(
   user=DME_INGEST_B_USER
 )
 
-# Feed the audio to ODR-AudioEnc
-output.external(
-  %wav(channels = 2, samplerate = 48000),
-  "/bin/odr-audioenc -i - --bitrate=#{ODR_AUDIOENC_BITRATE} \
-   --edi=\"#{ODR_AUDIOENC_EDI_URL}\"",
-  audio_to_dab
-)
+# Output to DAB+
+output_dab_stream(radio_processed)

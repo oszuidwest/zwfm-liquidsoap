@@ -30,10 +30,11 @@ MOBILE_MOUNT =
 TRANSPORT_MOUNT =
   environment.get("TRANSPORT_MOUNT", default="/#{ICECAST_MOUNTPOINT}.stl")
 
-# ODR-AudioEnc configuration for DAB+
-# These MUST be set in your .env file - no defaults provided
-ODR_AUDIOENC_BITRATE = int_of_string(environment.get("ODR_AUDIOENC_BITRATE"))
-ODR_AUDIOENC_EDI_URL = environment.get("ODR_AUDIOENC_EDI_URL")
+# ODR-AudioEnc configuration for DAB+ (optional)
+# Only set these if you want DAB+ output
+ODR_AUDIOENC_BITRATE = environment.get("ODR_AUDIOENC_BITRATE", default="")
+ODR_AUDIOENC_EDI_URL = environment.get("ODR_AUDIOENC_EDI_URL", default="")
+ODR_PADENC_SOCK = environment.get("ODR_PADENC_SOCK", default="")
 
 # Silence detection configuration
 # These have sensible defaults but can be overridden in .env

@@ -65,9 +65,10 @@ This table lists ALL environment variables used in the system. Variables without
 | `SILENCE_DETECTION_FILE` | Silence detection control file | `/silence_detection.txt` | `/opt/silence.txt` | `conf/lib/defaults.liq` | All |
 | `MAX_BLANK` | Max silence duration (seconds) | `15.0` | `20.0` | `conf/lib/defaults.liq` | All |
 | `MIN_NOISE` | Min noise duration (seconds) | `15.0` | `10.0` | `conf/lib/defaults.liq` | All |
-| **DAB+ Configuration** |
-| `ODR_AUDIOENC_BITRATE` | DAB+ encoder bitrate | *(required)* | `128` | `conf/lib/defaults.liq` | All |
-| `ODR_AUDIOENC_EDI_URL` | DAB+ EDI destination | *(required)* | `tcp://dab-mux.local:9001` | `conf/lib/defaults.liq` | All |
+| **DAB+ Configuration (Optional)** |
+| `ODR_AUDIOENC_BITRATE` | DAB+ encoder bitrate | *(none)* | `128` | `conf/lib/defaults.liq` | All |
+| `ODR_AUDIOENC_EDI_URL` | DAB+ EDI destination | *(none)* | `tcp://dab-mux.local:9001` | `conf/lib/defaults.liq` | All |
+| `ODR_PADENC_SOCK` | PAD metadata socket path | *(none)* | `padenc.sock` | `conf/lib/defaults.liq` | All |
 | **DME Configuration** |
 | `DME_INGEST_A_HOST` | Primary DME server | *(required)* | `ingest1.dme.nl` | `conf/rucphen.liq`, `conf/bredanu.liq` | Rucphen/BredaNu |
 | `DME_INGEST_A_PORT` | Primary DME port | *(required)* | `8010` | `conf/rucphen.liq`, `conf/bredanu.liq` | Rucphen/BredaNu |
@@ -83,6 +84,7 @@ This table lists ALL environment variables used in the system. Variables without
 
 ### Notes:
 - **Required variables**: Must be set in `.env` file or Liquidsoap will fail to start
+- **Optional features**: DAB+ output is optional - set both `ODR_AUDIOENC_BITRATE` and `ODR_AUDIOENC_EDI_URL` to enable
 - **Station column**: "All" means used by all stations, "Rucphen/BredaNu" means used only by stations with DME
 - **Default conventions**: `#{VARIABLE}` means the value is interpolated from another variable
 - **File locations**: Most configuration variables are centralized in `conf/lib/defaults.liq`
