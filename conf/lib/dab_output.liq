@@ -19,17 +19,27 @@ def output_dab_stream(source) =
     audio_to_dab = mksafe(buffer(source))
     clock.assign_new(id="dab_clock", [audio_to_dab])
 
-    # Build command with optional pad-socket parameter
+    # Build command with optional parameters
     odr_command =
       ref(
         "/bin/odr-audioenc -i - --bitrate=#{ODR_AUDIOENC_BITRATE}"
       )
+    
+    # Add PAD configuration if socket is set
     if
       ODR_PADENC_SOCK != ""
     then
+      # PAD socket requires PAD to be enabled
       odr_command :=
-        "#{odr_command()} --pad-socket=#{ODR_PADENC_SOCK}"
+        "#{odr_command()} --pad=#{ODR_PAD_SIZE} --pad-socket=#{ODR_PADENC_SOCK}"
+    elsif
+      ODR_PAD_SIZE != "58"
+    then
+      # Only add PAD parameter if it's different from default and no socket
+      odr_command :=
+        "#{odr_command()} --pad=#{ODR_PAD_SIZE}"
     end
+    
     odr_command :=
       "#{odr_command()} --edi=\"#{ODR_AUDIOENC_EDI_URL}\""
 
