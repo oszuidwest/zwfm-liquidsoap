@@ -24,7 +24,7 @@ def output_dab_stream(source) =
       ref(
         "/bin/odr-audioenc -i - --bitrate=#{ODR_AUDIOENC_BITRATE}"
       )
-    
+
     # Add PAD configuration if socket is set
     if
       ODR_PADENC_SOCK != ""
@@ -34,7 +34,7 @@ def output_dab_stream(source) =
       odr_command :=
         "#{odr_command()} --pad=#{pad_size} --pad-socket=#{ODR_PADENC_SOCK}"
     end
-    
+
     odr_command :=
       "#{odr_command()} --edi=\"#{ODR_AUDIOENC_EDI_URL}\""
 
