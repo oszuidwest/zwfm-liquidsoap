@@ -68,7 +68,7 @@ This table lists ALL environment variables used in the system. Variables without
 | **DAB+ Configuration (Optional)** |
 | `ODR_AUDIOENC_BITRATE` | DAB+ encoder bitrate | *(none)* | `128` | `conf/lib/defaults.liq` | All |
 | `ODR_AUDIOENC_EDI_URL` | DAB+ EDI destination | *(none)* | `tcp://dab-mux.local:9001` | `conf/lib/defaults.liq` | All |
-| `ODR_PAD_SIZE` | PAD size in bytes (0-255) | `58` | `128` | `conf/lib/defaults.liq` | All |
+| `ODR_PAD_SIZE` | PAD size in bytes (0-255) | *(none)* | `128` | `conf/lib/defaults.liq` | All |
 | `ODR_PADENC_SOCK` | PAD metadata socket path | *(none)* | `padenc.sock` | `conf/lib/defaults.liq` | All |
 | **DME Configuration** |
 | `DME_INGEST_A_HOST` | Primary DME server | *(required)* | `ingest1.dme.nl` | `conf/rucphen.liq`, `conf/bredanu.liq` | Rucphen/BredaNu |
@@ -85,7 +85,7 @@ This table lists ALL environment variables used in the system. Variables without
 
 ### Notes:
 - **Required variables**: Must be set in `.env` file or Liquidsoap will fail to start
-- **Optional features**: DAB+ output is optional - set both `ODR_AUDIOENC_BITRATE` and `ODR_AUDIOENC_EDI_URL` to enable. PAD metadata requires `ODR_PADENC_SOCK` (PAD size defaults to 58 bytes)
+- **Optional features**: DAB+ output is optional - set both `ODR_AUDIOENC_BITRATE` and `ODR_AUDIOENC_EDI_URL` to enable. PAD metadata requires `ODR_PADENC_SOCK` (defaults to 58 bytes when socket is configured)
 - **Station column**: "All" means used by all stations, "Rucphen/BredaNu" means used only by stations with DME
 - **Default conventions**: `#{VARIABLE}` means the value is interpolated from another variable
 - **PAD sizes**: Valid range 0-255 bytes. Common values: 16 (text only), 58 (text + logo), 128 (text + album art)

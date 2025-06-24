@@ -29,15 +29,10 @@ def output_dab_stream(source) =
     if
       ODR_PADENC_SOCK != ""
     then
-      # PAD socket requires PAD to be enabled
+      # PAD socket requires PAD to be enabled - default to 58 if not specified
+      pad_size = if ODR_PAD_SIZE != "" then ODR_PAD_SIZE else "58" end
       odr_command :=
-        "#{odr_command()} --pad=#{ODR_PAD_SIZE} --pad-socket=#{ODR_PADENC_SOCK}"
-    elsif
-      ODR_PAD_SIZE != "58"
-    then
-      # Only add PAD parameter if it's different from default and no socket
-      odr_command :=
-        "#{odr_command()} --pad=#{ODR_PAD_SIZE}"
+        "#{odr_command()} --pad=#{pad_size} --pad-socket=#{ODR_PADENC_SOCK}"
     end
     
     odr_command :=
