@@ -189,11 +189,9 @@ After installation, edit the environment file at `/opt/liquidsoap/.env` to confi
 ```bash
 cd /opt/liquidsoap
 
-# Start Liquidsoap (without StereoTool)
 docker-compose up -d
 
-# OR start with StereoTool
-docker-compose -f docker-compose.yml -f docker-compose.stereotool.yml up -d
+# Start Liquidsoap
 
 # View logs
 docker-compose logs -f
