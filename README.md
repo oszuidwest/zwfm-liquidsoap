@@ -97,13 +97,13 @@ This table lists ALL environment variables used in the system. Variables without
 cd /opt/liquidsoap
 
 # Start Liquidsoap
-docker-compose up -d
+docker compose up -d
 
 # View logs
-docker-compose logs -f
+docker compose logs -f
 
 # Stop services
-docker-compose down
+docker compose down
 ```
 
 ### StereoTool GUI
@@ -189,15 +189,14 @@ After installation, edit the environment file at `/opt/liquidsoap/.env` to confi
 ```bash
 cd /opt/liquidsoap
 
-docker-compose up -d
-
 # Start Liquidsoap
+docker compose up -d
 
 # View logs
-docker-compose logs -f
+docker compose logs -f
 
 # Stop services
-docker-compose down
+docker compose down
 ```
 
 ### StereoTool GUI
