@@ -38,11 +38,12 @@ def output_dab_stream(source) =
     # Add EDI outputs - supports comma-separated list
     edi_urls = string.split(separator=",", ODR_AUDIOENC_EDI_URL)
     list.iter(
-      fun(url) ->
+      fun (url) ->
         begin
           # Trim whitespace from URL
           trimmed_url = string.trim(url)
-          odr_command := "#{odr_command()} --edi=\"#{trimmed_url}\""
+          odr_command :=
+            "#{odr_command()} --edi=\"#{trimmed_url}\""
         end,
       edi_urls
     )
