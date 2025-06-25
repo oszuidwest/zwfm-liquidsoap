@@ -1,9 +1,9 @@
 # Studio inputs configuration - common for all stations
 
-# Get upstream password for SRT encryption
-UPSTREAM_PASSWORD = environment.get("UPSTREAM_PASSWORD")
+# Get SRT passphrase for encryption
+SRT_PASSPHRASE = environment.get("SRT_PASSPHRASE")
 
-# Note: SILENCE_DETECTION_FILE and is_silence_detection_enabled() are defined in defaults.liq
+# Note: SILENCE_CONTROL_PATH and is_silence_detection_enabled() are defined in defaults.liq
 
 # Function to create a studio SRT input with silence detection and buffering
 def create_studio_input(~id, ~port) =
@@ -16,7 +16,7 @@ def create_studio_input(~id, ~port) =
       max=10.0,
       streamid=id,
       enforced_encryption=true,
-      passphrase=UPSTREAM_PASSWORD,
+      passphrase=SRT_PASSPHRASE,
       on_connect=fun () -> log_event(id, "connected"),
       on_disconnect=fun () -> log_event(id, "disconnected")
     )
@@ -25,8 +25,8 @@ def create_studio_input(~id, ~port) =
   studio_with_detect =
     blank.detect(
       id="detect_#{id}",
-      max_blank=MAX_BLANK,
-      min_noise=MIN_NOISE,
+      max_blank=SILENCE_SWITCH_SECONDS,
+      min_noise=AUDIO_VALID_SECONDS,
       fun () ->
         log_event(
           id,
@@ -44,8 +44,8 @@ def create_studio_input(~id, ~port) =
   studio_stripped =
     blank.strip(
       id="stripped_#{id}",
-      max_blank=MAX_BLANK,
-      min_noise=MIN_NOISE,
+      max_blank=SILENCE_SWITCH_SECONDS,
+      min_noise=AUDIO_VALID_SECONDS,
       studio_with_detect
     )
 

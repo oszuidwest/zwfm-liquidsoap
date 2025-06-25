@@ -1,10 +1,10 @@
 # StereoTool audio processing configuration
 
 # Get StereoTool license key
-STEREOTOOL_LICENSE_KEY = environment.get("STEREOTOOL_LICENSE_KEY", default="")
+STEREOTOOL_LICENSE = environment.get("STEREOTOOL_LICENSE", default="")
 
 # Check if StereoTool is enabled
-stereotool_enabled = STEREOTOOL_LICENSE_KEY != ""
+stereotool_enabled = STEREOTOOL_LICENSE != ""
 
 # Function to create processed audio source
 # Returns either StereoTool-processed audio or unprocessed audio depending on license key
@@ -19,7 +19,7 @@ def create_processed_audio(radio) =
     processed =
       stereotool(
         library_file="/var/cache/liquidsoap/st_plugin.so",
-        license_key=STEREOTOOL_LICENSE_KEY,
+        license_key=STEREOTOOL_LICENSE,
         preset="/var/cache/liquidsoap/.st_plugin.so.rc",
         radio
       )

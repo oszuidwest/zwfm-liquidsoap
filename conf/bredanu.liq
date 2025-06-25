@@ -2,25 +2,25 @@
 %include "lib/defaults.liq"
 
 # Dutch Media Exchange (DME) configuration
-DME_INGEST_A_HOST = environment.get("DME_INGEST_A_HOST")
-DME_INGEST_A_PORT = int_of_string(environment.get("DME_INGEST_A_PORT"))
-DME_INGEST_A_USER = environment.get("DME_INGEST_A_USER")
-DME_INGEST_A_PASSWORD = environment.get("DME_INGEST_A_PASSWORD")
+DME_PRIMARY_HOST = environment.get("DME_PRIMARY_HOST")
+DME_PRIMARY_PORT = int_of_string(environment.get("DME_PRIMARY_PORT"))
+DME_PRIMARY_USER = environment.get("DME_PRIMARY_USER")
+DME_PRIMARY_PASSWORD = environment.get("DME_PRIMARY_PASSWORD")
 
-DME_INGEST_B_HOST = environment.get("DME_INGEST_B_HOST")
-DME_INGEST_B_PORT = int_of_string(environment.get("DME_INGEST_B_PORT"))
-DME_INGEST_B_USER = environment.get("DME_INGEST_B_USER")
-DME_INGEST_B_PASSWORD = environment.get("DME_INGEST_B_PASSWORD")
+DME_SECONDARY_HOST = environment.get("DME_SECONDARY_HOST")
+DME_SECONDARY_PORT = int_of_string(environment.get("DME_SECONDARY_PORT"))
+DME_SECONDARY_USER = environment.get("DME_SECONDARY_USER")
+DME_SECONDARY_PASSWORD = environment.get("DME_SECONDARY_PASSWORD")
 
-DME_MOUNT = environment.get("DME_MOUNT")
+DME_MOUNT_POINT = environment.get("DME_MOUNT_POINT")
 
 # Include library configurations
 %include "lib/studio_inputs.liq"
 %include "lib/stereotool.liq"
 
 # Create the two studio inputs
-studio_a = create_studio_input(id="studio_a", port=8888)
-studio_b = create_studio_input(id="studio_b", port=9999)
+studio_a = create_studio_input(id="studio_a", port=SRT_PORT_PRIMARY)
+studio_b = create_studio_input(id="studio_b", port=SRT_PORT_SECONDARY)
 
 # Combine live inputs and fallback
 radio =
@@ -31,7 +31,7 @@ radio =
   )
 
 # Create processed/unprocessed audio sources
-# When StereoTool is enabled (STEREOTOOL_LICENSE_KEY is set), it provides:
+# When StereoTool is enabled (STEREOTOOL_LICENSE is set), it provides:
 # - Audio processing (AGC, compression, limiting, etc.)
 # - MicroMPX encoding for FM transmitters (available in StereoTool itself)
 # Two audio sources are available:
@@ -45,10 +45,15 @@ radio_processed = create_processed_audio(radio)
 
 # Output a high bitrate mp3 stream
 output_icecast_stream(
-  format=%mp3(bitrate = 192, samplerate = 48000, internal_quality = 0),
+  format=
+    %mp3(
+      bitrate = ICECAST_BITRATE_MP3,
+      samplerate = 48000,
+      internal_quality = 0
+    ),
   description=
     "Hoge Kwaliteit Stream (192kbit MP3)",
-  mount=HIGH_QUALITY_MOUNT,
+  mount=ICECAST_MOUNT_MP3,
   source=radio_processed
 )
 
@@ -58,7 +63,7 @@ output_icecast_stream(
     %fdkaac(
       channels = 2,
       samplerate = 48000,
-      bitrate = 96,
+      bitrate = ICECAST_BITRATE_AAC_LOW,
       afterburner = true,
       aot = 'mpeg4_aac_lc',
       transmux = 'adts',
@@ -66,7 +71,7 @@ output_icecast_stream(
     ),
   description=
     "Mobile Stream (96kbit AAC)",
-  mount=MOBILE_MOUNT,
+  mount=ICECAST_MOUNT_AAC_LOW,
   source=radio_processed
 )
 
@@ -76,7 +81,7 @@ output_icecast_stream(
     %fdkaac(
       channels = 2,
       samplerate = 48000,
-      bitrate = 576,
+      bitrate = ICECAST_BITRATE_AAC_HIGH,
       afterburner = true,
       aot = 'mpeg4_aac_lc',
       transmux = 'adts',
@@ -84,7 +89,7 @@ output_icecast_stream(
     ),
   description=
     "Transport Stream (576kbit AAC)",
-  mount=TRANSPORT_MOUNT,
+  mount=ICECAST_MOUNT_AAC_HIGH,
   source=radio_processed
 )
 
@@ -94,20 +99,20 @@ output_icecast_stream(
     %fdkaac(
       channels = 2,
       samplerate = 48000,
-      bitrate = 576,
+      bitrate = ICECAST_BITRATE_AAC_HIGH,
       afterburner = true,
       aot = 'mpeg4_aac_lc',
       transmux = 'adts',
       sbr_mode = true
     ),
   description="",
-  mount=DME_MOUNT,
+  mount=DME_MOUNT_POINT,
   source=radio_processed,
-  host=DME_INGEST_A_HOST,
-  port=DME_INGEST_A_PORT,
-  user=DME_INGEST_A_USER,
-  password=DME_INGEST_A_PASSWORD,
-  name=STATION_NAME_FULL
+  host=DME_PRIMARY_HOST,
+  port=DME_PRIMARY_PORT,
+  user=DME_PRIMARY_USER,
+  password=DME_PRIMARY_PASSWORD,
+  name=STATION_NAME
 )
 
 output_icecast_stream(
@@ -115,20 +120,20 @@ output_icecast_stream(
     %fdkaac(
       channels = 2,
       samplerate = 48000,
-      bitrate = 576,
+      bitrate = ICECAST_BITRATE_AAC_HIGH,
       afterburner = true,
       aot = 'mpeg4_aac_lc',
       transmux = 'adts',
       sbr_mode = true
     ),
   description="",
-  mount=DME_MOUNT,
+  mount=DME_MOUNT_POINT,
   source=radio_processed,
-  host=DME_INGEST_B_HOST,
-  port=DME_INGEST_B_PORT,
-  user=DME_INGEST_B_USER,
-  password=DME_INGEST_B_PASSWORD,
-  name=STATION_NAME_FULL
+  host=DME_SECONDARY_HOST,
+  port=DME_SECONDARY_PORT,
+  user=DME_SECONDARY_USER,
+  password=DME_SECONDARY_PASSWORD,
+  name=STATION_NAME
 )
 
 # Output to DAB+

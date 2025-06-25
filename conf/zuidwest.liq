@@ -6,8 +6,8 @@
 %include "lib/stereotool.liq"
 
 # Create the two studio inputs
-studio_a = create_studio_input(id="studio_a", port=8888)
-studio_b = create_studio_input(id="studio_b", port=9999)
+studio_a = create_studio_input(id="studio_a", port=SRT_PORT_PRIMARY)
+studio_b = create_studio_input(id="studio_b", port=SRT_PORT_SECONDARY)
 
 # Combine live inputs and fallback
 radio =
@@ -18,7 +18,7 @@ radio =
   )
 
 # Create processed/unprocessed audio sources
-# When StereoTool is enabled (STEREOTOOL_LICENSE_KEY is set), it provides:
+# When StereoTool is enabled (STEREOTOOL_LICENSE is set), it provides:
 # - Audio processing (AGC, compression, limiting, etc.)
 # - MicroMPX encoding for FM transmitters (available in StereoTool itself)
 # Two audio sources are available:
@@ -32,10 +32,15 @@ radio_processed = create_processed_audio(radio)
 
 # Output a high bitrate mp3 stream
 output_icecast_stream(
-  format=%mp3(bitrate = 192, samplerate = 48000, internal_quality = 0),
+  format=
+    %mp3(
+      bitrate = ICECAST_BITRATE_MP3,
+      samplerate = 48000,
+      internal_quality = 0
+    ),
   description=
     "Hoge Kwaliteit Stream (192kbit MP3)",
-  mount=HIGH_QUALITY_MOUNT,
+  mount=ICECAST_MOUNT_MP3,
   source=radio
 )
 
@@ -45,7 +50,7 @@ output_icecast_stream(
     %fdkaac(
       channels = 2,
       samplerate = 48000,
-      bitrate = 96,
+      bitrate = ICECAST_BITRATE_AAC_LOW,
       afterburner = true,
       aot = 'mpeg4_aac_lc',
       transmux = 'adts',
@@ -53,7 +58,7 @@ output_icecast_stream(
     ),
   description=
     "Mobile Stream (96kbit AAC)",
-  mount=MOBILE_MOUNT,
+  mount=ICECAST_MOUNT_AAC_LOW,
   source=radio
 )
 
@@ -63,7 +68,7 @@ output_icecast_stream(
     %fdkaac(
       channels = 2,
       samplerate = 48000,
-      bitrate = 576,
+      bitrate = ICECAST_BITRATE_AAC_HIGH,
       afterburner = true,
       aot = 'mpeg4_aac_lc',
       transmux = 'adts',
@@ -71,7 +76,7 @@ output_icecast_stream(
     ),
   description=
     "Transport Stream (576kbit AAC)",
-  mount=TRANSPORT_MOUNT,
+  mount=ICECAST_MOUNT_AAC_HIGH,
   source=radio
 )
 

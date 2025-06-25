@@ -6,11 +6,11 @@
 def output_dab_stream(source) =
   # Check if DAB+ is configured
   if
-    ODR_AUDIOENC_BITRATE != "" and ODR_AUDIOENC_EDI_URL != ""
+    DAB_BITRATE != "" and DAB_EDI_DESTINATIONS != ""
   then
     log(
-      "DAB+ output enabled - Bitrate: #{ODR_AUDIOENC_BITRATE}kbps, EDI: #{
-        ODR_AUDIOENC_EDI_URL
+      "DAB+ output enabled - Bitrate: #{DAB_BITRATE}kbps, EDI: #{
+        DAB_EDI_DESTINATIONS
       }",
       level=3
     )
@@ -22,21 +22,21 @@ def output_dab_stream(source) =
     # Build command with optional parameters
     odr_command =
       ref(
-        "/bin/odr-audioenc -i - --bitrate=#{ODR_AUDIOENC_BITRATE}"
+        "/bin/odr-audioenc -i - --bitrate=#{DAB_BITRATE}"
       )
 
     # Add PAD configuration if socket is set
     if
-      ODR_PADENC_SOCK != ""
+      DAB_METADATA_SOCKET != ""
     then
       # PAD socket requires PAD to be enabled - default to 58 if not specified
-      pad_size = if ODR_PAD_SIZE != "" then ODR_PAD_SIZE else "58" end
+      pad_size = if DAB_METADATA_SIZE != "" then DAB_METADATA_SIZE else "58" end
       odr_command :=
-        "#{odr_command()} --pad=#{pad_size} --pad-socket=#{ODR_PADENC_SOCK}"
+        "#{odr_command()} --pad=#{pad_size} --pad-socket=#{DAB_METADATA_SOCKET}"
     end
 
     # Add EDI outputs - supports comma-separated list
-    edi_urls = string.split(separator=",", ODR_AUDIOENC_EDI_URL)
+    edi_urls = string.split(separator=",", DAB_EDI_DESTINATIONS)
     list.iter(
       fun (url) ->
         begin
@@ -54,8 +54,8 @@ def output_dab_stream(source) =
     )
   else
     log(
-      "DAB+ output disabled - ODR_AUDIOENC_BITRATE and/or ODR_AUDIOENC_EDI_URL \
-       not configured",
+      "DAB+ output disabled - DAB_BITRATE and/or DAB_EDI_DESTINATIONS not \
+       configured",
       level=3
     )
   end

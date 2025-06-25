@@ -16,11 +16,11 @@ def output_icecast_stream(
   clock.assign_new(id=clock_id, [clocked_source])
 
   # Use provided parameters or defaults
-  actual_host = host ?? ICECAST_SERVER
+  actual_host = host ?? ICECAST_HOST
   actual_port = port ?? ICECAST_PORT
   actual_user = user ?? "source"
-  actual_password = password ?? ICECAST_PASSWORD
-  actual_name = name ?? STATION_NAME_FULL
+  actual_password = password ?? ICECAST_SOURCE_PASSWORD
+  actual_name = name ?? STATION_NAME
 
   # Output to Icecast
   output.icecast(
