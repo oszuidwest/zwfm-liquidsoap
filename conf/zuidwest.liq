@@ -36,7 +36,7 @@ output_icecast_stream(
   description=
     "Hoge Kwaliteit Stream (192kbit MP3)",
   mount=HIGH_QUALITY_MOUNT,
-  source=radio_processed
+  source=radio
 )
 
 # Output a low bitrate AAC stream
@@ -54,7 +54,7 @@ output_icecast_stream(
   description=
     "Mobile Stream (96kbit AAC)",
   mount=MOBILE_MOUNT,
-  source=radio_processed
+  source=radio
 )
 
 # Output a high bitrate AAC STL stream
@@ -72,8 +72,8 @@ output_icecast_stream(
   description=
     "Transport Stream (576kbit AAC)",
   mount=TRANSPORT_MOUNT,
-  source=radio_processed
+  source=radio
 )
 
 # Output to DAB+
-output_dab_stream(radio_processed)
+output_dab_stream(radio)
