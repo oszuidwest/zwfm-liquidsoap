@@ -3,27 +3,41 @@
 [![CI](https://github.com/oszuidwest/zwfm-liquidsoap/actions/workflows/ci.yml/badge.svg)](https://github.com/oszuidwest/zwfm-liquidsoap/actions/workflows/ci.yml)
 [![Docker Image](https://github.com/oszuidwest/zwfm-liquidsoap/actions/workflows/docker-image.yml/badge.svg)](https://github.com/oszuidwest/zwfm-liquidsoap/actions/workflows/docker-image.yml)
 
-This repository contains an audio streaming solution tailored for [ZuidWest FM](https://www.zuidwestfm.nl/), [Radio Rucphen](https://www.rucphenrtv.nl/), and [BredaNu](https://www.bredanu.nl/) in the Netherlands. Leveraging [Liquidsoap](https://www.liquidsoap.info), it facilitates internet streaming with a reliable fallback mechanism and is capable of pushing MPX to broadcast transmitters via MicroMPX.
+This repository contains a professional-grade audio streaming solution originally built for [ZuidWest FM](https://www.zuidwestfm.nl/), [Radio Rucphen](https://www.rucphenrtv.nl/), and [BredaNu](https://www.bredanu.nl/) in the Netherlands. Using [Liquidsoap](https://www.liquidsoap.info) as its core, it provides:
+
+- **High-availability streaming** with automatic failover between multiple inputs
+- **Professional audio processing** via StereoTool (optional)
+- **Multiple output formats**: Icecast streaming (MP3/AAC), DAB+ encoding, and MicroMPX for FM transmitters
+- **Docker-based deployment** for easy installation and management
+
+While originally designed for these three Dutch radio stations, the system is fully configurable for any radio station's needs.
 
 ![Image](https://github.com/user-attachments/assets/e5bc7888-fb5d-4649-b42b-1474f0bd55f9)
 
-## System design
-The system design involves delivering the broadcast through two pathways. Liquidsoap uses the main input (SRT 1) as much as possible. If it becomes unavailable or silent, the system switches to SRT 2. Should SRT 2 also become unavailable or silent, it then switches to an emergency track. Ideally, the broadcast is delivered synchronously over the two inputs via separate pathways.
+## System Design
+The system delivers audio through dual redundant pathways. Liquidsoap prioritizes the main input (SRT 1). If it becomes unavailable or silent, the system automatically switches to SRT 2. Should both inputs fail, it falls back to an emergency audio file. For maximum reliability, both inputs should receive the same broadcast via separate network paths.
 
 ### Components
-1. **Liquidsoap**: Acts as the primary audio router and transcoder.
-2. **Icecast**: Functions as a public server for distributing the audio stream.
-3. **StereoTool**: Used as [MicroMPX](https://www.thimeo.com/micrompx/) encoder for feeding FM transmitters.
-4. **ODR-AudioEnc**: Used as DAB+ audio encoder for feeding a DAB+ muxer.
+1. **Liquidsoap**: Core audio processing engine - handles input switching, fallback logic, and encoding
+2. **Icecast**: Public streaming server for distributing MP3/AAC streams to listeners
+3. **StereoTool**: Professional audio processor and [MicroMPX](https://www.thimeo.com/micrompx/) encoder for FM transmitters (optional, requires license)
+4. **ODR-AudioEnc**: DAB+ audio encoder for digital radio broadcasting (optional)
 
-### Satellites
-1. **[rpi-audio-encoder](https://github.com/oszuidwest/rpi-audio-encoder)**: Software to turn a Raspberry Pi into a production grade SRT audio encoder.
-2. **[rpi-umpx-decoder](https://github.com/oszuidwest/rpi-audio-encoder)**: Software to turn a Raspberry Pi into a production grade μMPX decoder.
-3. **[ODR-PadEnc](https://wip)**: Work in progress. Metadata injector for ODR-AudioEnc.
-4. **[padenc-api](https://github.com/oszuidwest/padenc-api)**: REST server and metadata formatter for ODR-PadEnc.
-5. **[zwfm-metadata](https://www.github.com/oszuidwest/zwfm-metadata)**: Metadata routing middleware.
+### Related Projects
+1. **[rpi-audio-encoder](https://github.com/oszuidwest/rpi-audio-encoder)**: Turn a Raspberry Pi into a production-grade SRT audio encoder for studio connections
+2. **[rpi-umpx-decoder](https://github.com/oszuidwest/rpi-umpx-decoder)**: Turn a Raspberry Pi into a μMPX decoder for FM transmitter sites
+3. **[ODR-PadEnc](https://github.com/Opendigitalradio/ODR-PadEnc)**: Programme Associated Data encoder for DAB+ metadata
+4. **[padenc-api](https://github.com/oszuidwest/padenc-api)**: REST API server for managing DAB+ metadata
+5. **[zwfm-metadata](https://github.com/oszuidwest/zwfm-metadata)**: Metadata routing middleware for now-playing information
 
-## Installation & Usage
+## Getting Started
+
+### Requirements
+- Linux server (Ubuntu 24.04 or Debian 12 recommended)
+- Docker and Docker Compose installed
+- x86_64 or ARM64 architecture
+- At least 2GB RAM and 10GB disk space
+- Network connectivity for SRT streams
 
 ### Quick Install
 ```bash
@@ -35,9 +49,12 @@ The system design involves delivering the broadcast through two pathways. Liquid
 ```
 
 ### Configuration
-After installation, edit the environment file at `/opt/liquidsoap/.env` to configure your station settings.
+After installation, edit the environment file at `/opt/liquidsoap/.env` to configure your station settings. Example configuration files are provided:
+- `.env.zuidwest.example` - Basic configuration without DME
+- `.env.rucphen.example` - Configuration with DME output
+- `.env.bredanu.example` - Configuration with DME output
 
-Most configuration variables are centralized. Station-specific files only contain DME configuration (for Rucphen/BredaNu).
+Copy the appropriate example file to `.env` and customize it for your station. Most configuration variables are centralized in `conf/lib/defaults.liq`. Station-specific files only contain DME configuration (for Rucphen/BredaNu).
 
 ## Environment Variables Reference
 
@@ -67,8 +84,8 @@ This table lists ALL environment variables used in the system. Variables without
 | `MIN_NOISE` | Min noise duration (seconds) | `15.0` | `10.0` | `conf/lib/defaults.liq` | All |
 | **DAB+ Configuration (Optional)** |
 | `ODR_AUDIOENC_BITRATE` | DAB+ encoder bitrate | *(none)* | `128` | `conf/lib/defaults.liq` | All |
-| `ODR_AUDIOENC_EDI_URL` | DAB+ EDI destination | *(none)* | `tcp://dab-mux.local:9001` | `conf/lib/defaults.liq` | All |
-| `ODR_PAD_SIZE` | PAD size in bytes (0-255) | *(none)* | `128` | `conf/lib/defaults.liq` | All |
+| `ODR_AUDIOENC_EDI_URL` | DAB+ EDI destination(s) | *(none)* | `tcp://dab-mux.local:9001` or `tcp://dab1:9001,tcp://dab2:9002` | `conf/lib/defaults.liq` | All |
+| `ODR_PAD_SIZE` | PAD size in bytes (0-255) | `58` when socket is set | `128` | `conf/lib/defaults.liq` | All |
 | `ODR_PADENC_SOCK` | PAD metadata socket path | *(none)* | `padenc.sock` | `conf/lib/defaults.liq` | All |
 | **DME Configuration** |
 | `DME_INGEST_A_HOST` | Primary DME server | *(required)* | `ingest1.dme.nl` | `conf/rucphen.liq`, `conf/bredanu.liq` | Rucphen/BredaNu |
@@ -85,7 +102,8 @@ This table lists ALL environment variables used in the system. Variables without
 
 ### Notes:
 - **Required variables**: Must be set in `.env` file or Liquidsoap will fail to start
-- **Optional features**: DAB+ output is optional - set both `ODR_AUDIOENC_BITRATE` and `ODR_AUDIOENC_EDI_URL` to enable. PAD metadata requires `ODR_PADENC_SOCK` (defaults to 58 bytes when socket is configured)
+- **Optional features**: DAB+ output is optional - set both `ODR_AUDIOENC_BITRATE` and `ODR_AUDIOENC_EDI_URL` to enable. PAD metadata requires `ODR_PADENC_SOCK`
+- **Multiple EDI outputs**: `ODR_AUDIOENC_EDI_URL` supports comma-separated values for sending to multiple DAB+ destinations simultaneously
 - **Station column**: "All" means used by all stations, "Rucphen/BredaNu" means used only by stations with DME
 - **Default conventions**: `#{VARIABLE}` means the value is interpolated from another variable
 - **PAD sizes**: Valid range 0-255 bytes. Common values: 16 (text only), 58 (text + logo), 128 (text + album art)
@@ -96,7 +114,7 @@ This table lists ALL environment variables used in the system. Variables without
 ```bash
 cd /opt/liquidsoap
 
-# Start Liquidsoap
+# Start services
 docker compose up -d
 
 # View logs
@@ -142,11 +160,13 @@ When silence detection is **disabled**:
 Control silence detection via the control file:
 ```bash
 # Enable silence detection (default)
-echo '1' > /opt/liquidsoap/silence_detection.txt
+echo '1' > /silence_detection.txt
 
 # Disable silence detection
-echo '0' > /opt/liquidsoap/silence_detection.txt
+echo '0' > /silence_detection.txt
 ```
+
+Note: The actual path depends on your container volume mapping. By default, this file is located at `/silence_detection.txt` inside the container.
 
 Changes take effect immediately without restarting the service.
 
@@ -157,68 +177,37 @@ The default silence detection parameters can be adjusted via environment variabl
 
 ## Streaming to SRT Inputs
 
-The system accepts two SRT input streams on ports 8888 (primary) and 9999 (secondary). All connections must use encryption with the passphrase configured in `UPSTREAM_PASSWORD`.
+The system accepts two SRT input streams:
+- **Port 8888**: Primary studio input (Studio A)
+- **Port 9999**: Secondary studio input (Studio B)
 
-### Live audio capture
+All connections require encryption using the passphrase configured in `UPSTREAM_PASSWORD`.
+
+### Example: Stream from Audio Device
 ```bash
-# Stream from ALSA audio device (WAV in Matroska container)
+# Stream from ALSA audio device (Linux)
 ffmpeg -f alsa -channels 2 -sample_rate 48000 -i hw:0 \
   -codec:a pcm_s16le -vn -f matroska \
   "srt://liquidsoap.example.com:8888?passphrase=your_passphrase&mode=caller&transtype=live&latency=10000"
+
+# Stream from file (for testing)
+ffmpeg -re -i input.mp3 -c copy -f mpegts \
+  "srt://liquidsoap.example.com:8888?passphrase=your_passphrase&mode=caller"
 ```
 
-## Installation & Usage
+For production use, consider using [rpi-audio-encoder](https://github.com/oszuidwest/rpi-audio-encoder) for a dedicated hardware encoder.
 
-### Quick Install
-```bash
-# Install Liquidsoap
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/oszuidwest/zwfm-liquidsoap/main/install.sh)"
-
-# Optional: Install Icecast server
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/oszuidwest/zwfm-liquidsoap/main/icecast2.sh)"
-```
-
-### Configuration
-After installation, edit the environment file at `/opt/liquidsoap/.env` to configure:
-- Stream passwords and mount points
-- Server addresses
-- StereoTool license key (if using)
-- DAB+ encoder settings
-
-### Running with Docker
-```bash
-cd /opt/liquidsoap
-
-# Start Liquidsoap
-docker compose up -d
-
-# View logs
-docker compose logs -f
-
-# Stop services
-docker compose down
-```
-
-### StereoTool GUI
-If using StereoTool, access the web interface at: `http://localhost:8080`
-
-### Emergency Broadcast Control
-Control the emergency broadcast (noodband) fallback:
-```bash
-# Enable emergency broadcast
-echo '1' > /opt/liquidsoap/use_noodband.txt
-
-# Disable (use silence instead)
-echo '0' > /opt/liquidsoap/use_noodband.txt
-```
 
 ## Scripts
 - **icecast2.sh**: Installs Icecast 2 with SSL support via Let's Encrypt/Certbot
 - **install.sh**: Installs Liquidsoap with fdkaac and ODR tools support in Docker containers
 
 ## Configurations
-- **radio.liq**: A production-ready Liquidsoap configuration that incorporates StereoTool as a MicroMPX encoder.
-- **docker-compose.yml**: Docker Compose configuration including StereoTool support.
+- **conf/zuidwest.liq**: Configuration for ZuidWest FM
+- **conf/rucphen.liq**: Configuration for Radio Rucphen (includes DME output)
+- **conf/bredanu.liq**: Configuration for BredaNu (includes DME output)
+- **conf/lib/**: Shared library modules for all stations
+- **docker-compose.yml**: Docker Compose configuration including StereoTool support
 
 ## Development
 
@@ -260,10 +249,33 @@ Runs on all pushes to `main` and pull requests:
 ### Workflow Status
 Check the badges at the top of this README for current CI/CD status. The pipeline uses concurrency control to cancel duplicate runs and caching for faster builds.
 
+## Troubleshooting
+
+### Common Issues
+
+**Liquidsoap won't start**
+- Check that all required environment variables are set in `.env`
+- Verify Docker is running: `systemctl status docker`
+- Check logs: `docker compose logs liquidsoap`
+
+**No audio output**
+- Verify SRT streams are reaching the server (check firewall rules for ports 8888/9999)
+- Check silence detection status in `/silence_detection.txt`
+- Ensure `UPSTREAM_PASSWORD` matches between encoder and server
+- Test with a local file: `ffmpeg -re -i test.mp3 -c copy -f mpegts "srt://localhost:8888?passphrase=YOUR_PASSWORD&mode=caller"`
+
+**StereoTool not working**
+- Verify license key is correctly set in `STEREOTOOL_LICENSE_KEY`
+- Check if web interface is accessible at port 8080
+- For ARM systems, StereoTool support is limited
+
 ## Compatibility
-1. Tested on Ubuntu 24.04 and Debian 12.
-2. Supports x86_64 or ARM64 system architectures (e.g., Ampere Altra, Raspberry Pi). Note: StereoTool MicroMPX is currently not well-supported on ARM architectures.
-3. Requires an internet connection for script dependencies.
+- **OS**: Tested on Ubuntu 24.04 and Debian 12
+- **Architecture**: x86_64 and ARM64 (e.g., Ampere Altra, Raspberry Pi)
+- **Docker**: Requires Docker Engine and Docker Compose v2
+- **Internet**: Required during installation for downloading dependencies
+
+**Note**: StereoTool's MicroMPX encoder has limited support on ARM architectures. For ARM-based FM transmission, consider using external hardware encoders.
 
 
 # MIT License

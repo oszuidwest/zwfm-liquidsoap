@@ -35,8 +35,17 @@ def output_dab_stream(source) =
         "#{odr_command()} --pad=#{pad_size} --pad-socket=#{ODR_PADENC_SOCK}"
     end
 
-    odr_command :=
-      "#{odr_command()} --edi=\"#{ODR_AUDIOENC_EDI_URL}\""
+    # Add EDI outputs - supports comma-separated list
+    edi_urls = string.split(separator=",", ODR_AUDIOENC_EDI_URL)
+    list.iter(
+      fun(url) ->
+        begin
+          # Trim whitespace from URL
+          trimmed_url = string.trim(url)
+          odr_command := "#{odr_command()} --edi=\"#{trimmed_url}\""
+        end,
+      edi_urls
+    )
 
     # Feed the audio to ODR-AudioEnc
     output.external(
