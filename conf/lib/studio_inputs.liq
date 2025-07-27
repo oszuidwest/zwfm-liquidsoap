@@ -57,7 +57,7 @@ def create_studio_input(~id, ~port) =
       [
         ({is_silence_detection_enabled()}, studio_stripped),
         # When silence detection is disabled, use raw studio source
-        ({true}, studio)
+        ({not(is_silence_detection_enabled())}, studio)
       ]
     )
 
