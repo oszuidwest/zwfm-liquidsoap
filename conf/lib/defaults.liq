@@ -51,7 +51,7 @@ DAB_BITRATE = environment.get("DAB_BITRATE", default="")
 DAB_EDI_DESTINATIONS = environment.get("DAB_EDI_DESTINATIONS", default="")
 DAB_METADATA_SOCKET = environment.get("DAB_METADATA_SOCKET", default="")
 
-# PAD size in bytes (0-255) - only used when PAD socket is configured
+# PAD size in bytes (0-196) - only used when PAD socket is configured
 DAB_METADATA_SIZE = environment.get("DAB_METADATA_SIZE", default="")
 
 # Silence detection configuration

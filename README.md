@@ -100,7 +100,7 @@ This table lists ALL environment variables used in the system. Variables without
 | **DAB+ Configuration (Optional)** |
 | `DAB_BITRATE`                     | DAB+ encoder bitrate                             | _(none)_                     | `128`                                                           | `conf/lib/defaults.liq`                | All             |
 | `DAB_EDI_DESTINATIONS`            | DAB+ EDI destination(s)                          | _(none)_                     | `tcp://dab-mux.local:9001` or `tcp://dab1:9001,tcp://dab2:9002` | `conf/lib/defaults.liq`                | All             |
-| `DAB_METADATA_SIZE`               | PAD size in bytes (0-255)                        | `58` when socket is set      | `128`                                                           | `conf/lib/defaults.liq`                | All             |
+| `DAB_METADATA_SIZE`               | PAD size in bytes (0-196)                        | `8` when socket is set       | `16`                                                            | `conf/lib/defaults.liq`                | All             |
 | `DAB_METADATA_SOCKET`             | PAD metadata socket path                         | _(none)_                     | `padenc.sock`                                                   | `conf/lib/defaults.liq`                | All             |
 | **DME Configuration**             |
 | `DME_PRIMARY_HOST`                | Primary DME server                               | _(required)_                 | `ingest1.dme.nl`                                                | `conf/rucphen.liq`, `conf/bredanu.liq` | Rucphen/BredaNu |
@@ -122,7 +122,7 @@ This table lists ALL environment variables used in the system. Variables without
 - **Multiple EDI outputs**: `DAB_EDI_DESTINATIONS` supports comma-separated values for sending to multiple DAB+ destinations simultaneously
 - **Station column**: "All" means used by all stations, "Rucphen/BredaNu" means used only by stations with DME
 - **Default conventions**: `#{VARIABLE}` means the value is interpolated from another variable
-- **PAD sizes**: Valid range 0-255 bytes. Common values: 16 (text only), 58 (text + logo), 128 (text + album art)
+- **PAD sizes**: Valid range 0-196 bytes. Recommendation to use as small of a METADATA_SIZE as possible. 8 bytes is enough to transmit a logo in a couple of seconds (ofcourse, how smaller the filesize the faster the logo will transmit). If you're using artwork, you might need to consider using a bigger METADATA_SIZE.
 - **File locations**: Most configuration variables are centralized in `conf/lib/defaults.liq`
 - **Station-specific files**: Only contain DME configuration (for Rucphen/BredaNu) and station-specific logic
 
@@ -246,7 +246,7 @@ DAB_EDI_DESTINATIONS=tcp://dab-mux.example.com:9001   # EDI output destination(s
 
 # Optional PAD metadata
 DAB_METADATA_SOCKET=padenc.sock                   # Socket for PAD encoder
-DAB_METADATA_SIZE=58                              # PAD size (default: 58)
+DAB_METADATA_SIZE=8                               # PAD size (default: 8)
 ```
 
 ### Multiple EDI Destinations
@@ -259,11 +259,7 @@ DAB_EDI_DESTINATIONS=tcp://primary.example.com:9001,tcp://backup.example.com:900
 
 ### PAD (Programme Associated Data)
 
-PAD allows sending metadata like song titles and station logos alongside the audio:
-
-- **Size 16**: Text only
-- **Size 58**: Text + small logo (default)
-- **Size 128**: Text + album artwork
+PAD allows sending metadata like song titles and station logos alongside the audio. Recommendation to use as small of a METADATA_SIZE as possible. 8 bytes is enough to transmit a logo in a couple of seconds (ofcourse, how smaller the filesize the faster the logo will transmit). If you're using artwork, you might need to consider using a bigger METADATA_SIZE.
 
 ## DME Integration (Dutch Media Exchange)
 

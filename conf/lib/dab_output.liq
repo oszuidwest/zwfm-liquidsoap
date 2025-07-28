@@ -29,8 +29,8 @@ def output_dab_stream(source) =
     if
       DAB_METADATA_SOCKET != ""
     then
-      # PAD socket requires PAD to be enabled - default to 58 if not specified
-      pad_size = if DAB_METADATA_SIZE != "" then DAB_METADATA_SIZE else "58" end
+      # PAD socket requires PAD to be enabled - default to 8 if not specified
+      pad_size = if DAB_METADATA_SIZE != "" then DAB_METADATA_SIZE else "8" end
       odr_command :=
         "#{odr_command()} --pad=#{pad_size} --pad-socket=#{DAB_METADATA_SOCKET}"
     end
