@@ -22,7 +22,7 @@ def output_dab_stream(source) =
     # Build command with optional parameters
     odr_command =
       ref(
-        "/bin/odr-audioenc -i - --bitrate=#{DAB_BITRATE}"
+        "/bin/odr-audioenc -i - --bitrate=#{DAB_BITRATE} --sbr"
       )
 
     # Add PAD configuration if socket is set
