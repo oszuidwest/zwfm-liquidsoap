@@ -54,7 +54,7 @@ AUDIO_FALLBACK_PATH="${INSTALL_DIR}/audio/fallback.ogg"
 SILENCE_DETECTION_PATH="${INSTALL_DIR}/silence_detection.txt"
 
 # StereoTool configuration
-STEREO_TOOL_VERSION="1051"
+STEREO_TOOL_VERSION="1070"
 STEREO_TOOL_BASE_URL="https://download.thimeo.com"
 STEREO_TOOL_ZIP_URL="${STEREO_TOOL_BASE_URL}/Stereo_Tool_Generic_plugin_${STEREO_TOOL_VERSION}.zip"
 STEREO_TOOL_ZIP_PATH="/tmp/stereotool.zip"
