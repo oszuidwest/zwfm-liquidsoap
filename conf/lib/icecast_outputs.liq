@@ -4,11 +4,11 @@ def output_icecast_stream(
   ~description,
   ~mount,
   ~source,
-  ~host=null(),
-  ~port=null(),
-  ~user=null(),
-  ~password=null(),
-  ~name=null()
+  ~host=null,
+  ~port=null,
+  ~user=null,
+  ~password=null,
+  ~name=null
 ) =
   # Create a buffered source with its own clock
   clocked_source = mksafe(buffer(source))
