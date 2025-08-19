@@ -31,23 +31,47 @@ def create_studio_input(~id, ~port) =
     )
 
   # Register callbacks for blank and noise detection
-  studio_with_detect.on_blank(synchronous=false, fun () ->
-    begin
-      levels = null.get(studio_with_detect.dB_levels())
-      # Format dB levels as string, rounded to 1 decimal place
-      level_strs = list.map(fun (x) -> string.float(decimal_places=1, x), levels)
-      db_str = string.concat(separator=", ", level_strs)
-      log_event(id, "silence detected (#{db_str} dB)")
-    end
+  studio_with_detect.on_blank(
+    synchronous=false,
+    fun () ->
+      begin
+        levels = null.get(studio_with_detect.dB_levels())
+
+        # Format dB levels as string, rounded to 1 decimal place
+        level_strs =
+          list.map(fun (x) -> string.float(decimal_places=1, x), levels)
+        db_str =
+          string.concat(
+            separator=
+              ", ",
+            level_strs
+          )
+        log_event(
+          id,
+          "silence detected (#{db_str} dB)"
+        )
+      end
   )
-  studio_with_detect.on_noise(synchronous=false, fun () ->
-    begin
-      levels = null.get(studio_with_detect.dB_levels())
-      # Format dB levels as string, rounded to 1 decimal place
-      level_strs = list.map(fun (x) -> string.float(decimal_places=1, x), levels)
-      db_str = string.concat(separator=", ", level_strs)
-      log_event(id, "audio resumed (#{db_str} dB)")
-    end
+  studio_with_detect.on_noise(
+    synchronous=false,
+    fun () ->
+      begin
+        levels = null.get(studio_with_detect.dB_levels())
+
+        # Format dB levels as string, rounded to 1 decimal place
+        level_strs =
+          list.map(fun (x) -> string.float(decimal_places=1, x), levels)
+        db_str =
+          string.concat(
+            separator=
+              ", ",
+            level_strs
+          )
+        log_event(
+          id,
+          "audio resumed (#{db_str} dB)"
+        )
+      end
   )
 
   studio_stripped =
