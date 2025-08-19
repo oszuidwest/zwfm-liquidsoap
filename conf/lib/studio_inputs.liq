@@ -29,10 +29,24 @@ def create_studio_input(~id, ~port) =
       min_noise=AUDIO_VALID_SECONDS,
       studio
     )
-  
+
   # Register callbacks for blank and noise detection
-  studio_with_detect.on_blank(synchronous=false, fun () -> log_event(id, "silence detected"))
-  studio_with_detect.on_noise(synchronous=false, fun () -> log_event(id, "audio resumed"))
+  studio_with_detect.on_blank(
+    synchronous=false,
+    fun () ->
+      log_event(
+        id,
+        "silence detected"
+      )
+  )
+  studio_with_detect.on_noise(
+    synchronous=false,
+    fun () ->
+      log_event(
+        id,
+        "audio resumed"
+      )
+  )
 
   studio_stripped =
     blank.strip(
