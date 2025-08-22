@@ -62,10 +62,9 @@ jobs:
       - name: Get Liquidsoap Version
         id: version
         run: |
-          LATEST=$(curl -s https://api.github.com/repos/savonet/liquidsoap/releases/latest | \
-            grep '"tag_name"' | cut -d'"' -f4)
-          echo "version=${LATEST}" >> $GITHUB_OUTPUT
-          echo "Latest Liquidsoap version: ${LATEST}"
+          LIQUIDSOAP_VERSION=$(grep "^ARG LIQUIDSOAP_VERSION" Dockerfile | cut -d'=' -f2)
+          echo "version=v${LIQUIDSOAP_VERSION}" >> $GITHUB_OUTPUT
+          echo "Using Liquidsoap version from Dockerfile: v${LIQUIDSOAP_VERSION}"
 
       - name: Check Liquidsoap Syntax
         run: |
