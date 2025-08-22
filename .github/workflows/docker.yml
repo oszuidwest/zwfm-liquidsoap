@@ -1,0 +1,133 @@
+---
+name: Docker Build and Publish
+
+on:
+  workflow_dispatch:
+    inputs:
+      force_build:
+        description: "Force build even if version exists"
+        required: false
+        default: "false"
+        type: boolean
+  workflow_call:
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    outputs:
+      image_tag: ${{ steps.build.outputs.tags }}
+      image_digest: ${{ steps.build.outputs.digest }}
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v5
+
+      - name: Get Software Versions
+        id: versions
+        run: |
+          # Read versions from Dockerfile ARGs
+          LIQUIDSOAP_VERSION=$(grep "^ARG LIQUIDSOAP_VERSION" Dockerfile | cut -d'=' -f2)
+          ODR_AUDIOENC_VERSION=$(grep "^ARG ODR_AUDIOENC_VERSION" Dockerfile | cut -d'=' -f2)
+          COMBINED_TAG="$LIQUIDSOAP_VERSION-$ODR_AUDIOENC_VERSION"
+
+          echo "Using Liquidsoap version: $LIQUIDSOAP_VERSION"
+          echo "Using ODR-AudioEnc version: $ODR_AUDIOENC_VERSION"
+          echo "Combined tag: $COMBINED_TAG"
+
+          echo "liquidsoap_version=$LIQUIDSOAP_VERSION" >> $GITHUB_OUTPUT
+          echo "odr_audioenc_version=$ODR_AUDIOENC_VERSION" >> $GITHUB_OUTPUT
+          echo "combined_tag=$COMBINED_TAG" >> $GITHUB_OUTPUT
+
+      - name: Check if Version Exists
+        id: check_version
+        run: |
+          COMBINED_TAG="${{ steps.versions.outputs.combined_tag }}"
+          FORCE_BUILD="${{ github.event.inputs.force_build }}"
+
+          if [[ "$FORCE_BUILD" == "true" ]]; then
+            echo "Force build enabled, proceeding with build"
+            echo "should_build=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          REPO_NAME=$(basename ${{ github.repository }})
+          ORG_NAME=$(dirname ${{ github.repository }})
+
+          echo "Checking if version exists: $COMBINED_TAG"
+          EXISTING_TAGS=$(gh api "orgs/${ORG_NAME}/packages/container/${REPO_NAME}/versions" \
+                          --paginate 2>/dev/null | \
+                          jq -r '.[].metadata.container.tags[]?' 2>/dev/null | \
+                          sort -V || echo "No versions found or API error")
+
+          echo "Existing versions:"
+          echo "$EXISTING_TAGS"
+          echo "---"
+
+          if echo "$EXISTING_TAGS" | grep -q "^$COMBINED_TAG$"; then
+            echo "Version already exists: $COMBINED_TAG"
+            echo "should_build=false" >> $GITHUB_OUTPUT
+          else
+            echo "Version not found. Will build: $COMBINED_TAG"
+            echo "should_build=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Set up QEMU
+        if: steps.check_version.outputs.should_build == 'true'
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        if: steps.check_version.outputs.should_build == 'true'
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        if: steps.check_version.outputs.should_build == 'true'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and Push Docker Image
+        if: steps.check_version.outputs.should_build == 'true'
+        id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          provenance: false
+          build-args: |
+            LIQUIDSOAP_VERSION=${{ steps.versions.outputs.liquidsoap_version }}
+            ODR_AUDIOENC_VERSION=${{ steps.versions.outputs.odr_audioenc_version }}
+          tags: |
+            ghcr.io/${{ github.repository }}:${{ steps.versions.outputs.combined_tag }}
+            ghcr.io/${{ github.repository }}:latest
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.created=${{ github.event.repository.updated_at }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            liquidsoap.version=${{ steps.versions.outputs.liquidsoap_version }}
+            odr-audioenc.version=${{ steps.versions.outputs.odr_audioenc_version }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build Summary
+        if: steps.check_version.outputs.should_build == 'true'
+        run: |
+          echo "## Docker Build Completed Successfully" >> $GITHUB_STEP_SUMMARY
+          echo "- **Image Tag**: ${{ steps.versions.outputs.combined_tag }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Image**: ghcr.io/${{ github.repository }}:${{ steps.versions.outputs.combined_tag }}" \
+            >> $GITHUB_STEP_SUMMARY
+          echo "- **Digest**: ${{ steps.build.outputs.digest }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Platforms**: linux/amd64, linux/arm64" >> $GITHUB_STEP_SUMMARY
+          if [[ "${{ github.event.inputs.force_build }}" == "true" ]]; then
+            echo "- **Force Build**: Enabled" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Skip Build Summary
+        if: steps.check_version.outputs.should_build == 'false'
+        run: |
+          echo "## Docker Build Skipped" >> $GITHUB_STEP_SUMMARY
+          echo "Version ${{ steps.versions.outputs.combined_tag }} already exists" >> $GITHUB_STEP_SUMMARY
+          echo "Use 'Force build' option to rebuild existing version" >> $GITHUB_STEP_SUMMARY

@@ -1,0 +1,137 @@
+---
+name: Code Quality
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_call:
+
+permissions:
+  contents: write
+
+jobs:
+  lint:
+    name: Lint Code
+    runs-on: ubuntu-latest
+    outputs:
+      lint_success: ${{ steps.lint_result.outputs.success }}
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v5
+
+      # Shell scripts linting
+      - name: ShellCheck
+        uses: ludeeus/action-shellcheck@2.0.0
+        with:
+          check_together: "yes"
+          severity: warning
+
+      # Dockerfile linting
+      - name: Hadolint
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: Dockerfile
+          failure-threshold: warning
+          ignore: DL3008,DL3009
+
+      # YAML linting
+      - name: YAML Lint
+        uses: ibiqlik/action-yamllint@v3.1.1
+        with:
+          config_data: |
+            extends: default
+            rules:
+              line-length:
+                max: 120
+                level: warning
+              comments:
+                min-spaces-from-content: 1
+              truthy:
+                allowed-values: ['true', 'false', 'on', 'off', 'yes', 'no']
+
+      # Docker Compose validation
+      - name: Docker Compose Check
+        run: |
+          echo "STATION_NAME_SHORT=test" > .env
+          echo "STATION_NAME_FULL=Test Station" >> .env
+          docker compose config --quiet
+
+      # Liquidsoap syntax check
+      - name: Get Liquidsoap Version
+        id: version
+        run: |
+          LATEST=$(curl -s https://api.github.com/repos/savonet/liquidsoap/releases/latest | \
+            grep '"tag_name"' | cut -d'"' -f4)
+          echo "version=${LATEST}" >> $GITHUB_OUTPUT
+          echo "Latest Liquidsoap version: ${LATEST}"
+
+      - name: Check Liquidsoap Syntax
+        run: |
+          echo "Checking Liquidsoap files with ${{ steps.version.outputs.version }}..."
+
+          # Check all .liq files in conf directory
+          for file in conf/*.liq; do
+            if [ -f "$file" ]; then
+              echo "Checking ${file}..."
+              docker run --rm -v "$PWD:/app" -w /app \
+                savonet/liquidsoap:${{ steps.version.outputs.version }} \
+                liquidsoap -c "${file}"
+            fi
+          done
+
+      - name: Set Lint Success
+        id: lint_result
+        run: echo "success=true" >> $GITHUB_OUTPUT
+
+  format:
+    name: Format Code
+    runs-on: ubuntu-latest
+    needs: lint
+    if: needs.lint.outputs.lint_success == 'true'
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          ref: ${{ github.head_ref || github.ref_name }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install Formatters
+        run: |
+          npm install -g prettier
+          npm install -g liquidsoap-prettier
+          npm install -g dclint
+
+      - name: Format Files
+        run: |
+          # YAML files
+          prettier --write "**/*.yml" "**/*.yaml"
+
+          # Liquidsoap files
+          liquidsoap-prettier -w "**/*.liq"
+
+          # Docker Compose files
+          for file in docker-compose*.yml; do
+            if [ -f "$file" ]; then
+              echo "Formatting $file..."
+              dclint "$file" --fix
+            fi
+          done
+
+      - name: Commit Formatted Changes
+        if: github.event_name == 'push'
+        run: |
+          if [[ -n "$(git status --porcelain)" ]]; then
+            git config --local user.email "github-actions[bot]@users.noreply.github.com"
+            git config --local user.name "github-actions[bot]"
+            git add -A
+            git commit -m "style: auto-format code [skip ci]"
+            git push
+          fi
