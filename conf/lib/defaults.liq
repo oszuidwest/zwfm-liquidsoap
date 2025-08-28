@@ -20,30 +20,20 @@ ICECAST_SOURCE_PASSWORD = environment.get("ICECAST_SOURCE_PASSWORD")
 # Default mount point is based on station ID
 # Override these in .env if needed
 ICECAST_MOUNT_BASE = environment.get("ICECAST_MOUNT_BASE", default=STATION_ID)
-ICECAST_MOUNT_MP3 =
-  environment.get("ICECAST_MOUNT_MP3", default="/#{ICECAST_MOUNT_BASE}.mp3")
-ICECAST_MOUNT_AAC_LOW =
-  environment.get("ICECAST_MOUNT_AAC_LOW", default="/#{ICECAST_MOUNT_BASE}.aac")
-ICECAST_MOUNT_AAC_HIGH =
-  environment.get(
-    "ICECAST_MOUNT_AAC_HIGH", default="/#{ICECAST_MOUNT_BASE}.stl"
-  )
+ICECAST_MOUNT_MP3 = environment.get("ICECAST_MOUNT_MP3", default="/#{ICECAST_MOUNT_BASE}.mp3")
+ICECAST_MOUNT_AAC_LOW = environment.get("ICECAST_MOUNT_AAC_LOW", default="/#{ICECAST_MOUNT_BASE}.aac")
+ICECAST_MOUNT_AAC_HIGH = environment.get("ICECAST_MOUNT_AAC_HIGH", default="/#{ICECAST_MOUNT_BASE}.stl")
 
 # Icecast stream bitrates
 # Override these in .env if needed
-ICECAST_BITRATE_MP3 =
-  int_of_string(environment.get("ICECAST_BITRATE_MP3", default="192"))
-ICECAST_BITRATE_AAC_LOW =
-  int_of_string(environment.get("ICECAST_BITRATE_AAC_LOW", default="96"))
-ICECAST_BITRATE_AAC_HIGH =
-  int_of_string(environment.get("ICECAST_BITRATE_AAC_HIGH", default="576"))
+ICECAST_BITRATE_MP3 = int_of_string(environment.get("ICECAST_BITRATE_MP3", default="192"))
+ICECAST_BITRATE_AAC_LOW = int_of_string(environment.get("ICECAST_BITRATE_AAC_LOW", default="96"))
+ICECAST_BITRATE_AAC_HIGH = int_of_string(environment.get("ICECAST_BITRATE_AAC_HIGH", default="576"))
 
 # SRT studio input ports
 # Override these in .env if needed
-SRT_PORT_PRIMARY =
-  int_of_string(environment.get("SRT_PORT_PRIMARY", default="8888"))
-SRT_PORT_SECONDARY =
-  int_of_string(environment.get("SRT_PORT_SECONDARY", default="9999"))
+SRT_PORT_PRIMARY = int_of_string(environment.get("SRT_PORT_PRIMARY", default="8888"))
+SRT_PORT_SECONDARY = int_of_string(environment.get("SRT_PORT_SECONDARY", default="9999"))
 
 # DAB+ configuration (optional)
 # Only set these if you want DAB+ output
@@ -56,17 +46,13 @@ DAB_METADATA_SIZE = environment.get("DAB_METADATA_SIZE", default="")
 
 # Silence detection configuration
 # These have sensible defaults but can be overridden in .env
-SILENCE_SWITCH_SECONDS =
-  float_of_string(environment.get("SILENCE_SWITCH_SECONDS", default="15.0"))
-AUDIO_VALID_SECONDS =
-  float_of_string(environment.get("AUDIO_VALID_SECONDS", default="15.0"))
+SILENCE_SWITCH_SECONDS = float_of_string(environment.get("SILENCE_SWITCH_SECONDS", default="15.0"))
+AUDIO_VALID_SECONDS = float_of_string(environment.get("AUDIO_VALID_SECONDS", default="15.0"))
 
 # Common file paths
 # These have sensible defaults but can be overridden in .env
-EMERGENCY_AUDIO_PATH =
-  environment.get("EMERGENCY_AUDIO_PATH", default="/audio/fallback.ogg")
-SILENCE_CONTROL_PATH =
-  environment.get("SILENCE_CONTROL_PATH", default="/silence_detection.txt")
+EMERGENCY_AUDIO_PATH = environment.get("EMERGENCY_AUDIO_PATH", default="/audio/fallback.ogg")
+SILENCE_CONTROL_PATH = environment.get("SILENCE_CONTROL_PATH", default="/silence_detection.txt")
 
 # Logging function for various events
 def log_event(input_name, event) =
@@ -134,6 +120,5 @@ emergency_fallback =
   switch(
     id="switch_fallback",
     track_sensitive=false,
-    [({is_silence_detection_enabled()}, fallback_file), ({true}, fallback_blank)
-    ]
+    [({is_silence_detection_enabled()}, fallback_file), ({true}, fallback_blank)]
   )

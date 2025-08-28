@@ -32,12 +32,11 @@ def create_studio_input(~id, ~port) =
           id,
           "silence detected"
         ),
-      on_noise=
-        fun () ->
-          log_event(
-            id,
-            "audio resumed"
-          ),
+      on_noise=fun () ->
+        log_event(
+          id,
+          "audio resumed"
+        ),
       studio
     )
 
