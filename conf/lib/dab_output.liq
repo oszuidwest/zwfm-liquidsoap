@@ -9,7 +9,9 @@ def output_dab_stream(source) =
     DAB_BITRATE != "" and DAB_EDI_DESTINATIONS != ""
   then
     log(
-      "DAB+ output enabled - Bitrate: #{DAB_BITRATE}kbps, EDI: #{DAB_EDI_DESTINATIONS}",
+      "DAB+ output enabled - Bitrate: #{DAB_BITRATE}kbps, EDI: #{
+        DAB_EDI_DESTINATIONS
+      }",
       level=3
     )
 
@@ -47,10 +49,15 @@ def output_dab_stream(source) =
     )
 
     # Feed the audio to ODR-AudioEnc
-    output.external(%wav(channels = 2, samplerate = 48000), odr_command(), audio_to_dab)
+    output.external(
+      %wav(channels = 2, samplerate = 48000),
+      odr_command(),
+      audio_to_dab
+    )
   else
     log(
-      "DAB+ output disabled - DAB_BITRATE and/or DAB_EDI_DESTINATIONS not configured",
+      "DAB+ output disabled - DAB_BITRATE and/or DAB_EDI_DESTINATIONS not \
+       configured",
       level=3
     )
   end
