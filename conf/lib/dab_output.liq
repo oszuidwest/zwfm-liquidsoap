@@ -50,7 +50,9 @@ def output_dab_stream(source) =
 
     # Feed the audio to ODR-AudioEnc
     output.external(
-      %wav(channels = 2, samplerate = 48000), odr_command(), audio_to_dab
+      %wav(channels = 2, samplerate = 48000),
+      odr_command(),
+      audio_to_dab
     )
   else
     log(

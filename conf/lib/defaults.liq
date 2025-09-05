@@ -26,7 +26,8 @@ ICECAST_MOUNT_AAC_LOW =
   environment.get("ICECAST_MOUNT_AAC_LOW", default="/#{ICECAST_MOUNT_BASE}.aac")
 ICECAST_MOUNT_AAC_HIGH =
   environment.get(
-    "ICECAST_MOUNT_AAC_HIGH", default="/#{ICECAST_MOUNT_BASE}.stl"
+    "ICECAST_MOUNT_AAC_HIGH",
+    default="/#{ICECAST_MOUNT_BASE}.stl"
   )
 
 # Icecast stream bitrates
