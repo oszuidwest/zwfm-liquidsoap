@@ -102,7 +102,7 @@ jobs:
             ODR_AUDIOENC_VERSION=${{ steps.versions.outputs.odr_audioenc_version }}
           tags: |
             ghcr.io/${{ github.repository }}:${{ steps.versions.outputs.combined_tag }}
-            ${{ github.ref == 'refs/heads/main' && 'ghcr.io/${{ github.repository }}:latest' || '' }}
+            ${{ github.ref == 'refs/heads/main' && format('ghcr.io/{0}:latest', github.repository) || '' }}
           labels: |
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
             org.opencontainers.image.created=${{ github.event.repository.updated_at }}
