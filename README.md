@@ -48,9 +48,6 @@ The system delivers audio through dual redundant pathways. Liquidsoap prioritize
 ```bash
 # Install Liquidsoap
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/oszuidwest/zwfm-liquidsoap/main/install.sh)"
-
-# Optional: Install Icecast server
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/oszuidwest/zwfm-liquidsoap/main/icecast2.sh)"
 ```
 
 ### Configuration
