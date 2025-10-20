@@ -15,9 +15,9 @@ def output_dab_stream(source) =
       level=3
     )
 
-    # Create a clock for DAB+ output
+    # Buffer provides clock isolation between sources
+    # Each buffer creates a new clock domain automatically
     audio_to_dab = mksafe(buffer(source))
-    clock.assign_new(id="dab_clock", [audio_to_dab])
 
     # Build command with optional parameters
     odr_command =

@@ -10,10 +10,9 @@ def output_icecast_stream(
   ~password=null,
   ~name=null
 ) =
-  # Create a buffered source with its own clock
+  # Buffer provides clock isolation between sources
+  # Each buffer creates a new clock domain automatically
   clocked_source = mksafe(buffer(source))
-  clock_id = "icecast_clock_#{mount}"
-  clock.assign_new(id=clock_id, [clocked_source])
 
   # Use provided parameters or defaults
   actual_host = host ?? ICECAST_HOST
