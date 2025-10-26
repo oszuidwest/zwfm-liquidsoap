@@ -33,13 +33,13 @@ radio_processed = create_processed_audio(radio)
 # Output a high bitrate mp3 stream using ffmpeg encoder
 output_icecast_stream(
   format=%ffmpeg(
-    format="mp3",
+    format = "mp3",
     %audio(
-      codec="libmp3lame",
-      b="#{ICECAST_BITRATE_MP3}k",
-      ar=48000,
-      ac=2,
-      q=0
+      codec = "libmp3lame",
+      b = "#{ICECAST_BITRATE_MP3}k",
+      ar = 48000,
+      ac = 2,
+      q = 0
     )
   ),
   description="Hoge Kwaliteit Stream (192kbit MP3)",
