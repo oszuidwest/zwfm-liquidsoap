@@ -38,8 +38,7 @@ output_icecast_stream(
       codec = "libmp3lame",
       b = "#{ICECAST_BITRATE_MP3}k",
       ar = 48000,
-      ac = 2,
-      q = 0
+      ac = 2
     )
   ),
   description="Hoge Kwaliteit Stream (192kbit MP3)",
