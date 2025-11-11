@@ -4,11 +4,11 @@ def output_icecast_stream(
   ~description,
   ~mount,
   ~source,
-  ~host=null,
-  ~port=null,
-  ~user=null,
-  ~password=null,
-  ~name=null
+  ~host=null(),
+  ~port=null(),
+  ~user=null(),
+  ~password=null(),
+  ~name=null()
 ) =
   # Buffer provides clock isolation between sources
   # Each buffer creates a new clock domain automatically
