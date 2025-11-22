@@ -1,18 +1,20 @@
 #!/usr/bin/env bash
 
 # Load the functions library
-FUNCTIONS_LIB_PATH="/tmp/functions.sh"
+FUNCTIONS_LIB_PATH=$(mktemp)
 FUNCTIONS_LIB_URL="https://raw.githubusercontent.com/oszuidwest/bash-functions/main/common-functions.sh"
 
-# Download the latest version of the functions library
-rm -f "${FUNCTIONS_LIB_PATH}"
+# Clean up temporary file on exit
+trap 'rm -f "${FUNCTIONS_LIB_PATH}"' EXIT
+
+# Download the functions library
 if ! curl -sLo "${FUNCTIONS_LIB_PATH}" "${FUNCTIONS_LIB_URL}"; then
   echo -e "*** Failed to download the functions library. Please check your network connection! ***"
   exit 1
 fi
 
 # Source the functions library
-# shellcheck source=/tmp/functions.sh
+# shellcheck source=/dev/null
 source "${FUNCTIONS_LIB_PATH}"
 
 # Define base variables
