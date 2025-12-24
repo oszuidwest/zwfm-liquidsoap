@@ -1,0 +1,51 @@
+---
+name: Docker Quality
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  docker-lint:
+    name: Docker Linting
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v6
+
+      # Dockerfile linting
+      - name: Hadolint
+        uses: hadolint/hadolint-action@v3.3.0
+        with:
+          dockerfile: Dockerfile
+          failure-threshold: warning
+          ignore: DL3008,DL3009
+
+      # YAML linting
+      - name: YAML Lint
+        uses: ibiqlik/action-yamllint@v3.1.1
+        with:
+          config_data: |
+            extends: default
+            rules:
+              line-length:
+                max: 120
+                level: warning
+              comments:
+                min-spaces-from-content: 1
+              truthy:
+                allowed-values: ['true', 'false', 'on', 'off', 'yes', 'no']
+
+      # Docker Compose validation
+      - name: Docker Compose Check
+        run: |
+          echo "STATION_NAME_SHORT=test" > .env
+          echo "STATION_NAME_FULL=Test Station" >> .env
+          docker compose config --quiet
