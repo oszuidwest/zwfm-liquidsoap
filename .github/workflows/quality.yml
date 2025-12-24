@@ -10,7 +10,6 @@ on:
 
 permissions:
   contents: write
-  workflows: write
 
 jobs:
   lint:
@@ -112,8 +111,8 @@ jobs:
 
       - name: Format Files
         run: |
-          # YAML files
-          prettier --write "**/*.yml" "**/*.yaml"
+          # YAML files (exclude workflow files)
+          prettier --write "**/*.yml" "**/*.yaml" "!.github/workflows/**"
 
           # Liquidsoap files
           liquidsoap-prettier -w "**/*.liq"
