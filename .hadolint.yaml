@@ -1,0 +1,27 @@
+---
+# Hadolint Configuration
+# https://github.com/hadolint/hadolint
+
+failure-threshold: warning
+
+ignored:
+  # DL3008: Pin versions in apt-get install
+  # Often impractical for images that should receive security updates
+  - DL3008
+  # DL3009: Delete apt-get lists after installing
+  # Usually handled in multi-stage builds
+  - DL3009
+
+trustedRegistries:
+  - docker.io
+  - ghcr.io
+  - gcr.io
+  - quay.io
+
+override:
+  warning:
+    # Warn instead of error for missing version pins in pip
+    - DL3013
+  info:
+    # Info level for MAINTAINER deprecation
+    - DL4000
