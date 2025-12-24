@@ -111,8 +111,8 @@ jobs:
 
       - name: Format Files
         run: |
-          # YAML files
-          prettier --write "**/*.yml" "**/*.yaml"
+          # YAML files (exclude workflow files - should not be auto-formatted)
+          prettier --write "**/*.yml" "**/*.yaml" --ignore-pattern ".github/workflows/**"
 
           # Liquidsoap files
           liquidsoap-prettier -w "**/*.liq"
