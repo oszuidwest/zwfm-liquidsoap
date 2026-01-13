@@ -2,7 +2,7 @@
 
 # Load the functions library
 FUNCTIONS_LIB_PATH=$(mktemp)
-FUNCTIONS_LIB_URL="https://raw.githubusercontent.com/oszuidwest/bash-functions/main/common-functions.sh"
+FUNCTIONS_LIB_URL="https://raw.githubusercontent.com/oszuidwest/bash-functions/v2/common-functions.sh"
 
 # Clean up temporary file on exit
 trap 'rm -f "${FUNCTIONS_LIB_PATH}"' EXIT
@@ -30,12 +30,6 @@ LIQUIDSOAP_CONFIG_URL_ZUIDWEST="${GITHUB_BASE}/conf/zuidwest.liq"
 LIQUIDSOAP_CONFIG_URL_RUCPHEN="${GITHUB_BASE}/conf/rucphen.liq"
 LIQUIDSOAP_CONFIG_URL_BREDANU="${GITHUB_BASE}/conf/bredanu.liq"
 LIQUIDSOAP_CONFIG_PATH="${INSTALL_DIR}/scripts/radio.liq"
-
-# Liquidsoap library files
-LIQUIDSOAP_LIB_DIR="${INSTALL_DIR}/scripts/lib"
-LIQUIDSOAP_LIB_DEFAULTS_URL="${GITHUB_BASE}/conf/lib/defaults.liq"
-LIQUIDSOAP_LIB_STUDIO_INPUTS_URL="${GITHUB_BASE}/conf/lib/studio_inputs.liq"
-LIQUIDSOAP_LIB_ICECAST_OUTPUTS_URL="${GITHUB_BASE}/conf/lib/icecast_outputs.liq"
 
 LIQUIDSOAP_ENV_URL_ZUIDWEST="${GITHUB_BASE}/.env.zuidwest.example"
 LIQUIDSOAP_ENV_URL_RUCPHEN="${GITHUB_BASE}/.env.rucphen.example"
@@ -74,13 +68,13 @@ OS_ARCH=$(dpkg --print-architecture)
 
 # Environment setup
 set_colors
-check_user_privileges privileged
-is_this_linux
-is_this_os_64bit
+assert_user_privileged "root"
+assert_os_linux
+assert_os_64bit
 set_timezone "${TIMEZONE}"
 
 # Ensure Docker is installed
-require_tool "docker"
+assert_tool "docker"
 
 # Display a welcome banner
 clear
@@ -95,17 +89,17 @@ EOF
 echo -e "${GREEN}⎎ Liquidsoap and StereoTool Installation${NC}\n"
 
 # Prompt user for input
-ask_user "STATION_CONFIG" "zuidwest" "Which station configuration would you like to use? (zuidwest/rucphen/bredanu)" "str"
+prompt_user "STATION_CONFIG" "zuidwest" "Which station configuration would you like to use? (zuidwest/rucphen/bredanu)" "str"
 
 # Validate station configuration
 if [[ ! "$STATION_CONFIG" =~ ^(zuidwest|rucphen|bredanu)$ ]]; then
   echo -e "${RED}Error: Invalid station configuration. Must be 'zuidwest', 'rucphen', or 'bredanu'.${NC}"
   exit 1
 fi
-ask_user "DO_UPDATES" "y" "Would you like to perform all OS updates? (y/n)" "y/n"
+prompt_user "DO_UPDATES" "y" "Would you like to perform all OS updates? (y/n)" "y/n"
 
 if [ "${DO_UPDATES}" == "y" ]; then
-  update_os silent
+  apt_update --silent
 fi
 
 # Create required directories
@@ -129,30 +123,30 @@ else
   LIQUIDSOAP_ENV_URL="${LIQUIDSOAP_ENV_URL_BREDANU}"
 fi
 
-if ! download_file "${LIQUIDSOAP_CONFIG_URL}" "${LIQUIDSOAP_CONFIG_PATH}" "Liquidsoap configuration for ${STATION_CONFIG}" backup; then
+if ! file_download "${LIQUIDSOAP_CONFIG_URL}" "${LIQUIDSOAP_CONFIG_PATH}" "Liquidsoap configuration for ${STATION_CONFIG}" --backup; then
   exit 1
 fi
 
 # Download library files
 echo -e "${BLUE}►► Downloading Liquidsoap library files...${NC}"
-if ! download_file -m "${LIQUIDSOAP_LIB_DIR}" "Liquidsoap library files" \
-  "${LIQUIDSOAP_LIB_DEFAULTS_URL}:defaults.liq" \
-  "${LIQUIDSOAP_LIB_STUDIO_INPUTS_URL}:studio_inputs.liq" \
-  "${LIQUIDSOAP_LIB_ICECAST_OUTPUTS_URL}:icecast_outputs.liq" \
-  "${LIQUIDSOAP_LIB_STEREOTOOL_URL}:stereotool.liq" \
-  "${LIQUIDSOAP_LIB_DAB_OUTPUT_URL}:dab_output.liq"; then
+if ! file_download -m "${LIQUIDSOAP_LIB_DIR}" "Liquidsoap library files" \
+  "${LIQUIDSOAP_LIB_DEFAULTS_URL}|defaults.liq" \
+  "${LIQUIDSOAP_LIB_STUDIO_INPUTS_URL}|studio_inputs.liq" \
+  "${LIQUIDSOAP_LIB_ICECAST_OUTPUTS_URL}|icecast_outputs.liq" \
+  "${LIQUIDSOAP_LIB_STEREOTOOL_URL}|stereotool.liq" \
+  "${LIQUIDSOAP_LIB_DAB_OUTPUT_URL}|dab_output.liq"; then
   exit 1
 fi
 
-if ! download_file "${LIQUIDSOAP_ENV_URL}" "${LIQUIDSOAP_ENV_PATH}" "Liquidsoap env for ${STATION_CONFIG}" backup; then
+if ! file_download "${LIQUIDSOAP_ENV_URL}" "${LIQUIDSOAP_ENV_PATH}" "Liquidsoap env for ${STATION_CONFIG}" --backup; then
   exit 1
 fi
 
-if ! download_file "${DOCKER_COMPOSE_URL}" "${DOCKER_COMPOSE_PATH}" "docker-compose.yml" backup; then
+if ! file_download "${DOCKER_COMPOSE_URL}" "${DOCKER_COMPOSE_PATH}" "docker-compose.yml" --backup; then
   exit 1
 fi
 
-if ! download_file "${AUDIO_FALLBACK_URL}" "${AUDIO_FALLBACK_PATH}" "audio fallback file" backup; then
+if ! file_download "${AUDIO_FALLBACK_URL}" "${AUDIO_FALLBACK_PATH}" "audio fallback file" --backup; then
   exit 1
 fi
 
@@ -160,14 +154,14 @@ echo "1" > $SILENCE_DETECTION_PATH
 
 # Always install StereoTool (whether it's used depends on STEREOTOOL_LICENSE_KEY in .env)
 echo -e "${BLUE}►► Installing StereoTool...${NC}"
-install_packages silent unzip
+apt_install --silent unzip
 
 
 # Create installation directory
 mkdir -p "${STEREO_TOOL_INSTALL_DIR}"
 
 # Download and extract StereoTool
-if ! download_file "${STEREO_TOOL_ZIP_URL}" "${STEREO_TOOL_ZIP_PATH}" "StereoTool"; then
+if ! file_download "${STEREO_TOOL_ZIP_URL}" "${STEREO_TOOL_ZIP_PATH}" "StereoTool"; then
   exit 1
 fi
 TMP_DIR=$(mktemp -d)
