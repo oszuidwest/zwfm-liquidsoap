@@ -28,6 +28,7 @@ def create_studio_input(~input_id, ~port) =
       id="detect_#{input_id}",
       max_blank=SILENCE_SWITCH_SECONDS,
       min_noise=AUDIO_VALID_SECONDS,
+      threshold=SILENCE_THRESHOLD,
       studio
     )
 
@@ -47,6 +48,7 @@ def create_studio_input(~input_id, ~port) =
       id="stripped_#{input_id}",
       max_blank=SILENCE_SWITCH_SECONDS,
       min_noise=AUDIO_VALID_SECONDS,
+      threshold=SILENCE_THRESHOLD,
       studio_with_detect
     )
 

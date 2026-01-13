@@ -1,6 +1,27 @@
 # Default configuration values - common for all stations
 # DO NOT EDIT THESE VALUES HERE - Set them in your .env file instead!
 
+# Production settings
+settings.ffmpeg.log.verbosity := "warning"
+settings.clock.max_latency := 60.0
+
+# Server socket for runtime control (access via: socat /tmp/liquidsoap.sock -)
+SERVER_SOCKET_ENABLED =
+  environment.get("SERVER_SOCKET_ENABLED", default="false") == "true"
+SERVER_SOCKET_PATH =
+  environment.get("SERVER_SOCKET_PATH", default="/tmp/liquidsoap.sock")
+
+if
+  SERVER_SOCKET_ENABLED
+then
+  settings.server.socket := true
+  settings.server.socket.path := SERVER_SOCKET_PATH
+  log(
+    "Server socket enabled at #{SERVER_SOCKET_PATH}",
+    level=3
+  )
+end
+
 # Audio settings
 settings.frame.audio.channels := 2
 settings.frame.audio.samplerate := 48000
@@ -61,6 +82,8 @@ SILENCE_SWITCH_SECONDS =
   float_of_string(environment.get("SILENCE_SWITCH_SECONDS", default="15.0"))
 AUDIO_VALID_SECONDS =
   float_of_string(environment.get("AUDIO_VALID_SECONDS", default="15.0"))
+SILENCE_THRESHOLD =
+  float_of_string(environment.get("SILENCE_THRESHOLD", default="-40.0"))
 
 # Common file paths
 # These have sensible defaults but can be overridden in .env

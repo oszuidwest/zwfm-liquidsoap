@@ -24,6 +24,18 @@ def create_processed_audio(radio) =
         radio
       )
 
+    # Validate license and warn if invalid
+    if
+      not processed.valid_license()
+    then
+      log(
+        "WARNING: StereoTool license invalid! Audio will have artifacts. Features: #{
+          processed.unlincensed_used_features()
+        }",
+        level=2
+      )
+    end
+
     # Send processed audio to a dummy output (required for StereoTool to function)
     # This activates the StereoTool processing chain even though we don't use this output directly
     output.dummy(processed)
