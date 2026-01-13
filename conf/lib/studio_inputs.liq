@@ -35,12 +35,20 @@ def create_studio_input(~input_id, ~port) =
   # Attach silence detection callbacks using source methods (2.4+ API)
   studio_with_detect.on_blank(
     synchronous=true,
-    fun () -> log_event(input_id, "silence detected")
+    fun () ->
+      log_event(
+        input_id,
+        "silence detected"
+      )
   )
 
   studio_with_detect.on_noise(
     synchronous=true,
-    fun () -> log_event(input_id, "audio resumed")
+    fun () ->
+      log_event(
+        input_id,
+        "audio resumed"
+      )
   )
 
   studio_stripped =

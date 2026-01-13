@@ -29,9 +29,8 @@ def create_processed_audio(radio) =
       not processed.valid_license()
     then
       log(
-        "WARNING: StereoTool license invalid! Audio will have artifacts. Features: #{
-          processed.unlincensed_used_features()
-        }",
+        "WARNING: StereoTool license invalid! Audio will have artifacts. \
+         Features: #{processed.unlincensed_used_features()}",
         level=2
       )
     end
