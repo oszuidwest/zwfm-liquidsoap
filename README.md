@@ -12,7 +12,48 @@ This repository contains a professional-grade audio streaming solution originall
 
 While originally designed for these three Dutch radio stations, the system is fully configurable for any radio station's needs.
 
-![Image](https://github.com/user-attachments/assets/e5bc7888-fb5d-4649-b42b-1474f0bd55f9)
+```mermaid
+flowchart LR
+    subgraph inputs [" Inputs "]
+        SRT1["SRT INPUT 1"]
+        SRT2["SRT INPUT 2"]
+        FALLBACK["FALLBACK"]
+    end
+
+    LIQUIDSOAP["LIQUIDSOAP"]
+
+    subgraph outputs [" Outputs "]
+        MICROMPX["MICROMPX"]
+        ICECAST["ICECAST"]
+        ODR["ODR-AUDIOENC"]
+    end
+
+    subgraph metadata [" Metadata "]
+        PADENC["ODR-PADENC"]
+        PADAPI["PADENC-API"]
+        ZWFM["ZWFM-METADATA"]
+    end
+
+    SRT1 --> LIQUIDSOAP
+    SRT2 --> LIQUIDSOAP
+    FALLBACK --> LIQUIDSOAP
+
+    LIQUIDSOAP --> MICROMPX
+    LIQUIDSOAP --> ICECAST
+    LIQUIDSOAP --> ODR
+
+    ODR <--> PADENC
+    PADAPI --> PADENC
+    ZWFM --> PADAPI
+
+    classDef blue fill:#2196F3,stroke:#1565C0,color:#fff
+    classDef gray fill:#757575,stroke:#424242,color:#fff
+    classDef pink fill:#E91E8A,stroke:#AD1457,color:#fff
+
+    class SRT1,SRT2,FALLBACK,LIQUIDSOAP,MICROMPX,ICECAST,ODR blue
+    class PADENC,PADAPI gray
+    class ZWFM pink
+```
 
 ## System Design
 
