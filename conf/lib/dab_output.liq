@@ -2,8 +2,8 @@
 # This library provides a reusable function for DAB+ encoding
 
 # Function to create DAB+ output
-# @param source The audio source to encode
-def output_dab_stream(source) =
+# @param audio_source The audio source to encode
+def output_dab_stream(audio_source) =
   # Check if DAB+ is configured
   if
     DAB_BITRATE != "" and DAB_EDI_DESTINATIONS != ""
@@ -17,7 +17,7 @@ def output_dab_stream(source) =
 
     # Buffer provides clock isolation between sources
     # Each buffer creates a new clock domain automatically
-    audio_to_dab = mksafe(buffer(source))
+    audio_to_dab = mksafe(buffer(audio_source))
 
     # Build command with optional parameters
     odr_command =
@@ -38,10 +38,10 @@ def output_dab_stream(source) =
     # Add EDI outputs - supports comma-separated list
     edi_urls = string.split(separator=",", DAB_EDI_DESTINATIONS)
     list.iter(
-      fun (url) ->
+      fun (edi_url) ->
         begin
           # Trim whitespace from URL
-          trimmed_url = string.trim(url)
+          trimmed_url = string.trim(edi_url)
           odr_command :=
             "#{odr_command()} --edi=\"#{trimmed_url}\""
         end,

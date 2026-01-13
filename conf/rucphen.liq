@@ -19,8 +19,8 @@ DME_MOUNT_POINT = environment.get("DME_MOUNT_POINT")
 %include "lib/stereotool.liq"
 
 # Create the two studio inputs
-studio_a = create_studio_input(id="studio_a", port=SRT_PORT_PRIMARY)
-studio_b = create_studio_input(id="studio_b", port=SRT_PORT_SECONDARY)
+studio_a = create_studio_input(input_id="studio_a", port=SRT_PORT_PRIMARY)
+studio_b = create_studio_input(input_id="studio_b", port=SRT_PORT_SECONDARY)
 
 # Combine live inputs and fallback
 radio =
@@ -56,7 +56,7 @@ output_icecast_stream(
   ),
   description="Hoge Kwaliteit Stream (192kbit MP3)",
   mount=ICECAST_MOUNT_MP3,
-  source=radio_processed
+  audio_source=radio_processed
 )
 
 # Output a low bitrate AAC stream
@@ -72,7 +72,7 @@ output_icecast_stream(
   ),
   description="Mobile Stream (96kbit AAC)",
   mount=ICECAST_MOUNT_AAC_LOW,
-  source=radio_processed
+  audio_source=radio_processed
 )
 
 # Output a high bitrate AAC STL stream
@@ -88,7 +88,7 @@ output_icecast_stream(
   ),
   description="Transport Stream (576kbit AAC)",
   mount=ICECAST_MOUNT_AAC_HIGH,
-  source=radio_processed
+  audio_source=radio_processed
 )
 
 # Output high bitrate AAC streams to Dutch Media Exchange (dual ingestion points)
@@ -104,12 +104,12 @@ output_icecast_stream(
   ),
   description="",
   mount=DME_MOUNT_POINT,
-  source=radio_processed,
-  host=DME_PRIMARY_HOST,
-  port=DME_PRIMARY_PORT,
-  password=DME_PRIMARY_PASSWORD,
-  name=STATION_NAME,
-  user=DME_PRIMARY_USER
+  audio_source=radio_processed,
+  icecast_host=DME_PRIMARY_HOST,
+  icecast_port=DME_PRIMARY_PORT,
+  icecast_password=DME_PRIMARY_PASSWORD,
+  stream_name=STATION_NAME,
+  icecast_user=DME_PRIMARY_USER
 )
 
 output_icecast_stream(
@@ -124,12 +124,12 @@ output_icecast_stream(
   ),
   description="",
   mount=DME_MOUNT_POINT,
-  source=radio_processed,
-  host=DME_SECONDARY_HOST,
-  port=DME_SECONDARY_PORT,
-  password=DME_SECONDARY_PASSWORD,
-  name=STATION_NAME,
-  user=DME_SECONDARY_USER
+  audio_source=radio_processed,
+  icecast_host=DME_SECONDARY_HOST,
+  icecast_port=DME_SECONDARY_PORT,
+  icecast_password=DME_SECONDARY_PASSWORD,
+  stream_name=STATION_NAME,
+  icecast_user=DME_SECONDARY_USER
 )
 
 # Output to DAB+

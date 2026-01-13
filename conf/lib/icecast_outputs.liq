@@ -3,23 +3,23 @@ def output_icecast_stream(
   ~format,
   ~description,
   ~mount,
-  ~source,
-  ~host=null(),
-  ~port=null(),
-  ~user=null(),
-  ~password=null(),
-  ~name=null()
+  ~audio_source,
+  ~icecast_host=null,
+  ~icecast_port=null,
+  ~icecast_user=null,
+  ~icecast_password=null,
+  ~stream_name=null
 ) =
   # Buffer provides clock isolation between sources
   # Each buffer creates a new clock domain automatically
-  clocked_source = mksafe(buffer(source))
+  clocked_source = mksafe(buffer(audio_source))
 
   # Use provided parameters or defaults
-  actual_host = host ?? ICECAST_HOST
-  actual_port = port ?? ICECAST_PORT
-  actual_user = user ?? "source"
-  actual_password = password ?? ICECAST_SOURCE_PASSWORD
-  actual_name = name ?? STATION_NAME
+  actual_host = icecast_host ?? ICECAST_HOST
+  actual_port = icecast_port ?? ICECAST_PORT
+  actual_user = icecast_user ?? "source"
+  actual_password = icecast_password ?? ICECAST_SOURCE_PASSWORD
+  actual_name = stream_name ?? STATION_NAME
 
   # Output to Icecast
   output.icecast(

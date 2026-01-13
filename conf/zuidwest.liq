@@ -6,8 +6,8 @@
 %include "lib/stereotool.liq"
 
 # Create the two studio inputs
-studio_a = create_studio_input(id="studio_a", port=SRT_PORT_PRIMARY)
-studio_b = create_studio_input(id="studio_b", port=SRT_PORT_SECONDARY)
+studio_a = create_studio_input(input_id="studio_a", port=SRT_PORT_PRIMARY)
+studio_b = create_studio_input(input_id="studio_b", port=SRT_PORT_SECONDARY)
 
 # Combine live inputs and fallback
 radio =
@@ -43,7 +43,7 @@ output_icecast_stream(
   ),
   description="Hoge Kwaliteit Stream (192kbit MP3)",
   mount=ICECAST_MOUNT_MP3,
-  source=radio
+  audio_source=radio
 )
 
 # Output a low bitrate AAC stream
@@ -59,7 +59,7 @@ output_icecast_stream(
   ),
   description="Mobile Stream (96kbit AAC)",
   mount=ICECAST_MOUNT_AAC_LOW,
-  source=radio
+  audio_source=radio
 )
 
 # Output a high bitrate AAC STL stream
@@ -75,7 +75,7 @@ output_icecast_stream(
   ),
   description="Transport Stream (576kbit AAC)",
   mount=ICECAST_MOUNT_AAC_HIGH,
-  source=radio
+  audio_source=radio
 )
 
 # Output to DAB+
