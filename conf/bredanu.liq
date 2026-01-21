@@ -1,5 +1,17 @@
-# Include default configuration values
-%include "lib/defaults.liq"
+# BredaNu - Station configuration
+# Uses processed audio for all outputs, includes DME integration
+
+# Load libraries in order
+%include "lib/00_settings.liq"
+%include "lib/10_logging.liq"
+%include "lib/20_state.liq"
+%include "lib/30_silence.liq"
+%include "lib/40_source_fallback.liq"
+%include "lib/41_source_studio.liq"
+%include "lib/50_processing.liq"
+%include "lib/60_output_icecast.liq"
+%include "lib/61_output_dab.liq"
+%include "lib/90_server.liq"
 
 # Dutch Media Exchange (DME) configuration
 DME_PRIMARY_HOST = environment.get("DME_PRIMARY_HOST")
@@ -14,36 +26,40 @@ DME_SECONDARY_PASSWORD = environment.get("DME_SECONDARY_PASSWORD")
 
 DME_MOUNT_POINT = environment.get("DME_MOUNT_POINT")
 
-# Include library configurations
-%include "lib/studio_inputs.liq"
-%include "lib/stereotool.liq"
-
 # Create the two studio inputs
-studio_a = create_studio_input(input_id="studio_a", port=SRT_PORT_PRIMARY)
-studio_b = create_studio_input(input_id="studio_b", port=SRT_PORT_SECONDARY)
+studio_a = create_studio_input(id="studio_a", port=SRT_PORT_PRIMARY)
+studio_b = create_studio_input(id="studio_b", port=SRT_PORT_SECONDARY)
 
-# Combine live inputs and fallback
-radio =
+# Automatic fallback chain
+auto_fallback =
   fallback(
-    id="radio_prod",
+    id="auto_fallback",
     track_sensitive=false,
     [studio_a, studio_b, emergency_fallback]
   )
 
-# Create processed/unprocessed audio sources
-# When StereoTool is enabled (STEREOTOOL_LICENSE is set), it provides:
-# - Audio processing (AGC, compression, limiting, etc.)
-# - MicroMPX encoding for FM transmitters (available in StereoTool itself)
-# Two audio sources are available:
-# - 'radio': Unprocessed audio (direct from studio/fallback)
-# - 'radio_processed': Either StereoTool-processed audio (if enabled) or unprocessed audio (if disabled)
+# Main radio source with forcing support
+# In auto mode: uses automatic fallback chain
+# When forced: uses the specified source directly
+radio =
+  switch(
+    id="radio_prod",
+    track_sensitive=false,
+    [
+      ({should_use_source("studio_a")}, studio_a),
+      ({should_use_source("studio_b")}, studio_b),
+      ({should_use_source("fallback")}, emergency_fallback),
+      ({is_auto_mode()}, auto_fallback)
+    ]
+  )
+
+# Register radio source for server control commands
+register_radio_source(radio)
+
+# Create processed audio source
 radio_processed = create_processed_audio(radio)
 
-# Include output configurations
-%include "lib/icecast_outputs.liq"
-%include "lib/dab_output.liq"
-
-# Output a high bitrate mp3 stream using ffmpeg encoder
+# Output streams - BredaNu uses processed audio
 output_icecast_stream(
   format=%ffmpeg(
     format = "mp3",
@@ -59,7 +75,6 @@ output_icecast_stream(
   audio_source=radio_processed
 )
 
-# Output a low bitrate AAC stream
 output_icecast_stream(
   format=%fdkaac(
     channels = 2,
@@ -75,7 +90,6 @@ output_icecast_stream(
   audio_source=radio_processed
 )
 
-# Output a high bitrate AAC STL stream
 output_icecast_stream(
   format=%fdkaac(
     channels = 2,
@@ -91,7 +105,7 @@ output_icecast_stream(
   audio_source=radio_processed
 )
 
-# Output high bitrate AAC streams to Dutch Media Exchange (dual ingestion points)
+# Dutch Media Exchange outputs (dual ingestion points)
 output_icecast_stream(
   format=%fdkaac(
     channels = 2,
@@ -132,5 +146,5 @@ output_icecast_stream(
   stream_name=STATION_NAME
 )
 
-# Output to DAB+
+# DAB+ output
 output_dab_stream(radio_processed)

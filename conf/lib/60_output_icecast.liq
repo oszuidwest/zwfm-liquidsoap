@@ -1,4 +1,8 @@
-# Function to create an Icecast output with its own clock for stability
+# Icecast output factory
+# Creates Icecast outputs with automatic clock isolation
+
+# Factory function to create an Icecast output
+# Each output gets its own clock domain via buffer() for stability
 def output_icecast_stream(
   ~format,
   ~description,
@@ -10,18 +14,16 @@ def output_icecast_stream(
   ~icecast_password=null,
   ~stream_name=null
 ) =
-  # Buffer provides clock isolation between sources
-  # Each buffer creates a new clock domain automatically
+  # Buffer provides clock isolation - each creates a new clock domain
   clocked_source = mksafe(buffer(audio_source))
 
-  # Use provided parameters or defaults
+  # Use provided parameters or fall back to defaults
   actual_host = icecast_host ?? ICECAST_HOST
   actual_port = icecast_port ?? ICECAST_PORT
   actual_user = icecast_user ?? "source"
   actual_password = icecast_password ?? ICECAST_SOURCE_PASSWORD
   actual_name = stream_name ?? STATION_NAME
 
-  # Output to Icecast
   output.icecast(
     format,
     host=actual_host,
