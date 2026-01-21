@@ -11,24 +11,24 @@ def output_dab_stream(audio_source) =
     )
 
     # Buffer provides clock isolation
-    audio_to_dab = mksafe(buffer(audio_source))
+    let audio_to_dab = mksafe(buffer(audio_source))
 
     # Build ODR-AudioEnc command
-    odr_command = ref("/bin/odr-audioenc -i - --bitrate=#{DAB_BITRATE} --sbr")
+    let odr_command = ref("/bin/odr-audioenc -i - --bitrate=#{DAB_BITRATE} --sbr")
 
     # Add PAD configuration if socket is set
     if DAB_METADATA_SOCKET != "" then
-      pad_size = if DAB_METADATA_SIZE != "" then DAB_METADATA_SIZE else "8" end
+      let pad_size = if DAB_METADATA_SIZE != "" then DAB_METADATA_SIZE else "8" end
       odr_command :=
         "#{odr_command()} --pad=#{pad_size} --pad-socket=#{DAB_METADATA_SOCKET}"
     end
 
     # Add EDI outputs - supports comma-separated list
-    edi_urls = string.split(separator=",", DAB_EDI_DESTINATIONS)
+    let edi_urls = string.split(separator=",", DAB_EDI_DESTINATIONS)
     list.iter(
       fun (edi_url) ->
         begin
-          trimmed_url = string.trim(edi_url)
+          let trimmed_url = string.trim(edi_url)
           odr_command := "#{odr_command()} --edi=\"#{trimmed_url}\""
         end,
       edi_urls

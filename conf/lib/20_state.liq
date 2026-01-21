@@ -4,7 +4,7 @@
 
 # Silence detection state
 # Default: enabled. Use silence.enable/silence.disable commands to change.
-silence_detection_enabled = ref(true)
+let silence_detection_enabled = ref(true)
 
 # Check if silence detection is currently enabled
 def is_silence_detection_enabled() =
@@ -14,8 +14,8 @@ end
 # Set silence detection state
 def set_silence_detection(enabled) =
   if enabled != silence_detection_enabled() then
-    old_state = if silence_detection_enabled() then "enabled" else "disabled" end
-    new_state = if enabled then "enabled" else "disabled" end
+    let old_state = if silence_detection_enabled() then "enabled" else "disabled" end
+    let new_state = if enabled then "enabled" else "disabled" end
     silence_detection_enabled := enabled
     log_state_change("silence_detection", old_state, new_state)
   end
@@ -24,7 +24,7 @@ end
 # Source forcing state
 # Empty string = auto mode (normal fallback behavior)
 # "studio_a", "studio_b", "fallback" = force that specific source
-forced_source_name = ref("")
+let forced_source_name = ref("")
 
 # Get current forced source name (empty = auto)
 def get_forced_source() =

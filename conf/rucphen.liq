@@ -14,24 +14,24 @@
 %include "lib/90_server.liq"
 
 # Dutch Media Exchange (DME) configuration
-DME_PRIMARY_HOST = environment.get("DME_PRIMARY_HOST")
-DME_PRIMARY_PORT = int_of_string(environment.get("DME_PRIMARY_PORT"))
-DME_PRIMARY_USER = environment.get("DME_PRIMARY_USER")
-DME_PRIMARY_PASSWORD = environment.get("DME_PRIMARY_PASSWORD")
+let DME_PRIMARY_HOST = environment.get("DME_PRIMARY_HOST")
+let DME_PRIMARY_PORT = int_of_string(environment.get("DME_PRIMARY_PORT"))
+let DME_PRIMARY_USER = environment.get("DME_PRIMARY_USER")
+let DME_PRIMARY_PASSWORD = environment.get("DME_PRIMARY_PASSWORD")
 
-DME_SECONDARY_HOST = environment.get("DME_SECONDARY_HOST")
-DME_SECONDARY_PORT = int_of_string(environment.get("DME_SECONDARY_PORT"))
-DME_SECONDARY_USER = environment.get("DME_SECONDARY_USER")
-DME_SECONDARY_PASSWORD = environment.get("DME_SECONDARY_PASSWORD")
+let DME_SECONDARY_HOST = environment.get("DME_SECONDARY_HOST")
+let DME_SECONDARY_PORT = int_of_string(environment.get("DME_SECONDARY_PORT"))
+let DME_SECONDARY_USER = environment.get("DME_SECONDARY_USER")
+let DME_SECONDARY_PASSWORD = environment.get("DME_SECONDARY_PASSWORD")
 
-DME_MOUNT_POINT = environment.get("DME_MOUNT_POINT")
+let DME_MOUNT_POINT = environment.get("DME_MOUNT_POINT")
 
 # Create the two studio inputs
-studio_a = create_studio_input(id="studio_a", port=SRT_PORT_PRIMARY)
-studio_b = create_studio_input(id="studio_b", port=SRT_PORT_SECONDARY)
+let studio_a = create_studio_input(id="studio_a", port=SRT_PORT_PRIMARY)
+let studio_b = create_studio_input(id="studio_b", port=SRT_PORT_SECONDARY)
 
 # Automatic fallback chain
-auto_fallback =
+let auto_fallback =
   fallback(
     id="auto_fallback",
     track_sensitive=false,
@@ -41,7 +41,7 @@ auto_fallback =
 # Main radio source with forcing support
 # In auto mode: uses automatic fallback chain
 # When forced: uses the specified source directly
-radio =
+let radio =
   switch(
     id="radio_prod",
     track_sensitive=false,
@@ -57,7 +57,7 @@ radio =
 register_radio_source(radio)
 
 # Create processed audio source
-radio_processed = create_processed_audio(radio)
+let radio_processed = create_processed_audio(radio)
 
 # Output streams - Rucphen uses processed audio
 output_icecast_stream(

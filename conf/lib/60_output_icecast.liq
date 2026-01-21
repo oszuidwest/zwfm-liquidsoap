@@ -15,14 +15,14 @@ def output_icecast_stream(
   ~stream_name=null
 ) =
   # Buffer provides clock isolation - each creates a new clock domain
-  clocked_source = mksafe(buffer(audio_source))
+  let clocked_source = mksafe(buffer(audio_source))
 
   # Use provided parameters or fall back to defaults
-  actual_host = icecast_host ?? ICECAST_HOST
-  actual_port = icecast_port ?? ICECAST_PORT
-  actual_user = icecast_user ?? "source"
-  actual_password = icecast_password ?? ICECAST_SOURCE_PASSWORD
-  actual_name = stream_name ?? STATION_NAME
+  let actual_host = icecast_host ?? ICECAST_HOST
+  let actual_port = icecast_port ?? ICECAST_PORT
+  let actual_user = icecast_user ?? "source"
+  let actual_password = icecast_password ?? ICECAST_SOURCE_PASSWORD
+  let actual_name = stream_name ?? STATION_NAME
 
   output.icecast(
     format,

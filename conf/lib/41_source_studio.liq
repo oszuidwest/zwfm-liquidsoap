@@ -5,7 +5,7 @@
 # Returns a fallible source - output factories handle buffering and mksafe()
 def create_studio_input(~id, ~port) =
   # Create SRT input with encryption
-  studio =
+  let studio =
     input.srt(
       id=id,
       port=port,
@@ -21,12 +21,12 @@ def create_studio_input(~id, ~port) =
   studio.on_disconnect(synchronous=true, fun () -> log_event(id, "disconnected"))
 
   # Add silence detection with logging
-  detected = with_silence_detection(id="detect_#{id}", studio)
+  let detected = with_silence_detection(id="detect_#{id}", studio)
   detected.on_blank(synchronous=true, fun () -> log_event(id, "silence detected"))
   detected.on_noise(synchronous=true, fun () -> log_event(id, "audio resumed"))
 
   # Strip silence to trigger fallback
-  stripped = with_silence_strip(id="strip_#{id}", detected)
+  let stripped = with_silence_strip(id="strip_#{id}", detected)
 
   # Return source based on silence detection state
   # When enabled: use stripped version (triggers fallback on silence)

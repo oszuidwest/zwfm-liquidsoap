@@ -14,11 +14,11 @@
 %include "lib/90_server.liq"
 
 # Create the two studio inputs
-studio_a = create_studio_input(id="studio_a", port=SRT_PORT_PRIMARY)
-studio_b = create_studio_input(id="studio_b", port=SRT_PORT_SECONDARY)
+let studio_a = create_studio_input(id="studio_a", port=SRT_PORT_PRIMARY)
+let studio_b = create_studio_input(id="studio_b", port=SRT_PORT_SECONDARY)
 
 # Automatic fallback chain
-auto_fallback =
+let auto_fallback =
   fallback(
     id="auto_fallback",
     track_sensitive=false,
@@ -28,7 +28,7 @@ auto_fallback =
 # Main radio source with forcing support
 # In auto mode: uses automatic fallback chain
 # When forced: uses the specified source directly
-radio =
+let radio =
   switch(
     id="radio_prod",
     track_sensitive=false,
@@ -44,7 +44,7 @@ radio =
 register_radio_source(radio)
 
 # Create processed audio source (used only if StereoTool is enabled)
-radio_processed = create_processed_audio(radio)
+let radio_processed = create_processed_audio(radio)
 
 # Output streams - ZuidWest uses unprocessed audio
 output_icecast_stream(

@@ -2,7 +2,7 @@
 # Provides audio when all studio inputs fail
 
 # Create fallback audio source - either from file or blank
-fallback_audio =
+let fallback_audio =
   if file.exists(EMERGENCY_AUDIO_PATH) then
     source.drop.metadata(id="fallback_file", single(EMERGENCY_AUDIO_PATH))
   else
@@ -10,12 +10,12 @@ fallback_audio =
   end
 
 # Blank source for when silence detection is disabled
-fallback_disabled = blank(id="fallback_disabled")
+let fallback_disabled = blank(id="fallback_disabled")
 
 # Emergency fallback with silence detection awareness
 # When silence detection is enabled: plays fallback audio
 # When silence detection is disabled: outputs silence (blank)
-emergency_fallback =
+let emergency_fallback =
   switch(
     id="emergency_fallback",
     track_sensitive=false,

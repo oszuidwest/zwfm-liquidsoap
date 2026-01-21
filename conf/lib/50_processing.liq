@@ -2,7 +2,7 @@
 # StereoTool integration for broadcast-quality audio
 
 # Check if StereoTool is enabled via license key
-stereotool_enabled = STEREOTOOL_LICENSE != ""
+let stereotool_enabled = STEREOTOOL_LICENSE != ""
 
 # Create processed audio source
 # Returns StereoTool-processed audio if licensed, otherwise returns input unchanged
@@ -10,7 +10,7 @@ def create_processed_audio(radio) =
   if stereotool_enabled then
     log("StereoTool enabled - processing audio", level=3)
 
-    processed =
+    let processed =
       stereotool(
         library_file="/var/cache/liquidsoap/st_plugin.so",
         license_key=STEREOTOOL_LICENSE,

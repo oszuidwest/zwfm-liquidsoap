@@ -3,16 +3,16 @@
 # Connect with: socat - UNIX-CONNECT:/tmp/liquidsoap.sock
 
 # Server socket configuration
-SERVER_SOCKET_ENABLED =
+let SERVER_SOCKET_ENABLED =
   environment.get("SERVER_SOCKET_ENABLED", default="false") == "true"
-SERVER_SOCKET_PATH =
+let SERVER_SOCKET_PATH =
   environment.get("SERVER_SOCKET_PATH", default="/tmp/liquidsoap.sock")
 
 # Register the main radio source for server commands
 def register_radio_source(s) =
   # Register source-specific commands only when socket is enabled
   if SERVER_SOCKET_ENABLED then
-    source_id = source.id(s)
+    let source_id = source.id(s)
 
     # Get status command
     server.register(
@@ -20,8 +20,8 @@ def register_radio_source(s) =
       "#{source_id}.status",
       fun (_) ->
         begin
-          mode = if is_auto_mode() then "auto" else "forced" end
-          forced = get_forced_source()
+          let mode = if is_auto_mode() then "auto" else "forced" end
+          let forced = get_forced_source()
           "Mode: #{mode}, Forced: #{
             if forced == '' then 'none' else forced end
           }, Active: #{source_id}"
@@ -34,7 +34,7 @@ def register_radio_source(s) =
       "#{source_id}.force",
       fun (arg) ->
         begin
-          valid_sources = ["studio_a", "studio_b", "fallback"]
+          let valid_sources = ["studio_a", "studio_b", "fallback"]
           if list.mem(arg, valid_sources) then
             set_forced_source(arg)
             "Forced source: #{arg}"
