@@ -5,23 +5,6 @@
 settings.ffmpeg.log.verbosity := "warning"
 settings.clock.max_latency := 60.0
 
-# Server socket for runtime control (access via: socat /tmp/liquidsoap.sock -)
-SERVER_SOCKET_ENABLED =
-  environment.get("SERVER_SOCKET_ENABLED", default="false") == "true"
-SERVER_SOCKET_PATH =
-  environment.get("SERVER_SOCKET_PATH", default="/tmp/liquidsoap.sock")
-
-if
-  SERVER_SOCKET_ENABLED
-then
-  settings.server.socket := true
-  settings.server.socket.path := SERVER_SOCKET_PATH
-  log(
-    "Server socket enabled at #{SERVER_SOCKET_PATH}",
-    level=3
-  )
-end
-
 # Audio settings
 settings.frame.audio.channels := 2
 settings.frame.audio.samplerate := 48000
@@ -85,12 +68,32 @@ AUDIO_VALID_SECONDS =
 SILENCE_THRESHOLD =
   float_of_string(environment.get("SILENCE_THRESHOLD", default="-40.0"))
 
+# Helper function: wrap blank.detect with centralized silence params
+def add_silence_detection(~id, s) =
+  blank.detect(
+    id=id,
+    max_blank=SILENCE_SWITCH_SECONDS,
+    min_noise=AUDIO_VALID_SECONDS,
+    threshold=SILENCE_THRESHOLD,
+    s
+  )
+end
+
+# Helper function: wrap blank.strip with centralized silence params
+def add_silence_strip(~id, s) =
+  blank.strip(
+    id=id,
+    max_blank=SILENCE_SWITCH_SECONDS,
+    min_noise=AUDIO_VALID_SECONDS,
+    threshold=SILENCE_THRESHOLD,
+    s
+  )
+end
+
 # Common file paths
 # These have sensible defaults but can be overridden in .env
 EMERGENCY_AUDIO_PATH =
   environment.get("EMERGENCY_AUDIO_PATH", default="/audio/fallback.ogg")
-SILENCE_CONTROL_PATH =
-  environment.get("SILENCE_CONTROL_PATH", default="/silence_detection.txt")
 
 # Logging function for various events
 def log_event(input_name, event) =
@@ -100,30 +103,23 @@ def log_event(input_name, event) =
   )
 end
 
-# Track the last known silence detection state
+# Silence detection state (in-memory, controlled via server socket commands)
+# Default: enabled. Use silence.enable/silence.disable commands to change at runtime.
 silence_detection_state = ref(true)
 
 # Function to check if silence detection is enabled
 def is_silence_detection_enabled() =
-  current_state =
-    if
-      file.exists(SILENCE_CONTROL_PATH)
-    then
-      file_content = file.contents(SILENCE_CONTROL_PATH)
-      first_char = list.hd(string.chars(file_content))
-      first_char == "1"
-    else
-      # Default to enabled if file doesn't exist
-      true
-    end
+  silence_detection_state()
+end
 
-  # Log if state has changed
+# Function to set silence detection state (called by server commands)
+def set_silence_detection(enabled) =
   if
-    current_state != silence_detection_state()
+    enabled != silence_detection_state()
   then
-    silence_detection_state := current_state
+    silence_detection_state := enabled
     if
-      current_state
+      enabled
     then
       log(
         "Silence detection ENABLED",
@@ -136,9 +132,48 @@ def is_silence_detection_enabled() =
       )
     end
   end
-
-  current_state
 end
+
+# Source selection state (in-memory, controlled via server socket commands)
+# Empty string = auto mode (normal fallback behavior)
+# "studio_a", "studio_b", "fallback" = force that specific source
+forced_source_name = ref("")
+
+# Function to check if a specific source should be used
+def should_use_source(name) =
+  forced_source_name() == name
+end
+
+# Function to check if in auto mode
+def is_auto_mode() =
+  forced_source_name() == ""
+end
+
+# Function to set forced source (called by server commands)
+def set_forced_source(name) =
+  forced_source_name := name
+  if
+    name == ""
+  then
+    log(
+      "Source selection: AUTO mode",
+      level=3
+    )
+  else
+    log(
+      "Source selection: FORCED to #{name}",
+      level=3
+    )
+  end
+end
+
+# Function to get current forced source name
+def get_forced_source() =
+  forced_source_name()
+end
+
+# Include server commands (optional, enabled via SERVER_SOCKET_ENABLED)
+%include "server_commands.liq"
 
 # Create fallback source - either from file or blank audio
 fallback_file =

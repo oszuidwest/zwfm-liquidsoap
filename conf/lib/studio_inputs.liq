@@ -3,7 +3,7 @@
 # Get SRT passphrase for encryption
 SRT_PASSPHRASE = environment.get("SRT_PASSPHRASE")
 
-# Note: SILENCE_CONTROL_PATH and is_silence_detection_enabled() are defined in defaults.liq
+# Note: is_silence_detection_enabled() is defined in defaults.liq
 
 # Function to create a studio SRT input with silence detection and buffering
 def create_studio_input(~input_id, ~port) =
@@ -16,23 +16,17 @@ def create_studio_input(~input_id, ~port) =
       max=10.0,
       streamid=input_id,
       enforced_encryption=true,
-      passphrase=SRT_PASSPHRASE,
-      on_connect=fun () -> log_event(input_id, "connected"),
-      on_disconnect=fun () -> log_event(input_id, "disconnected")
+      passphrase=SRT_PASSPHRASE
     )
 
-  # Create version with silence detection
-  # In Liquidsoap 2.4+, callbacks are attached via source methods
-  studio_with_detect =
-    blank.detect(
-      id="detect_#{input_id}",
-      max_blank=SILENCE_SWITCH_SECONDS,
-      min_noise=AUDIO_VALID_SECONDS,
-      threshold=SILENCE_THRESHOLD,
-      studio
-    )
+  # Attach connection callbacks using source methods (2.4+ API)
+  studio.on_connect(synchronous=true, fun () -> log_event(input_id, "connected"))
+  studio.on_disconnect(synchronous=true, fun () -> log_event(input_id, "disconnected"))
 
-  # Attach silence detection callbacks using source methods (2.4+ API)
+  # Create version with silence detection (uses centralized params from defaults.liq)
+  studio_with_detect = add_silence_detection(id="detect_#{input_id}", studio)
+
+  # Attach silence detection callbacks
   studio_with_detect.on_blank(
     synchronous=true,
     fun () ->
@@ -51,27 +45,18 @@ def create_studio_input(~input_id, ~port) =
       )
   )
 
-  studio_stripped =
-    blank.strip(
-      id="stripped_#{input_id}",
-      max_blank=SILENCE_SWITCH_SECONDS,
-      min_noise=AUDIO_VALID_SECONDS,
-      threshold=SILENCE_THRESHOLD,
-      studio_with_detect
-    )
+  # Strip silence to trigger fallback (uses centralized params from defaults.liq)
+  studio_stripped = add_silence_strip(id="stripped_#{input_id}", studio_with_detect)
 
   # Use switch to select between stripped version and original
-  studio_switchable =
-    switch(
-      id="switch_silence_#{input_id}",
-      track_sensitive=false,
-      [
-        ({is_silence_detection_enabled()}, studio_stripped),
-        # When silence detection is disabled, use raw studio source
-        ({not (is_silence_detection_enabled())}, studio)
-      ]
-    )
-
-  # Buffer to prevent connection/disconnection latency impact
-  buffer(id="buffered_#{input_id}", fallible=true, studio_switchable)
+  # Returns fallible source - output factories handle buffering and mksafe()
+  switch(
+    id="switch_silence_#{input_id}",
+    track_sensitive=false,
+    [
+      ({is_silence_detection_enabled()}, studio_stripped),
+      # When silence detection is disabled, use raw studio source
+      ({not (is_silence_detection_enabled())}, studio)
+    ]
+  )
 end

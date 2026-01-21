@@ -22,13 +22,31 @@ DME_MOUNT_POINT = environment.get("DME_MOUNT_POINT")
 studio_a = create_studio_input(input_id="studio_a", port=SRT_PORT_PRIMARY)
 studio_b = create_studio_input(input_id="studio_b", port=SRT_PORT_SECONDARY)
 
-# Combine live inputs and fallback
-radio =
+# Automatic fallback chain for auto mode
+auto_fallback =
   fallback(
-    id="radio_prod",
+    id="auto_fallback",
     track_sensitive=false,
     [studio_a, studio_b, emergency_fallback]
   )
+
+# Main switch that respects forced source selection
+# - In auto mode: uses automatic fallback chain
+# - When forced: uses the specified source (falls back to auto if unavailable)
+radio =
+  switch(
+    id="radio_prod",
+    track_sensitive=false,
+    [
+      ({should_use_source("studio_a")}, studio_a),
+      ({should_use_source("studio_b")}, studio_b),
+      ({should_use_source("fallback")}, emergency_fallback),
+      ({is_auto_mode()}, auto_fallback)
+    ]
+  )
+
+# Register radio source for server control
+register_radio_source(radio)
 
 # Create processed/unprocessed audio sources
 # When StereoTool is enabled (STEREOTOOL_LICENSE is set), it provides:

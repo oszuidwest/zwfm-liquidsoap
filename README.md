@@ -130,11 +130,14 @@ This table lists ALL environment variables used in the system. Variables without
 | **Audio Processing**              |
 | `STEREOTOOL_LICENSE`              | StereoTool license key                           | _(none)_                     | `ABC123DEF456...`                                               | `conf/lib/stereotool.liq`              | All             |
 | `STEREOTOOL_WEB_PORT`             | StereoTool web interface port                    | `8080`                       | `8080`                                                          | `conf/lib/stereotool.liq`              | All             |
-| **Fallback & Control**            |
+| **Fallback & Silence Detection**  |
 | `EMERGENCY_AUDIO_PATH`            | Fallback audio file when all inputs fail         | `/audio/fallback.ogg`        | `/audio/noodband.mp3`                                           | `conf/lib/defaults.liq`                | All             |
-| `SILENCE_CONTROL_PATH`            | Silence detection control file                   | `/silence_detection.txt`     | `/opt/silence.txt`                                              | `conf/lib/defaults.liq`                | All             |
 | `SILENCE_SWITCH_SECONDS`          | Max silence duration (seconds)                   | `15.0`                       | `20.0`                                                          | `conf/lib/defaults.liq`                | All             |
 | `AUDIO_VALID_SECONDS`             | Min audio duration (seconds)                     | `15.0`                       | `10.0`                                                          | `conf/lib/defaults.liq`                | All             |
+| `SILENCE_THRESHOLD`               | Silence threshold in dB                          | `-40.0`                      | `-35.0`                                                         | `conf/lib/defaults.liq`                | All             |
+| **Server Control (Optional)**     |
+| `SERVER_SOCKET_ENABLED`           | Enable telnet/socket control commands            | `false`                      | `true`                                                          | `conf/lib/server_commands.liq`         | All             |
+| `SERVER_SOCKET_PATH`              | Path to the Unix socket                          | `/tmp/liquidsoap.sock`       | `/var/run/liquidsoap.sock`                                      | `conf/lib/server_commands.liq`         | All             |
 | **DAB+ Configuration (Optional)** |
 | `DAB_BITRATE`                     | DAB+ encoder bitrate                             | _(none)_                     | `128`                                                           | `conf/lib/defaults.liq`                | All             |
 | `DAB_EDI_DESTINATIONS`            | DAB+ EDI destination(s)                          | _(none)_                     | `tcp://dab-mux.local:9001` or `tcp://dab1:9001,tcp://dab2:9002` | `conf/lib/defaults.liq`                | All             |
@@ -215,19 +218,13 @@ When silence detection is **disabled**:
 - Fallback file is never used
 - Useful for testing or when manual control is preferred
 
-### Configuration
+### Runtime Control
 
-Control silence detection via the control file:
+To control silence detection at runtime, enable server socket control (see [Server Control](#server-control)) and use the following commands:
 
-```bash
-# Enable silence detection (default)
-echo '1' > /silence_detection.txt
-
-# Disable silence detection
-echo '0' > /silence_detection.txt
-```
-
-Note: The actual path depends on your container volume mapping. By default, this file is located at `/silence_detection.txt` inside the container.
+- `silence.enable` - Enable silence detection
+- `silence.disable` - Disable silence detection
+- `silence.status` - Check current status
 
 Changes take effect immediately without restarting the service.
 
@@ -237,6 +234,7 @@ The default silence detection parameters can be adjusted via environment variabl
 
 - `SILENCE_SWITCH_SECONDS`: Maximum silence duration in seconds (default: 15.0)
 - `AUDIO_VALID_SECONDS`: The minimum duration of continuous audio required for an input to be considered valid (default: 15.0)
+- `SILENCE_THRESHOLD`: Audio level in dB below which audio is considered silent (default: -40.0)
 
 ## Streaming to SRT Inputs
 
@@ -324,6 +322,62 @@ DME_SECONDARY_PASSWORD=secret
 DME_MOUNT_POINT=/live
 ```
 
+## Server Control
+
+The system supports runtime control via a Unix socket interface. When enabled, you can control Liquidsoap without restarting the container.
+
+### Enabling Server Control
+
+Set the following environment variables in your `.env` file:
+
+```bash
+SERVER_SOCKET_ENABLED=true
+SERVER_SOCKET_PATH=/tmp/liquidsoap.sock  # Optional, this is the default
+```
+
+### Available Commands
+
+Connect to the socket using socat:
+
+```bash
+docker exec -it liquidsoap socat - UNIX-CONNECT:/tmp/liquidsoap.sock
+```
+
+**Silence Detection Control**
+
+| Command            | Description                                       |
+| ------------------ | ------------------------------------------------- |
+| `silence.enable`   | Enable silence detection and automatic failover   |
+| `silence.disable`  | Disable silence detection (manual control only)   |
+| `silence.status`   | Show current silence detection state              |
+
+**Radio Source Control**
+
+| Command                        | Description                                              |
+| ------------------------------ | -------------------------------------------------------- |
+| `radio_prod.status`            | Show current mode (AUTO/FORCED) and active source        |
+| `radio_prod.skip`              | Force a transition to the next available source          |
+| `radio_prod.auto`              | Return to automatic source selection                     |
+| `radio_prod.force <source>`    | Force a specific source (studio_a, studio_b, fallback)   |
+
+### Example Usage
+
+```bash
+# Check current status (shows mode and active source)
+echo "radio_prod.status" | docker exec -i liquidsoap socat - UNIX-CONNECT:/tmp/liquidsoap.sock
+
+# Force studio_b as the active source
+echo "radio_prod.force studio_b" | docker exec -i liquidsoap socat - UNIX-CONNECT:/tmp/liquidsoap.sock
+
+# Return to automatic source selection
+echo "radio_prod.auto" | docker exec -i liquidsoap socat - UNIX-CONNECT:/tmp/liquidsoap.sock
+
+# Disable silence detection temporarily
+echo "silence.disable" | docker exec -i liquidsoap socat - UNIX-CONNECT:/tmp/liquidsoap.sock
+```
+
+**Note:** When a source is forced but unavailable (e.g., studio disconnected), the system automatically falls back to auto mode.
+
 ## Advanced Features
 
 ### Metadata Integration
@@ -385,7 +439,8 @@ docker run --rm -v "$PWD:/app" -w /app savonet/liquidsoap:latest liquidsoap -c c
 │   │   ├── studio_inputs.liq # SRT input handling
 │   │   ├── icecast_outputs.liq # Streaming outputs
 │   │   ├── stereotool.liq    # Audio processing
-│   │   └── dab_output.liq    # DAB+ encoding
+│   │   ├── dab_output.liq    # DAB+ encoding
+│   │   └── server_commands.liq # Runtime control via socket
 │   ├── zuidwest.liq          # ZuidWest FM configuration
 │   ├── rucphen.liq           # Radio Rucphen configuration
 │   └── bredanu.liq           # BredaNu configuration
