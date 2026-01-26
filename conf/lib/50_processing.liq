@@ -7,8 +7,13 @@ let stereotool_enabled = STEREOTOOL_LICENSE != ""
 # Create processed audio source
 # Returns StereoTool-processed audio if licensed, otherwise returns input unchanged
 def create_processed_audio(radio) =
-  if stereotool_enabled then
-    log("StereoTool enabled - processing audio", level=3)
+  if
+    stereotool_enabled
+  then
+    log(
+      "StereoTool enabled - processing audio",
+      level=3
+    )
 
     let processed =
       stereotool(
@@ -19,7 +24,9 @@ def create_processed_audio(radio) =
       )
 
     # Validate license and warn if invalid
-    if not processed.valid_license() then
+    if
+      not processed.valid_license()
+    then
       log(
         "WARNING: StereoTool license invalid! Audio will have artifacts. \
          Features: #{processed.unlincensed_used_features()}",

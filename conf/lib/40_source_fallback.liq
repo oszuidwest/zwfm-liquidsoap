@@ -3,7 +3,9 @@
 
 # Create fallback audio source - either from file or blank
 let fallback_audio =
-  if file.exists(EMERGENCY_AUDIO_PATH) then
+  if
+    file.exists(EMERGENCY_AUDIO_PATH)
+  then
     source.drop.metadata(id="fallback_file", single(EMERGENCY_AUDIO_PATH))
   else
     blank(id="fallback_blank")

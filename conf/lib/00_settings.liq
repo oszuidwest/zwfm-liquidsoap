@@ -17,7 +17,8 @@ let ICECAST_PORT = int_of_string(environment.get("ICECAST_PORT"))
 let ICECAST_SOURCE_PASSWORD = environment.get("ICECAST_SOURCE_PASSWORD")
 
 # Icecast mount points (default based on station ID)
-let ICECAST_MOUNT_BASE = environment.get("ICECAST_MOUNT_BASE", default=STATION_ID)
+let ICECAST_MOUNT_BASE =
+  environment.get("ICECAST_MOUNT_BASE", default=STATION_ID)
 let ICECAST_MOUNT_MP3 =
   environment.get("ICECAST_MOUNT_MP3", default="/#{ICECAST_MOUNT_BASE}.mp3")
 let ICECAST_MOUNT_AAC_LOW =

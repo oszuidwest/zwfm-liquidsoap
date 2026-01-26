@@ -13,7 +13,9 @@ let SERVER_SOCKET_PATH =
 # Register the main radio source for server commands
 def register_radio_source(s) =
   # Register source-specific commands only when socket is enabled
-  if SERVER_SOCKET_ENABLED then
+  if
+    SERVER_SOCKET_ENABLED
+  then
     let source_id = source.id(s)
 
     # Get status command
@@ -37,7 +39,9 @@ def register_radio_source(s) =
       fun (arg) ->
         begin
           let valid_sources = ["studio_a", "studio_b", "fallback"]
-          if list.mem(arg, valid_sources) then
+          if
+            list.mem(arg, valid_sources)
+          then
             set_forced_source(arg)
             "Forced source: #{arg}"
           else
@@ -71,8 +75,13 @@ def register_radio_source(s) =
 end
 
 # Initialize server socket if enabled
-if SERVER_SOCKET_ENABLED then
-  log("Server socket enabled at #{SERVER_SOCKET_PATH}", level=3)
+if
+  SERVER_SOCKET_ENABLED
+then
+  log(
+    "Server socket enabled at #{SERVER_SOCKET_PATH}",
+    level=3
+  )
   settings.server.socket := true
   settings.server.socket.path := SERVER_SOCKET_PATH
 
@@ -106,5 +115,8 @@ if SERVER_SOCKET_ENABLED then
       end
   )
 else
-  log("Server socket disabled", level=3)
+  log(
+    "Server socket disabled",
+    level=3
+  )
 end

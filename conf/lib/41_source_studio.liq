@@ -18,12 +18,29 @@ def create_studio_input(~id, ~port) =
 
   # Attach connection logging callbacks
   studio.on_connect(synchronous=true, fun () -> log_event(id, "connected"))
-  studio.on_disconnect(synchronous=true, fun () -> log_event(id, "disconnected"))
+  studio.on_disconnect(
+    synchronous=true,
+    fun () -> log_event(id, "disconnected")
+  )
 
   # Add silence detection with logging
   let detected = with_silence_detection(id="detect_#{id}", studio)
-  detected.on_blank(synchronous=true, fun () -> log_event(id, "silence detected"))
-  detected.on_noise(synchronous=true, fun () -> log_event(id, "audio resumed"))
+  detected.on_blank(
+    synchronous=true,
+    fun () ->
+      log_event(
+        id,
+        "silence detected"
+      )
+  )
+  detected.on_noise(
+    synchronous=true,
+    fun () ->
+      log_event(
+        id,
+        "audio resumed"
+      )
+  )
 
   # Strip silence to trigger fallback
   let stripped = with_silence_strip(id="strip_#{id}", detected)

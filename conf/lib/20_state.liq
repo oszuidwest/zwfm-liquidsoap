@@ -13,8 +13,11 @@ end
 
 # Set silence detection state
 def set_silence_detection(enabled) =
-  if enabled != silence_detection_enabled() then
-    let old_state = if silence_detection_enabled() then "enabled" else "disabled" end
+  if
+    enabled != silence_detection_enabled()
+  then
+    let old_state =
+      if silence_detection_enabled() then "enabled" else "disabled" end
     let new_state = if enabled then "enabled" else "disabled" end
     silence_detection_enabled := enabled
     log_state_change("silence_detection", old_state, new_state)
@@ -44,9 +47,17 @@ end
 # Set forced source (or empty string for auto mode)
 def set_forced_source(name) =
   forced_source_name := name
-  if name == "" then
-    log("Source selection: AUTO mode", level=3)
+  if
+    name == ""
+  then
+    log(
+      "Source selection: AUTO mode",
+      level=3
+    )
   else
-    log("Source selection: FORCED to #{name}", level=3)
+    log(
+      "Source selection: FORCED to #{name}",
+      level=3
+    )
   end
 end
