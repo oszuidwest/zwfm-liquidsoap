@@ -78,7 +78,7 @@ The system delivers audio through dual redundant pathways. Liquidsoap prioritize
 
 ### Requirements
 
-- Linux server (Ubuntu 24.04 or Debian 12 recommended)
+- Linux server (Ubuntu 24.04 or Debian 13 recommended)
 - Docker and Docker Compose installed
 - x86_64 or ARM64 architecture
 - At least 2GB RAM and 10GB disk space
@@ -416,7 +416,7 @@ docker compose up -d
 
 ## License
 
-Copyright 2025 Omroepstichting ZuidWest & Stichting BredaNu. This project is licensed under the MIT License. See [LICENSE](LICENSE) file for details.
+Copyright 2026 Omroepstichting ZuidWest & Stichting BredaNu. This project is licensed under the MIT License. See [LICENSE](LICENSE) file for details.
 
 ## Acknowledgments
 
