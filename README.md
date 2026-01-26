@@ -382,28 +382,6 @@ docker run --rm -v "$PWD:/app" -w /app savonet/liquidsoap:v2.4.2 liquidsoap -c c
 
 ## Development
 
-### Project Structure
-
-```
-├── conf/
-│   ├── lib/                       # Shared library modules (numbered for load order)
-│   │   ├── 00_settings.liq        # Environment variables and Liquidsoap settings
-│   │   ├── 10_logging.liq         # Logging utilities
-│   │   ├── 20_state.liq           # Runtime state management
-│   │   ├── 30_silence.liq         # Silence detection helpers
-│   │   ├── 40_source_fallback.liq # Emergency fallback source
-│   │   ├── 41_source_studio.liq   # SRT studio input factory
-│   │   ├── 50_processing.liq      # StereoTool audio processing
-│   │   ├── 60_output_icecast.liq  # Icecast output factory
-│   │   ├── 61_output_dab.liq      # DAB+ encoding output
-│   │   └── 90_server.liq          # Server socket commands
-│   ├── zuidwest.liq               # ZuidWest FM configuration
-│   ├── rucphen.liq                # Radio Rucphen configuration
-│   └── bredanu.liq                # BredaNu configuration
-├── docker-compose.yml             # Docker composition
-└── Dockerfile                     # Multi-arch container image
-```
-
 ### Building from Source
 
 ```bash
