@@ -132,8 +132,8 @@ This table lists ALL environment variables used in the system. Variables without
 | `STEREOTOOL_LICENSE`              | StereoTool license key                           | _(none)_                     | `ABC123DEF456...`                                               | `conf/lib/00_settings.liq`             | All             |
 | `STEREOTOOL_WEB_PORT`             | StereoTool web interface port                    | `8080`                       | `8080`                                                          | `conf/lib/00_settings.liq`             | All             |
 | **Fallback & Control**            |
-| `SERVER_SOCKET_ENABLED`           | Enable Unix socket for runtime control           | `false`                      | `true`                                                          | `conf/lib/90_server.liq`               | All             |
-| `SERVER_SOCKET_PATH`              | Unix socket file path                            | `/tmp/liquidsoap.sock`       | `/tmp/liquidsoap.sock`                                          | `conf/lib/90_server.liq`               | All             |
+| `SERVER_SOCKET_ENABLED`           | Enable Unix socket for runtime control           | `true`                       | `true`                                                          | `conf/lib/90_server.liq`               | All             |
+| `SERVER_SOCKET_PATH`              | Unix socket file path                            | `/tmp/liquidsoap/liquidsoap.sock` | `/tmp/liquidsoap/liquidsoap.sock`                          | `conf/lib/90_server.liq`               | All             |
 | `EMERGENCY_AUDIO_PATH`            | Fallback audio file when all inputs fail         | `/audio/fallback.ogg`        | `/audio/noodband.mp3`                                           | `conf/lib/00_settings.liq`             | All             |
 | `SILENCE_SWITCH_SECONDS`          | Max silence duration (seconds)                   | `15.0`                       | `20.0`                                                          | `conf/lib/00_settings.liq`             | All             |
 | `AUDIO_VALID_SECONDS`             | Min audio duration (seconds)                     | `15.0`                       | `10.0`                                                          | `conf/lib/00_settings.liq`             | All             |
@@ -223,7 +223,7 @@ Control silence detection via the server socket (requires `SERVER_SOCKET_ENABLED
 
 ```bash
 # Connect to the server socket
-socat - UNIX-CONNECT:/tmp/liquidsoap.sock
+socat - UNIX-CONNECT:/opt/liquidsoap/socket/liquidsoap.sock
 
 # Enable silence detection (default)
 silence.enable

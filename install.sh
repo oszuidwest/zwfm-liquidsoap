@@ -70,6 +70,7 @@ DIRECTORIES=(
   "${INSTALL_DIR}/scripts"
   "${INSTALL_DIR}/scripts/lib"
   "${INSTALL_DIR}/audio"
+  "${INSTALL_DIR}/socket"
 )
 OS_ARCH=$(dpkg --print-architecture)
 
@@ -212,8 +213,9 @@ Whitelist=/0
 EOL
 
 # Adjust ownership for the directories (the liquidsoap container runs as UID 100 and GID 101)
-echo -e "${BLUE}►► Setting ownership for ${STEREO_TOOL_INSTALL_DIR}...${NC}"
+echo -e "${BLUE}►► Setting ownership...${NC}"
 chown -R 100:101 "${STEREO_TOOL_INSTALL_DIR}"
+chown -R 100:101 "${INSTALL_DIR}/socket"
 
 echo -e "${GREEN}Installation completed successfully for ${STATION_CONFIG} configuration!${NC}"
 
@@ -235,8 +237,8 @@ echo -e ""
 echo -e "${YELLOW}To stop Liquidsoap:${NC}"
 echo -e "  ${CYAN}docker compose down${NC}"
 echo -e ""
-echo -e "${YELLOW}To control silence detection (requires SERVER_SOCKET_ENABLED=true):${NC}"
-echo -e "  ${CYAN}socat - UNIX-CONNECT:/tmp/liquidsoap.sock${NC}"
+echo -e "${YELLOW}To control silence detection:${NC}"
+echo -e "  ${CYAN}socat - UNIX-CONNECT:${INSTALL_DIR}/socket/liquidsoap.sock${NC}"
 echo -e "  Enable:  ${CYAN}silence.enable${NC}"
 echo -e "  Disable: ${CYAN}silence.disable${NC}"
 echo -e "  Status:  ${CYAN}silence.status${NC}"

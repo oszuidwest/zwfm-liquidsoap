@@ -1,12 +1,14 @@
 # Server socket commands for runtime control
-# Enable with SERVER_SOCKET_ENABLED=true in .env
-# Connect with: socat - UNIX-CONNECT:/tmp/liquidsoap.sock
+# Connect with: socat - UNIX-CONNECT:/tmp/liquidsoap/liquidsoap.sock
 
 # Server socket configuration
 let SERVER_SOCKET_ENABLED =
-  environment.get("SERVER_SOCKET_ENABLED", default="false") == "true"
+  environment.get("SERVER_SOCKET_ENABLED", default="true") == "true"
 let SERVER_SOCKET_PATH =
-  environment.get("SERVER_SOCKET_PATH", default="/tmp/liquidsoap.sock")
+  environment.get(
+    "SERVER_SOCKET_PATH",
+    default="/tmp/liquidsoap/liquidsoap.sock"
+  )
 
 # Register the main radio source for server commands
 def register_radio_source(s) =
