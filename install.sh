@@ -19,7 +19,8 @@ source "${FUNCTIONS_LIB_PATH}"
 
 # Define base variables
 INSTALL_DIR="/opt/liquidsoap"
-GITHUB_BASE="https://raw.githubusercontent.com/oszuidwest/zwfm-liquidsoap/main"
+GITHUB_BRANCH="${GITHUB_BRANCH:-main}"
+GITHUB_BASE="https://raw.githubusercontent.com/oszuidwest/zwfm-liquidsoap/${GITHUB_BRANCH}"
 
 # Docker files
 DOCKER_COMPOSE_URL="${GITHUB_BASE}/docker-compose.yml"
@@ -38,19 +39,25 @@ LIQUIDSOAP_ENV_PATH="${INSTALL_DIR}/.env"
 
 # Liquidsoap library files
 LIQUIDSOAP_LIB_DIR="${INSTALL_DIR}/scripts/lib"
-LIQUIDSOAP_LIB_DEFAULTS_URL="${GITHUB_BASE}/conf/lib/defaults.liq"
-LIQUIDSOAP_LIB_STUDIO_INPUTS_URL="${GITHUB_BASE}/conf/lib/studio_inputs.liq"
-LIQUIDSOAP_LIB_ICECAST_OUTPUTS_URL="${GITHUB_BASE}/conf/lib/icecast_outputs.liq"
-LIQUIDSOAP_LIB_STEREOTOOL_URL="${GITHUB_BASE}/conf/lib/stereotool.liq"
-LIQUIDSOAP_LIB_DAB_OUTPUT_URL="${GITHUB_BASE}/conf/lib/dab_output.liq"
+LIQUIDSOAP_LIB_URL_BASE="${GITHUB_BASE}/conf/lib"
+LIQUIDSOAP_LIB_FILES=(
+  "00_settings.liq"
+  "10_logging.liq"
+  "20_state.liq"
+  "30_silence.liq"
+  "40_source_fallback.liq"
+  "41_source_studio.liq"
+  "50_processing.liq"
+  "60_output_icecast.liq"
+  "61_output_dab.liq"
+  "90_server.liq"
+)
 
 AUDIO_FALLBACK_URL="https://upload.wikimedia.org/wikipedia/commons/6/66/Aaron_Dunn_-_Sonata_No_1_-_Movement_2.ogg"
 AUDIO_FALLBACK_PATH="${INSTALL_DIR}/audio/fallback.ogg"
 
-SILENCE_DETECTION_PATH="${INSTALL_DIR}/silence_detection.txt"
-
 # StereoTool configuration
-STEREO_TOOL_VERSION="1074"
+STEREO_TOOL_VERSION="1075"
 STEREO_TOOL_BASE_URL="https://download.thimeo.com"
 STEREO_TOOL_ZIP_URL="${STEREO_TOOL_BASE_URL}/Stereo_Tool_Generic_plugin_${STEREO_TOOL_VERSION}.zip"
 STEREO_TOOL_ZIP_PATH="/tmp/stereotool.zip"
@@ -63,6 +70,7 @@ DIRECTORIES=(
   "${INSTALL_DIR}/scripts"
   "${INSTALL_DIR}/scripts/lib"
   "${INSTALL_DIR}/audio"
+  "${INSTALL_DIR}/socket"
 )
 OS_ARCH=$(dpkg --print-architecture)
 
@@ -129,12 +137,12 @@ fi
 
 # Download library files
 echo -e "${BLUE}►► Downloading Liquidsoap library files...${NC}"
+LIB_DOWNLOAD_ARGS=()
+for lib_file in "${LIQUIDSOAP_LIB_FILES[@]}"; do
+  LIB_DOWNLOAD_ARGS+=("${LIQUIDSOAP_LIB_URL_BASE}/${lib_file}|${lib_file}")
+done
 if ! file_download -m "${LIQUIDSOAP_LIB_DIR}" "Liquidsoap library files" \
-  "${LIQUIDSOAP_LIB_DEFAULTS_URL}|defaults.liq" \
-  "${LIQUIDSOAP_LIB_STUDIO_INPUTS_URL}|studio_inputs.liq" \
-  "${LIQUIDSOAP_LIB_ICECAST_OUTPUTS_URL}|icecast_outputs.liq" \
-  "${LIQUIDSOAP_LIB_STEREOTOOL_URL}|stereotool.liq" \
-  "${LIQUIDSOAP_LIB_DAB_OUTPUT_URL}|dab_output.liq"; then
+  "${LIB_DOWNLOAD_ARGS[@]}"; then
   exit 1
 fi
 
@@ -149,8 +157,6 @@ fi
 if ! file_download "${AUDIO_FALLBACK_URL}" "${AUDIO_FALLBACK_PATH}" "audio fallback file" --backup; then
   exit 1
 fi
-
-echo "1" > $SILENCE_DETECTION_PATH
 
 # Always install StereoTool (whether it's used depends on STEREOTOOL_LICENSE_KEY in .env)
 echo -e "${BLUE}►► Installing StereoTool...${NC}"
@@ -207,8 +213,9 @@ Whitelist=/0
 EOL
 
 # Adjust ownership for the directories (the liquidsoap container runs as UID 100 and GID 101)
-echo -e "${BLUE}►► Setting ownership for ${STEREO_TOOL_INSTALL_DIR}...${NC}"
+echo -e "${BLUE}►► Setting ownership...${NC}"
 chown -R 100:101 "${STEREO_TOOL_INSTALL_DIR}"
+chown -R 100:101 "${INSTALL_DIR}/socket"
 
 echo -e "${GREEN}Installation completed successfully for ${STATION_CONFIG} configuration!${NC}"
 
@@ -230,11 +237,8 @@ echo -e ""
 echo -e "${YELLOW}To stop Liquidsoap:${NC}"
 echo -e "  ${CYAN}docker compose down${NC}"
 echo -e ""
-echo -e "${YELLOW}To control silence detection and fallback:${NC}"
-echo -e "  Enable:  ${CYAN}echo '1' > ${SILENCE_DETECTION_PATH}${NC}"
-echo -e "  Disable: ${CYAN}echo '0' > ${SILENCE_DETECTION_PATH}${NC}"
-echo -e ""
-echo -e "${YELLOW}When silence detection is disabled:${NC}"
-echo -e "  - Studio inputs will not switch on silence"
-echo -e "  - Emergency fallback file will not be used"
-echo -e "  - Silent studio streams will continue playing"
+echo -e "${YELLOW}To control silence detection:${NC}"
+echo -e "  ${CYAN}socat - UNIX-CONNECT:${INSTALL_DIR}/socket/liquidsoap.sock${NC}"
+echo -e "  Enable:  ${CYAN}silence.enable${NC}"
+echo -e "  Disable: ${CYAN}silence.disable${NC}"
+echo -e "  Status:  ${CYAN}silence.status${NC}"

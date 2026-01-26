@@ -83,6 +83,7 @@ The system delivers audio through dual redundant pathways. Liquidsoap prioritize
 - x86_64 or ARM64 architecture
 - At least 2GB RAM and 10GB disk space
 - Network connectivity for SRT streams
+- `socat` for runtime control via server socket (optional)
 
 ### Quick Install
 
@@ -99,7 +100,7 @@ After installation, edit the environment file at `/opt/liquidsoap/.env` to confi
 - `.env.rucphen.example` - Configuration with DME output
 - `.env.bredanu.example` - Configuration with DME output
 
-Copy the appropriate example file to `.env` and customize it for your station. Most configuration variables are centralized in `conf/lib/defaults.liq`. Station-specific files only contain DME configuration (for Rucphen/BredaNu).
+Copy the appropriate example file to `.env` and customize it for your station. Most configuration variables are centralized in `conf/lib/00_settings.liq`. Station-specific files only contain DME configuration (for Rucphen/BredaNu).
 
 ## Environment Variables Reference
 
@@ -108,38 +109,39 @@ This table lists ALL environment variables used in the system. Variables without
 | Variable                          | Description                                      | Default                      | Example                                                         | Used In                                | Station         |
 | --------------------------------- | ------------------------------------------------ | ---------------------------- | --------------------------------------------------------------- | -------------------------------------- | --------------- |
 | **Station Configuration**         |
-| `STATION_ID`                      | Unique station identifier (lowercase, no spaces) | _(required)_                 | `zuidwest`                                                      | `conf/lib/defaults.liq`                | All             |
-| `STATION_NAME`                    | Full station name for metadata                   | _(required)_                 | `ZuidWest FM`                                                   | `conf/lib/defaults.liq`                | All             |
+| `STATION_ID`                      | Unique station identifier (lowercase, no spaces) | _(required)_                 | `zuidwest`                                                      | `conf/lib/00_settings.liq`             | All             |
+| `STATION_NAME`                    | Full station name for metadata                   | _(required)_                 | `ZuidWest FM`                                                   | `conf/lib/00_settings.liq`             | All             |
 | **Icecast Configuration**         |
-| `ICECAST_HOST`                    | Icecast server hostname                          | _(required)_                 | `icecast.zuidwest.cloud`                                        | `conf/lib/defaults.liq`                | All             |
-| `ICECAST_PORT`                    | Icecast server port                              | _(required)_                 | `8000`                                                          | `conf/lib/defaults.liq`                | All             |
-| `ICECAST_SOURCE_PASSWORD`         | Icecast source password                          | _(required)_                 | `s3cur3p4ss`                                                    | `conf/lib/defaults.liq`                | All             |
-| `ICECAST_MOUNT_BASE`              | Base mount point name                            | `STATION_ID`                 | `zuidwest`                                                      | `conf/lib/defaults.liq`                | All             |
+| `ICECAST_HOST`                    | Icecast server hostname                          | _(required)_                 | `icecast.zuidwest.cloud`                                        | `conf/lib/00_settings.liq`             | All             |
+| `ICECAST_PORT`                    | Icecast server port                              | _(required)_                 | `8000`                                                          | `conf/lib/00_settings.liq`             | All             |
+| `ICECAST_SOURCE_PASSWORD`         | Icecast source password                          | _(required)_                 | `s3cur3p4ss`                                                    | `conf/lib/00_settings.liq`             | All             |
+| `ICECAST_MOUNT_BASE`              | Base mount point name                            | `STATION_ID`                 | `zuidwest`                                                      | `conf/lib/00_settings.liq`             | All             |
 | **Stream Mount Points**           |
-| `ICECAST_MOUNT_MP3`               | MP3 stream mount                                 | `/#{ICECAST_MOUNT_BASE}.mp3` | `/zuidwest.mp3`                                                 | `conf/lib/defaults.liq`                | All             |
-| `ICECAST_MOUNT_AAC_LOW`           | AAC mobile stream mount                          | `/#{ICECAST_MOUNT_BASE}.aac` | `/zuidwest.aac`                                                 | `conf/lib/defaults.liq`                | All             |
-| `ICECAST_MOUNT_AAC_HIGH`          | AAC STL stream mount                             | `/#{ICECAST_MOUNT_BASE}.stl` | `/zuidwest.stl`                                                 | `conf/lib/defaults.liq`                | All             |
+| `ICECAST_MOUNT_MP3`               | MP3 stream mount                                 | `/#{ICECAST_MOUNT_BASE}.mp3` | `/zuidwest.mp3`                                                 | `conf/lib/00_settings.liq`             | All             |
+| `ICECAST_MOUNT_AAC_LOW`           | AAC mobile stream mount                          | `/#{ICECAST_MOUNT_BASE}.aac` | `/zuidwest.aac`                                                 | `conf/lib/00_settings.liq`             | All             |
+| `ICECAST_MOUNT_AAC_HIGH`          | AAC STL stream mount                             | `/#{ICECAST_MOUNT_BASE}.stl` | `/zuidwest.stl`                                                 | `conf/lib/00_settings.liq`             | All             |
 | **Stream Bitrates**               |
-| `ICECAST_BITRATE_MP3`             | MP3 stream bitrate (kbps)                        | `192`                        | `256`                                                           | `conf/lib/defaults.liq`                | All             |
-| `ICECAST_BITRATE_AAC_LOW`         | Low AAC bitrate (kbps)                           | `96`                         | `64`                                                            | `conf/lib/defaults.liq`                | All             |
-| `ICECAST_BITRATE_AAC_HIGH`        | High AAC bitrate (kbps)                          | `576`                        | `320`                                                           | `conf/lib/defaults.liq`                | All             |
+| `ICECAST_BITRATE_MP3`             | MP3 stream bitrate (kbps)                        | `192`                        | `256`                                                           | `conf/lib/00_settings.liq`             | All             |
+| `ICECAST_BITRATE_AAC_LOW`         | Low AAC bitrate (kbps)                           | `96`                         | `64`                                                            | `conf/lib/00_settings.liq`             | All             |
+| `ICECAST_BITRATE_AAC_HIGH`        | High AAC bitrate (kbps)                          | `576`                        | `320`                                                           | `conf/lib/00_settings.liq`             | All             |
 | **SRT Studio Inputs**             |
-| `SRT_PASSPHRASE`                  | SRT encryption passphrase                        | _(required)_                 | `alpha-bravo-charlie-delta`                                     | `conf/lib/studio_inputs.liq`           | All             |
-| `SRT_PORT_PRIMARY`                | Primary SRT listening port                       | `8888`                       | `8888`                                                          | `conf/lib/defaults.liq`                | All             |
-| `SRT_PORT_SECONDARY`              | Secondary SRT listening port                     | `9999`                       | `9999`                                                          | `conf/lib/defaults.liq`                | All             |
+| `SRT_PASSPHRASE`                  | SRT encryption passphrase                        | _(required)_                 | `alpha-bravo-charlie-delta`                                     | `conf/lib/00_settings.liq`             | All             |
+| `SRT_PORT_PRIMARY`                | Primary SRT listening port                       | `8888`                       | `8888`                                                          | `conf/lib/00_settings.liq`             | All             |
+| `SRT_PORT_SECONDARY`              | Secondary SRT listening port                     | `9999`                       | `9999`                                                          | `conf/lib/00_settings.liq`             | All             |
 | **Audio Processing**              |
-| `STEREOTOOL_LICENSE`              | StereoTool license key                           | _(none)_                     | `ABC123DEF456...`                                               | `conf/lib/stereotool.liq`              | All             |
-| `STEREOTOOL_WEB_PORT`             | StereoTool web interface port                    | `8080`                       | `8080`                                                          | `conf/lib/stereotool.liq`              | All             |
+| `STEREOTOOL_LICENSE`              | StereoTool license key                           | _(none)_                     | `ABC123DEF456...`                                               | `conf/lib/00_settings.liq`             | All             |
+| `STEREOTOOL_WEB_PORT`             | StereoTool web interface port                    | `8080`                       | `8080`                                                          | `conf/lib/00_settings.liq`             | All             |
 | **Fallback & Control**            |
-| `EMERGENCY_AUDIO_PATH`            | Fallback audio file when all inputs fail         | `/audio/fallback.ogg`        | `/audio/noodband.mp3`                                           | `conf/lib/defaults.liq`                | All             |
-| `SILENCE_CONTROL_PATH`            | Silence detection control file                   | `/silence_detection.txt`     | `/opt/silence.txt`                                              | `conf/lib/defaults.liq`                | All             |
-| `SILENCE_SWITCH_SECONDS`          | Max silence duration (seconds)                   | `15.0`                       | `20.0`                                                          | `conf/lib/defaults.liq`                | All             |
-| `AUDIO_VALID_SECONDS`             | Min audio duration (seconds)                     | `15.0`                       | `10.0`                                                          | `conf/lib/defaults.liq`                | All             |
+| `SERVER_SOCKET_ENABLED`           | Enable Unix socket for runtime control           | `true`                       | `true`                                                          | `conf/lib/90_server.liq`               | All             |
+| `SERVER_SOCKET_PATH`              | Unix socket file path                            | `/tmp/liquidsoap/liquidsoap.sock` | `/tmp/liquidsoap/liquidsoap.sock`                          | `conf/lib/90_server.liq`               | All             |
+| `EMERGENCY_AUDIO_PATH`            | Fallback audio file when all inputs fail         | `/audio/fallback.ogg`        | `/audio/noodband.mp3`                                           | `conf/lib/00_settings.liq`             | All             |
+| `SILENCE_SWITCH_SECONDS`          | Max silence duration (seconds)                   | `15.0`                       | `20.0`                                                          | `conf/lib/00_settings.liq`             | All             |
+| `AUDIO_VALID_SECONDS`             | Min audio duration (seconds)                     | `15.0`                       | `10.0`                                                          | `conf/lib/00_settings.liq`             | All             |
 | **DAB+ Configuration (Optional)** |
-| `DAB_BITRATE`                     | DAB+ encoder bitrate                             | _(none)_                     | `128`                                                           | `conf/lib/defaults.liq`                | All             |
-| `DAB_EDI_DESTINATIONS`            | DAB+ EDI destination(s)                          | _(none)_                     | `tcp://dab-mux.local:9001` or `tcp://dab1:9001,tcp://dab2:9002` | `conf/lib/defaults.liq`                | All             |
-| `DAB_METADATA_SIZE`               | PAD size in bytes (0-196)                        | `8` when socket is set       | `16`                                                            | `conf/lib/defaults.liq`                | All             |
-| `DAB_METADATA_SOCKET`             | PAD metadata socket path                         | _(none)_                     | `padenc.sock`                                                   | `conf/lib/defaults.liq`                | All             |
+| `DAB_BITRATE`                     | DAB+ encoder bitrate                             | _(none)_                     | `128`                                                           | `conf/lib/00_settings.liq`             | All             |
+| `DAB_EDI_DESTINATIONS`            | DAB+ EDI destination(s)                          | _(none)_                     | `tcp://dab-mux.local:9001` or `tcp://dab1:9001,tcp://dab2:9002` | `conf/lib/00_settings.liq`             | All             |
+| `DAB_METADATA_SIZE`               | PAD size in bytes (0-196)                        | `8` when socket is set       | `16`                                                            | `conf/lib/00_settings.liq`             | All             |
+| `DAB_METADATA_SOCKET`             | PAD metadata socket path                         | _(none)_                     | `padenc.sock`                                                   | `conf/lib/00_settings.liq`             | All             |
 | **DME Configuration**             |
 | `DME_PRIMARY_HOST`                | Primary DME server                               | _(required)_                 | `ingest1.dme.nl`                                                | `conf/rucphen.liq`, `conf/bredanu.liq` | Rucphen/BredaNu |
 | `DME_PRIMARY_PORT`                | Primary DME port                                 | _(required)_                 | `8010`                                                          | `conf/rucphen.liq`, `conf/bredanu.liq` | Rucphen/BredaNu |
@@ -161,7 +163,7 @@ This table lists ALL environment variables used in the system. Variables without
 - **Station column**: "All" means used by all stations, "Rucphen/BredaNu" means used only by stations with DME
 - **Default conventions**: `#{VARIABLE}` means the value is interpolated from another variable
 - **PAD sizes**: Valid range 0-196 bytes. Recommendation to use as small of a METADATA_SIZE as possible. 8 bytes is enough to transmit a logo in a couple of seconds (ofcourse, how smaller the filesize the faster the logo will transmit). If you're using artwork, you might need to consider using a bigger METADATA_SIZE.
-- **File locations**: Most configuration variables are centralized in `conf/lib/defaults.liq`
+- **File locations**: Most configuration variables are centralized in `conf/lib/00_settings.liq`
 - **Station-specific files**: Only contain DME configuration (for Rucphen/BredaNu) and station-specific logic
 
 ### Running with Docker
@@ -195,6 +197,32 @@ StereoTool is always included in the installation. When enabled (by providing a 
 
 **Note**: The `output.dummy()` call is required to activate StereoTool's processing chain, even though this output isn't used directly.
 
+## Runtime Control
+
+The system provides a Unix socket for runtime control without restarting the service. The socket is enabled by default (`SERVER_SOCKET_ENABLED=true`).
+
+### Connecting
+
+```bash
+socat - UNIX-CONNECT:/opt/liquidsoap/socket/liquidsoap.sock
+```
+
+### Available Commands
+
+| Command | Description |
+|---------|-------------|
+| `radio_prod.status` | Show current mode (auto/forced) and active source |
+| `radio_prod.force studio_a` | Force Studio A as active source |
+| `radio_prod.force studio_b` | Force Studio B as active source |
+| `radio_prod.force fallback` | Force emergency fallback |
+| `radio_prod.auto` | Return to automatic fallback mode |
+| `radio_prod.skip` | Skip to next available source |
+| `silence.enable` | Enable silence detection |
+| `silence.disable` | Disable silence detection |
+| `silence.status` | Show silence detection state |
+
+All commands take effect immediately.
+
 ## Silence Detection
 
 The system includes automatic silence detection that monitors studio inputs and manages fallback behavior. This feature is **enabled by default**.
@@ -217,19 +245,7 @@ When silence detection is **disabled**:
 
 ### Configuration
 
-Control silence detection via the control file:
-
-```bash
-# Enable silence detection (default)
-echo '1' > /silence_detection.txt
-
-# Disable silence detection
-echo '0' > /silence_detection.txt
-```
-
-Note: The actual path depends on your container volume mapping. By default, this file is located at `/silence_detection.txt` inside the container.
-
-Changes take effect immediately without restarting the service.
+Toggle silence detection at runtime using the `silence.enable`, `silence.disable`, and `silence.status` socket commands (see [Runtime Control](#runtime-control)).
 
 ### Silence thresholds
 
@@ -371,28 +387,10 @@ docker compose ps
 docker compose restart
 
 # Validate configuration
-docker run --rm -v "$PWD:/app" -w /app savonet/liquidsoap:latest liquidsoap -c conf/*.liq
+docker run --rm -v "$PWD:/app" -w /app savonet/liquidsoap:v2.4.2 liquidsoap -c conf/*.liq
 ```
 
 ## Development
-
-### Project Structure
-
-```
-├── conf/
-│   ├── lib/                  # Shared library modules
-│   │   ├── defaults.liq      # Environment variables and defaults
-│   │   ├── studio_inputs.liq # SRT input handling
-│   │   ├── icecast_outputs.liq # Streaming outputs
-│   │   ├── stereotool.liq    # Audio processing
-│   │   └── dab_output.liq    # DAB+ encoding
-│   ├── zuidwest.liq          # ZuidWest FM configuration
-│   ├── rucphen.liq           # Radio Rucphen configuration
-│   └── bredanu.liq           # BredaNu configuration
-├── docker-compose.yml        # Main Docker composition
-├── docker-compose.*.yml      # Station-specific compositions
-└── Dockerfile                # Multi-arch container image
-```
 
 ### Building from Source
 
@@ -413,7 +411,7 @@ docker compose up -d
 1. Fork the repository
 2. Create a feature branch
 3. Make your changes
-4. Run syntax validation: `docker run --rm -v "$PWD:/app" -w /app savonet/liquidsoap:latest liquidsoap -c conf/*.liq`
+4. Run syntax validation: `docker run --rm -v "$PWD:/app" -w /app savonet/liquidsoap:v2.4.2 liquidsoap -c conf/*.liq`
 5. Submit a pull request
 
 ## License
