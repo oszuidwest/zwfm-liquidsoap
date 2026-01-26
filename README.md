@@ -197,6 +197,32 @@ StereoTool is always included in the installation. When enabled (by providing a 
 
 **Note**: The `output.dummy()` call is required to activate StereoTool's processing chain, even though this output isn't used directly.
 
+## Runtime Control
+
+The system provides a Unix socket for runtime control without restarting the service. The socket is enabled by default (`SERVER_SOCKET_ENABLED=true`).
+
+### Connecting
+
+```bash
+socat - UNIX-CONNECT:/opt/liquidsoap/socket/liquidsoap.sock
+```
+
+### Available Commands
+
+| Command | Description |
+|---------|-------------|
+| `radio_prod.status` | Show current mode (auto/forced) and active source |
+| `radio_prod.force studio_a` | Force Studio A as active source |
+| `radio_prod.force studio_b` | Force Studio B as active source |
+| `radio_prod.force fallback` | Force emergency fallback |
+| `radio_prod.auto` | Return to automatic fallback mode |
+| `radio_prod.skip` | Skip to next available source |
+| `silence.enable` | Enable silence detection |
+| `silence.disable` | Disable silence detection |
+| `silence.status` | Show silence detection state |
+
+All commands take effect immediately.
+
 ## Silence Detection
 
 The system includes automatic silence detection that monitors studio inputs and manages fallback behavior. This feature is **enabled by default**.
@@ -219,23 +245,7 @@ When silence detection is **disabled**:
 
 ### Configuration
 
-Control silence detection via the server socket (enabled by default):
-
-```bash
-# Connect to the server socket
-socat - UNIX-CONNECT:/opt/liquidsoap/socket/liquidsoap.sock
-
-# Enable silence detection (default)
-silence.enable
-
-# Disable silence detection
-silence.disable
-
-# Check current status
-silence.status
-```
-
-Changes take effect immediately without restarting the service.
+Toggle silence detection at runtime using the `silence.enable`, `silence.disable`, and `silence.status` socket commands (see [Runtime Control](#runtime-control)).
 
 ### Silence thresholds
 
