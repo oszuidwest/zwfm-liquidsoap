@@ -100,7 +100,7 @@ After installation, edit the environment file at `/opt/liquidsoap/.env` to confi
 - `.env.rucphen.example` - Configuration with DME output
 - `.env.bredanu.example` - Configuration with DME output
 
-Copy the appropriate example file to `.env` and customize it for your station. Most configuration variables are centralized in `conf/lib/defaults.liq`. Station-specific files only contain DME configuration (for Rucphen/BredaNu).
+Copy the appropriate example file to `.env` and customize it for your station. Most configuration variables are centralized in `conf/lib/00_settings.liq`. Station-specific files only contain DME configuration (for Rucphen/BredaNu).
 
 ## Environment Variables Reference
 
@@ -219,7 +219,7 @@ When silence detection is **disabled**:
 
 ### Configuration
 
-Control silence detection via the server socket (requires `SERVER_SOCKET_ENABLED=true`):
+Control silence detection via the server socket (enabled by default):
 
 ```bash
 # Connect to the server socket
@@ -377,7 +377,7 @@ docker compose ps
 docker compose restart
 
 # Validate configuration
-docker run --rm -v "$PWD:/app" -w /app savonet/liquidsoap:latest liquidsoap -c conf/*.liq
+docker run --rm -v "$PWD:/app" -w /app savonet/liquidsoap:v2.4.2 liquidsoap -c conf/*.liq
 ```
 
 ## Development
@@ -386,18 +386,22 @@ docker run --rm -v "$PWD:/app" -w /app savonet/liquidsoap:latest liquidsoap -c c
 
 ```
 ├── conf/
-│   ├── lib/                  # Shared library modules
-│   │   ├── defaults.liq      # Environment variables and defaults
-│   │   ├── studio_inputs.liq # SRT input handling
-│   │   ├── icecast_outputs.liq # Streaming outputs
-│   │   ├── stereotool.liq    # Audio processing
-│   │   └── dab_output.liq    # DAB+ encoding
-│   ├── zuidwest.liq          # ZuidWest FM configuration
-│   ├── rucphen.liq           # Radio Rucphen configuration
-│   └── bredanu.liq           # BredaNu configuration
-├── docker-compose.yml        # Main Docker composition
-├── docker-compose.*.yml      # Station-specific compositions
-└── Dockerfile                # Multi-arch container image
+│   ├── lib/                       # Shared library modules (numbered for load order)
+│   │   ├── 00_settings.liq        # Environment variables and Liquidsoap settings
+│   │   ├── 10_logging.liq         # Logging utilities
+│   │   ├── 20_state.liq           # Runtime state management
+│   │   ├── 30_silence.liq         # Silence detection helpers
+│   │   ├── 40_source_fallback.liq # Emergency fallback source
+│   │   ├── 41_source_studio.liq   # SRT studio input factory
+│   │   ├── 50_processing.liq      # StereoTool audio processing
+│   │   ├── 60_output_icecast.liq  # Icecast output factory
+│   │   ├── 61_output_dab.liq      # DAB+ encoding output
+│   │   └── 90_server.liq          # Server socket commands
+│   ├── zuidwest.liq               # ZuidWest FM configuration
+│   ├── rucphen.liq                # Radio Rucphen configuration
+│   └── bredanu.liq                # BredaNu configuration
+├── docker-compose.yml             # Docker composition
+└── Dockerfile                     # Multi-arch container image
 ```
 
 ### Building from Source
@@ -419,7 +423,7 @@ docker compose up -d
 1. Fork the repository
 2. Create a feature branch
 3. Make your changes
-4. Run syntax validation: `docker run --rm -v "$PWD:/app" -w /app savonet/liquidsoap:latest liquidsoap -c conf/*.liq`
+4. Run syntax validation: `docker run --rm -v "$PWD:/app" -w /app savonet/liquidsoap:v2.4.2 liquidsoap -c conf/*.liq`
 5. Submit a pull request
 
 ## License
