@@ -56,8 +56,6 @@ LIQUIDSOAP_LIB_FILES=(
 AUDIO_FALLBACK_URL="https://upload.wikimedia.org/wikipedia/commons/6/66/Aaron_Dunn_-_Sonata_No_1_-_Movement_2.ogg"
 AUDIO_FALLBACK_PATH="${INSTALL_DIR}/audio/fallback.ogg"
 
-SILENCE_DETECTION_PATH="${INSTALL_DIR}/silence_detection.txt"
-
 # StereoTool configuration
 STEREO_TOOL_VERSION="1075"
 STEREO_TOOL_BASE_URL="https://download.thimeo.com"
@@ -159,8 +157,6 @@ if ! file_download "${AUDIO_FALLBACK_URL}" "${AUDIO_FALLBACK_PATH}" "audio fallb
   exit 1
 fi
 
-echo "1" > $SILENCE_DETECTION_PATH
-
 # Always install StereoTool (whether it's used depends on STEREOTOOL_LICENSE_KEY in .env)
 echo -e "${BLUE}►► Installing StereoTool...${NC}"
 apt_install --silent unzip
@@ -239,11 +235,8 @@ echo -e ""
 echo -e "${YELLOW}To stop Liquidsoap:${NC}"
 echo -e "  ${CYAN}docker compose down${NC}"
 echo -e ""
-echo -e "${YELLOW}To control silence detection and fallback:${NC}"
-echo -e "  Enable:  ${CYAN}echo '1' > ${SILENCE_DETECTION_PATH}${NC}"
-echo -e "  Disable: ${CYAN}echo '0' > ${SILENCE_DETECTION_PATH}${NC}"
-echo -e ""
-echo -e "${YELLOW}When silence detection is disabled:${NC}"
-echo -e "  - Studio inputs will not switch on silence"
-echo -e "  - Emergency fallback file will not be used"
-echo -e "  - Silent studio streams will continue playing"
+echo -e "${YELLOW}To control silence detection (requires SERVER_SOCKET_ENABLED=true):${NC}"
+echo -e "  ${CYAN}socat - UNIX-CONNECT:/tmp/liquidsoap.sock${NC}"
+echo -e "  Enable:  ${CYAN}silence.enable${NC}"
+echo -e "  Disable: ${CYAN}silence.disable${NC}"
+echo -e "  Status:  ${CYAN}silence.status${NC}"

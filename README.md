@@ -83,6 +83,7 @@ The system delivers audio through dual redundant pathways. Liquidsoap prioritize
 - x86_64 or ARM64 architecture
 - At least 2GB RAM and 10GB disk space
 - Network connectivity for SRT streams
+- `socat` for runtime control via server socket (optional)
 
 ### Quick Install
 
@@ -132,7 +133,6 @@ This table lists ALL environment variables used in the system. Variables without
 | `STEREOTOOL_WEB_PORT`             | StereoTool web interface port                    | `8080`                       | `8080`                                                          | `conf/lib/stereotool.liq`              | All             |
 | **Fallback & Control**            |
 | `EMERGENCY_AUDIO_PATH`            | Fallback audio file when all inputs fail         | `/audio/fallback.ogg`        | `/audio/noodband.mp3`                                           | `conf/lib/defaults.liq`                | All             |
-| `SILENCE_CONTROL_PATH`            | Silence detection control file                   | `/silence_detection.txt`     | `/opt/silence.txt`                                              | `conf/lib/defaults.liq`                | All             |
 | `SILENCE_SWITCH_SECONDS`          | Max silence duration (seconds)                   | `15.0`                       | `20.0`                                                          | `conf/lib/defaults.liq`                | All             |
 | `AUDIO_VALID_SECONDS`             | Min audio duration (seconds)                     | `15.0`                       | `10.0`                                                          | `conf/lib/defaults.liq`                | All             |
 | **DAB+ Configuration (Optional)** |
@@ -217,17 +217,21 @@ When silence detection is **disabled**:
 
 ### Configuration
 
-Control silence detection via the control file:
+Control silence detection via the server socket (requires `SERVER_SOCKET_ENABLED=true`):
 
 ```bash
+# Connect to the server socket
+socat - UNIX-CONNECT:/tmp/liquidsoap.sock
+
 # Enable silence detection (default)
-echo '1' > /silence_detection.txt
+silence.enable
 
 # Disable silence detection
-echo '0' > /silence_detection.txt
-```
+silence.disable
 
-Note: The actual path depends on your container volume mapping. By default, this file is located at `/silence_detection.txt` inside the container.
+# Check current status
+silence.status
+```
 
 Changes take effect immediately without restarting the service.
 

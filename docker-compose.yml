@@ -7,7 +7,6 @@ services:
     volumes:
       - ./scripts:/scripts
       - ./audio:/audio
-      - ./silence_detection.txt:/silence_detection.txt
       - ./stereotool:/var/cache/liquidsoap/
     environment:
       - TZ=Europe/Amsterdam
