@@ -43,7 +43,7 @@ let radio =
 # Register radio source for server control commands
 register_radio_source(radio)
 
-# Create processed audio source (used only if StereoTool is enabled)
+# Create processed audio source
 let radio_processed = create_processed_audio(radio)
 
 # Output streams - ZuidWest uses unprocessed audio
