@@ -15,7 +15,7 @@ def create_processed_audio(radio) =
         library_file="/var/cache/liquidsoap/st_plugin.so",
         license_key=STEREOTOOL_LICENSE,
         preset="/var/cache/liquidsoap/.st_plugin.so.rc",
-        radio
+        mksafe(radio)
       )
 
     # Validate license and warn if invalid
