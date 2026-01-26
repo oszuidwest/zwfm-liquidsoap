@@ -39,11 +39,19 @@ LIQUIDSOAP_ENV_PATH="${INSTALL_DIR}/.env"
 
 # Liquidsoap library files
 LIQUIDSOAP_LIB_DIR="${INSTALL_DIR}/scripts/lib"
-LIQUIDSOAP_LIB_DEFAULTS_URL="${GITHUB_BASE}/conf/lib/defaults.liq"
-LIQUIDSOAP_LIB_STUDIO_INPUTS_URL="${GITHUB_BASE}/conf/lib/studio_inputs.liq"
-LIQUIDSOAP_LIB_ICECAST_OUTPUTS_URL="${GITHUB_BASE}/conf/lib/icecast_outputs.liq"
-LIQUIDSOAP_LIB_STEREOTOOL_URL="${GITHUB_BASE}/conf/lib/stereotool.liq"
-LIQUIDSOAP_LIB_DAB_OUTPUT_URL="${GITHUB_BASE}/conf/lib/dab_output.liq"
+LIQUIDSOAP_LIB_URL_BASE="${GITHUB_BASE}/conf/lib"
+LIQUIDSOAP_LIB_FILES=(
+  "00_settings.liq"
+  "10_logging.liq"
+  "20_state.liq"
+  "30_silence.liq"
+  "40_source_fallback.liq"
+  "41_source_studio.liq"
+  "50_processing.liq"
+  "60_output_icecast.liq"
+  "61_output_dab.liq"
+  "90_server.liq"
+)
 
 AUDIO_FALLBACK_URL="https://upload.wikimedia.org/wikipedia/commons/6/66/Aaron_Dunn_-_Sonata_No_1_-_Movement_2.ogg"
 AUDIO_FALLBACK_PATH="${INSTALL_DIR}/audio/fallback.ogg"
@@ -130,12 +138,12 @@ fi
 
 # Download library files
 echo -e "${BLUE}►► Downloading Liquidsoap library files...${NC}"
+LIB_DOWNLOAD_ARGS=()
+for lib_file in "${LIQUIDSOAP_LIB_FILES[@]}"; do
+  LIB_DOWNLOAD_ARGS+=("${LIQUIDSOAP_LIB_URL_BASE}/${lib_file}|${lib_file}")
+done
 if ! file_download -m "${LIQUIDSOAP_LIB_DIR}" "Liquidsoap library files" \
-  "${LIQUIDSOAP_LIB_DEFAULTS_URL}|defaults.liq" \
-  "${LIQUIDSOAP_LIB_STUDIO_INPUTS_URL}|studio_inputs.liq" \
-  "${LIQUIDSOAP_LIB_ICECAST_OUTPUTS_URL}|icecast_outputs.liq" \
-  "${LIQUIDSOAP_LIB_STEREOTOOL_URL}|stereotool.liq" \
-  "${LIQUIDSOAP_LIB_DAB_OUTPUT_URL}|dab_output.liq"; then
+  "${LIB_DOWNLOAD_ARGS[@]}"; then
   exit 1
 fi
 
