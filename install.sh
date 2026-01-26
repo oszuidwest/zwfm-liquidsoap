@@ -19,7 +19,8 @@ source "${FUNCTIONS_LIB_PATH}"
 
 # Define base variables
 INSTALL_DIR="/opt/liquidsoap"
-GITHUB_BASE="https://raw.githubusercontent.com/oszuidwest/zwfm-liquidsoap/main"
+GITHUB_BRANCH="${GITHUB_BRANCH:-main}"
+GITHUB_BASE="https://raw.githubusercontent.com/oszuidwest/zwfm-liquidsoap/${GITHUB_BRANCH}"
 
 # Docker files
 DOCKER_COMPOSE_URL="${GITHUB_BASE}/docker-compose.yml"
