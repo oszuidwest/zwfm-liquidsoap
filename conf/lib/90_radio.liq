@@ -19,7 +19,7 @@ def register_radio_commands(s, ~sources) =
         # In auto mode, the first ready source in priority order is active
         let active = ref("unknown")
         list.iter(
-          fun(item) ->
+          fun (item) ->
             begin
               let (name, src) = item
               if
@@ -47,8 +47,12 @@ def register_radio_commands(s, ~sources) =
     )
 
     # Derive valid source names from the sources list
-    let source_names = list.map(fun(item) -> fst(item), sources)
-    let source_names_str = string.concat(separator=", ", source_names)
+    let source_names = list.map(fun (item) -> fst(item), sources)
+    let source_names_str =
+      string.concat(
+        separator=", ",
+        source_names
+      )
 
     # Force specific source command
     server.register(
@@ -96,18 +100,14 @@ end
 # Returns the wired radio source
 def create_radio(~sources) =
   # Build auto fallback chain from source priority order
-  let source_list = list.map(fun(item) -> snd(item), sources)
+  let source_list = list.map(fun (item) -> snd(item), sources)
   let auto_fallback =
-    fallback(
-      id="auto_fallback",
-      track_sensitive=false,
-      source_list
-    )
+    fallback(id="auto_fallback", track_sensitive=false, source_list)
 
   # Build switch entries: one force predicate per source + auto fallback
   let forced_entries =
     list.map(
-      fun(item) ->
+      fun (item) ->
         begin
           let (name, src) = item
           ({should_use_source(name)}, src)
