@@ -20,6 +20,7 @@ def create_processed_audio(radio) =
         library_file="/var/cache/liquidsoap/st_plugin.so",
         license_key=STEREOTOOL_LICENSE,
         preset="/var/cache/liquidsoap/.st_plugin.so.rc",
+        active=true,
         mksafe(radio)
       )
 
@@ -34,8 +35,6 @@ def create_processed_audio(radio) =
       )
     end
 
-    # Dummy output required to activate StereoTool processing chain
-    output.dummy(processed)
     processed
   else
     log(

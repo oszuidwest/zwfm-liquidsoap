@@ -50,7 +50,8 @@ LIQUIDSOAP_LIB_FILES=(
   "50_processing.liq"
   "60_output_icecast.liq"
   "61_output_dab.liq"
-  "90_server.liq"
+  "80_server.liq"
+  "90_radio.liq"
 )
 
 AUDIO_FALLBACK_URL="https://upload.wikimedia.org/wikipedia/commons/6/66/Aaron_Dunn_-_Sonata_No_1_-_Movement_2.ogg"

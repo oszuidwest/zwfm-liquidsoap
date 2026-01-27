@@ -11,7 +11,8 @@
 %include "lib/50_processing.liq"
 %include "lib/60_output_icecast.liq"
 %include "lib/61_output_dab.liq"
-%include "lib/90_server.liq"
+%include "lib/80_server.liq"
+%include "lib/90_radio.liq"
 
 # Dutch Media Exchange (DME) configuration
 let DME_PRIMARY_HOST = environment.get("DME_PRIMARY_HOST")
@@ -30,31 +31,15 @@ let DME_MOUNT_POINT = environment.get("DME_MOUNT_POINT")
 let studio_a = create_studio_input(id="studio_a", port=SRT_PORT_PRIMARY)
 let studio_b = create_studio_input(id="studio_b", port=SRT_PORT_SECONDARY)
 
-# Automatic fallback chain
-let auto_fallback =
-  fallback(
-    id="auto_fallback",
-    track_sensitive=false,
-    [studio_a, studio_b, emergency_fallback]
-  )
-
-# Main radio source with forcing support
-# In auto mode: uses automatic fallback chain
-# When forced: uses the specified source directly
+# Build radio source with fallback chain, force support, and server commands
 let radio =
-  switch(
-    id="radio_prod",
-    track_sensitive=false,
-    [
-      ({should_use_source("studio_a")}, studio_a),
-      ({should_use_source("studio_b")}, studio_b),
-      ({should_use_source("fallback")}, emergency_fallback),
-      ({is_auto_mode()}, auto_fallback)
+  create_radio(
+    sources=[
+      ("studio_a", studio_a),
+      ("studio_b", studio_b),
+      ("fallback", emergency_fallback)
     ]
   )
-
-# Register radio source for server control commands
-register_radio_source(radio)
 
 # Create processed audio source
 let radio_processed = create_processed_audio(radio)
