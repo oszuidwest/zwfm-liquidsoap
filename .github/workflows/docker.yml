@@ -110,8 +110,6 @@ jobs:
             org.opencontainers.image.revision=${{ github.sha }}
             liquidsoap.version=${{ steps.versions.outputs.liquidsoap_version }}
             odr-audioenc.version=${{ steps.versions.outputs.odr_audioenc_version }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
 
       - name: Build Summary
         if: steps.check_version.outputs.should_build == 'true'
