@@ -387,7 +387,7 @@ docker compose ps
 docker compose restart
 
 # Validate configuration
-docker run --rm -v "$PWD:/app" -w /app savonet/liquidsoap:v2.4.2 liquidsoap -c conf/*.liq
+docker run --rm -v "$PWD:/app" -w /app savonet/liquidsoap:v2.4.3 liquidsoap -c conf/*.liq
 ```
 
 ## Development
@@ -411,7 +411,7 @@ docker compose up -d
 1. Fork the repository
 2. Create a feature branch
 3. Make your changes
-4. Run syntax validation: `docker run --rm -v "$PWD:/app" -w /app savonet/liquidsoap:v2.4.2 liquidsoap -c conf/*.liq`
+4. Run syntax validation: `docker run --rm -v "$PWD:/app" -w /app savonet/liquidsoap:v2.4.3 liquidsoap -c conf/*.liq`
 5. Submit a pull request
 
 ## License
