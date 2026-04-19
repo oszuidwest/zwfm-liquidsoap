@@ -195,7 +195,6 @@ StereoTool is always included in the installation. When enabled (by providing a 
    - Audio processing (AGC, compression, limiting, EQ, etc.)
    - MicroMPX encoding for FM transmitters (available via StereoTool's separate output)
 
-**Note**: The `output.dummy()` call is required to activate StereoTool's processing chain, even though this output isn't used directly.
 
 ## Runtime Control
 
