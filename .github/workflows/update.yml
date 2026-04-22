@@ -1,0 +1,101 @@
+---
+name: Auto-Update Liquidsoap
+
+on:
+  schedule:
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  update:
+    name: Check and Update Liquidsoap
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Get current Liquidsoap version
+        id: current
+        run: |
+          CURRENT=$(grep "^ARG LIQUIDSOAP_VERSION" Dockerfile | cut -d'=' -f2)
+          echo "version=$CURRENT" >> $GITHUB_OUTPUT
+          echo "Current version: $CURRENT"
+
+      - name: Get latest Liquidsoap version
+        id: latest
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          LATEST=$(gh api repos/savonet/liquidsoap/releases/latest --jq '.tag_name' | sed 's/^v//')
+          echo "version=$LATEST" >> $GITHUB_OUTPUT
+          echo "Latest version: $LATEST"
+
+      - name: Check if Docker image is available
+        id: docker_check
+        run: |
+          LATEST="${{ steps.latest.outputs.version }}"
+          if curl -sf "https://hub.docker.com/v2/repositories/savonet/liquidsoap/tags/v${LATEST}/" > /dev/null; then
+            echo "Docker image savonet/liquidsoap:v${LATEST} is available"
+            echo "available=true" >> $GITHUB_OUTPUT
+          else
+            echo "Docker image savonet/liquidsoap:v${LATEST} is not yet published, will retry next run"
+            echo "available=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Compare versions
+        id: compare
+        if: steps.docker_check.outputs.available == 'true'
+        run: |
+          CURRENT="${{ steps.current.outputs.version }}"
+          LATEST="${{ steps.latest.outputs.version }}"
+          if [ "$CURRENT" = "$LATEST" ]; then
+            echo "Already on latest version ($CURRENT)"
+            echo "update_needed=false" >> $GITHUB_OUTPUT
+          elif [ "$(printf '%s\n' "$CURRENT" "$LATEST" | sort -V | head -1)" = "$CURRENT" ]; then
+            echo "Update available: $CURRENT -> $LATEST"
+            echo "update_needed=true" >> $GITHUB_OUTPUT
+          else
+            echo "Current ($CURRENT) is newer than latest release ($LATEST), skipping"
+            echo "update_needed=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Update Dockerfile and docker-compose.yml
+        if: steps.compare.outputs.update_needed == 'true'
+        run: |
+          CURRENT="${{ steps.current.outputs.version }}"
+          LATEST="${{ steps.latest.outputs.version }}"
+          sed -i "s/ARG LIQUIDSOAP_VERSION=${CURRENT}/ARG LIQUIDSOAP_VERSION=${LATEST}/" Dockerfile
+          sed -i "s|zwfm-liquidsoap:${CURRENT}-|zwfm-liquidsoap:${LATEST}-|g" docker-compose.yml
+
+      - name: Commit and push
+        if: steps.compare.outputs.update_needed == 'true'
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add Dockerfile docker-compose.yml
+          git commit -m "chore(deps): bump liquidsoap from ${{ steps.current.outputs.version }} to ${{ steps.latest.outputs.version }}"
+          git push
+
+      - name: Trigger Docker build
+        if: steps.compare.outputs.update_needed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh workflow run docker.yml
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "## Liquidsoap Auto-Update" >> $GITHUB_STEP_SUMMARY
+          echo "- **Current version**: ${{ steps.current.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Latest version**: ${{ steps.latest.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ steps.compare.outputs.update_needed }}" = "true" ]; then
+            echo "- **Status**: Updated and Docker build triggered" >> $GITHUB_STEP_SUMMARY
+          elif [ "${{ steps.docker_check.outputs.available }}" = "false" ]; then
+            echo "- **Status**: Docker image not yet published for latest version, will retry next run" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- **Status**: Already up to date" >> $GITHUB_STEP_SUMMARY
+          fi
