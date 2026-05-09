@@ -15,7 +15,6 @@ jobs:
   build-and-publish:
     runs-on: ubuntu-latest
     outputs:
-      image_tag: ${{ steps.build.outputs.tags }}
       image_digest: ${{ steps.build.outputs.digest }}
 
     steps:
