@@ -111,6 +111,10 @@ if [ "${DO_UPDATES}" == "y" ]; then
   apt_update --silent
 fi
 
+if declare -F set_system_hardening_baseline > /dev/null; then
+  set_system_hardening_baseline --silent
+fi
+
 # Create required directories
 echo -e "${BLUE}►► Creating directories...${NC}"
 for dir in "${DIRECTORIES[@]}"; do
