@@ -10,70 +10,13 @@ name: Docker Security
   workflow_dispatch:
   workflow_call:
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
 permissions:
   contents: read
   security-events: write
 
-env:
-  DOCKERFILE_PATH: Dockerfile
-  IMAGE_REF: ${{ github.repository }}:security-scan
-
 jobs:
-  security-scan:
-    name: Security scan
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4
-
-      - name: Build image for scanning
-        uses: docker/build-push-action@v7
-        with:
-          context: .
-          file: ${{ env.DOCKERFILE_PATH }}
-          push: false
-          pull: true
-          load: true
-          tags: ${{ env.IMAGE_REF }}
-
-      - name: Trivy SARIF report
-        if: >-
-          github.event_name != 'pull_request' &&
-          github.event.repository.private == false
-        uses: aquasecurity/trivy-action@v0.36.0
-        with:
-          image-ref: ${{ env.IMAGE_REF }}
-          format: sarif
-          output: trivy-results.sarif
-          severity: CRITICAL,HIGH,MEDIUM
-          scanners: vuln,secret
-          ignore-unfixed: true
-          exit-code: "0"
-          limit-severities-for-sarif: true
-
-      - name: Upload Trivy results to GitHub Security
-        if: >-
-          github.event_name != 'pull_request' &&
-          github.event.repository.private == false
-        uses: github/codeql-action/upload-sarif@v4
-        with:
-          sarif_file: trivy-results.sarif
-
-      - name: Trivy high and critical summary
-        uses: aquasecurity/trivy-action@v0.36.0
-        with:
-          image-ref: ${{ env.IMAGE_REF }}
-          format: table
-          severity: CRITICAL,HIGH
-          scanners: vuln,secret
-          ignore-unfixed: true
-          exit-code: "0"
+  security:
+    uses: oszuidwest/.github-templates/.github/workflows/docker-security-build.yml@main  # yamllint disable-line rule:line-length
+    with:
+      event-name: ${{ github.event_name }}
+      repository-private: ${{ github.event.repository.private }}
