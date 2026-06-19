@@ -1,19 +1,24 @@
 #!/usr/bin/env bash
+set -euo pipefail
 
-# Load the functions library
+BASH_FUNCTIONS_REF="main"
+FUNCTIONS_LIB_URL="https://raw.githubusercontent.com/oszuidwest/bash-functions/${BASH_FUNCTIONS_REF}/common-functions.sh"
 FUNCTIONS_LIB_PATH=$(mktemp)
-FUNCTIONS_LIB_URL="https://raw.githubusercontent.com/oszuidwest/bash-functions/main/common-functions.sh"
 
-# Clean up temporary file on exit
 trap 'rm -f "${FUNCTIONS_LIB_PATH}"' EXIT
 
-# Download the functions library
-if ! curl -sLo "${FUNCTIONS_LIB_PATH}" "${FUNCTIONS_LIB_URL}"; then
-  echo -e "*** Failed to download the functions library. Please check your network connection! ***"
+clear || true
+
+if ! command -v curl >/dev/null 2>&1; then
+  echo "*** curl is required to download the functions library. ***"
   exit 1
 fi
 
-# Source the functions library
+if ! curl -fsSL -o "${FUNCTIONS_LIB_PATH}" "${FUNCTIONS_LIB_URL}"; then
+  echo "*** Failed to download functions library. Please check your network connection. ***"
+  exit 1
+fi
+
 # shellcheck source=/dev/null
 source "${FUNCTIONS_LIB_PATH}"
 
@@ -73,13 +78,14 @@ DIRECTORIES=(
   "${INSTALL_DIR}/audio"
   "${INSTALL_DIR}/socket"
 )
-OS_ARCH=$(dpkg --print-architecture)
 
 # Environment setup
 set_colors
 assert_user_privileged "root"
 assert_os_linux
 assert_os_64bit
+assert_tool "curl" "docker" "dpkg"
+OS_ARCH=$(dpkg --print-architecture)
 
 # Configure host time settings
 set_timezone "${TIMEZONE}"
@@ -88,11 +94,7 @@ set_time_sync
 # Configure journald storage limits
 set_journald_limits
 
-# Ensure Docker is installed
-assert_tool "docker"
-
 # Display a welcome banner
-clear
 cat << "EOF"
  ______     _     ___          __       _     ______ __  __
 |___  /    (_)   | \ \        / /      | |   |  ____|  \/  |
@@ -103,7 +105,10 @@ cat << "EOF"
 EOF
 echo -e "${GREEN}⎎ Liquidsoap and StereoTool Installation${NC}\n"
 
-# Prompt user for input
+if [ -f "${LIQUIDSOAP_ENV_PATH}" ] || [ -f "${DOCKER_COMPOSE_PATH}" ]; then
+  echo -e "${YELLOW}Existing installation detected in ${INSTALL_DIR}. Managed files will be backed up before replacement.${NC}\n"
+fi
+
 prompt_user "STATION_CONFIG" "zuidwest" "Which station configuration would you like to use? (zuidwest/rucphen/bredanu)" "str"
 
 # Validate station configuration
@@ -142,14 +147,13 @@ if ! file_download "${LIQUIDSOAP_CONFIG_URL}" "${LIQUIDSOAP_CONFIG_PATH}" "Liqui
   exit 1
 fi
 
-# Download library files
 echo -e "${BLUE}►► Downloading Liquidsoap library files...${NC}"
 LIB_DOWNLOAD_ARGS=()
 for lib_file in "${LIQUIDSOAP_LIB_FILES[@]}"; do
   LIB_DOWNLOAD_ARGS+=("${LIQUIDSOAP_LIB_URL_BASE}/${lib_file}|${lib_file}")
 done
 if ! file_download -m "${LIQUIDSOAP_LIB_DIR}" "Liquidsoap library files" \
-  "${LIB_DOWNLOAD_ARGS[@]}"; then
+  --backup "${LIB_DOWNLOAD_ARGS[@]}"; then
   exit 1
 fi
 
@@ -213,6 +217,9 @@ rm -rf "${TMP_DIR}" "${STEREO_TOOL_ZIP_PATH}"
 
 # Write StereoTool configuration
 STEREOTOOL_RC_PATH="${STEREO_TOOL_INSTALL_DIR}/.st_plugin.so.rc"
+if [ -f "${STEREOTOOL_RC_PATH}" ] && ! file_backup "${STEREOTOOL_RC_PATH}"; then
+  exit 1
+fi
 cat << EOL > "${STEREOTOOL_RC_PATH}"
 [Stereo Tool Configuration]
 Enable web interface=1
@@ -224,28 +231,31 @@ echo -e "${BLUE}►► Setting ownership...${NC}"
 chown -R 100:101 "${STEREO_TOOL_INSTALL_DIR}"
 chown -R 100:101 "${INSTALL_DIR}/socket"
 
+echo -e "${BLUE}►► Validating Docker Compose configuration...${NC}"
+(cd "${INSTALL_DIR}" && docker compose --env-file .env config -q)
+
 echo -e "${GREEN}Installation completed successfully for ${STATION_CONFIG} configuration!${NC}"
 
 # Display usage instructions
 echo -e "\n${BLUE}►► How to run Liquidsoap:${NC}"
 echo -e "${YELLOW}Important: Before starting, make sure to edit the .env file with your configuration:${NC}"
-echo -e "  ${CYAN}nano ${LIQUIDSOAP_ENV_PATH}${NC}"
+echo -e "  ${BLUE}nano ${LIQUIDSOAP_ENV_PATH}${NC}"
 echo -e ""
 echo -e "${YELLOW}To start Liquidsoap:${NC}"
-echo -e "  ${CYAN}cd ${INSTALL_DIR}${NC}"
-echo -e "  ${CYAN}docker compose up -d${NC}"
+echo -e "  ${BLUE}cd ${INSTALL_DIR}${NC}"
+echo -e "  ${BLUE}docker compose up -d${NC}"
 echo -e ""
 echo -e "${YELLOW}To access StereoTool GUI (if STEREOTOOL_LICENSE_KEY is set):${NC}"
 echo -e "  Open http://localhost:8080 in your browser"
 echo -e ""
 echo -e "${YELLOW}To view logs:${NC}"
-echo -e "  ${CYAN}docker compose logs -f${NC}"
+echo -e "  ${BLUE}docker compose logs -f${NC}"
 echo -e ""
 echo -e "${YELLOW}To stop Liquidsoap:${NC}"
-echo -e "  ${CYAN}docker compose down${NC}"
+echo -e "  ${BLUE}docker compose down${NC}"
 echo -e ""
 echo -e "${YELLOW}To control silence detection:${NC}"
-echo -e "  ${CYAN}socat - UNIX-CONNECT:${INSTALL_DIR}/socket/liquidsoap.sock${NC}"
-echo -e "  Enable:  ${CYAN}silence.enable${NC}"
-echo -e "  Disable: ${CYAN}silence.disable${NC}"
-echo -e "  Status:  ${CYAN}silence.status${NC}"
+echo -e "  ${BLUE}socat - UNIX-CONNECT:${INSTALL_DIR}/socket/liquidsoap.sock${NC}"
+echo -e "  Enable:  ${BLUE}silence.enable${NC}"
+echo -e "  Disable: ${BLUE}silence.disable${NC}"
+echo -e "  Status:  ${BLUE}silence.status${NC}"
