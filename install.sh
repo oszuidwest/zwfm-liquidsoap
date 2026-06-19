@@ -81,6 +81,8 @@ assert_user_privileged "root"
 assert_os_linux
 assert_os_64bit
 set_timezone "${TIMEZONE}"
+set_time_sync
+set_journald_limits
 
 # Ensure Docker is installed
 assert_tool "docker"
