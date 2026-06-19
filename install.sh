@@ -170,9 +170,9 @@ if ! file_download "${AUDIO_FALLBACK_URL}" "${AUDIO_FALLBACK_PATH}" "audio fallb
   exit 1
 fi
 
-# Always install StereoTool (whether it's used depends on STEREOTOOL_LICENSE_KEY in .env)
-echo -e "${BLUE}►► Installing StereoTool...${NC}"
-apt_install --silent unzip
+# Install host tools used for StereoTool setup and runtime control.
+echo -e "${BLUE}►► Installing dependencies...${NC}"
+apt_install --silent unzip socat
 
 
 # Create installation directory

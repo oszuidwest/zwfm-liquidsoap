@@ -83,7 +83,7 @@ The system delivers audio through dual redundant pathways. Liquidsoap prioritize
 - x86_64 or ARM64 architecture
 - At least 2GB RAM and 10GB disk space
 - Network connectivity for SRT streams
-- `socat` for runtime control via server socket (optional)
+- `socat` for runtime control via server socket (installed by the installer)
 
 ### Quick Install
 
