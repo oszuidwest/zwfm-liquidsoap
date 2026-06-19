@@ -80,6 +80,8 @@ set_colors
 assert_user_privileged "root"
 assert_os_linux
 assert_os_64bit
+
+# Configure host time settings and journald storage limits
 set_timezone "${TIMEZONE}"
 set_time_sync
 set_journald_limits
