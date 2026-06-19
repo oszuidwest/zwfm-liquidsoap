@@ -81,9 +81,11 @@ assert_user_privileged "root"
 assert_os_linux
 assert_os_64bit
 
-# Configure host time settings and journald storage limits
+# Configure host time settings
 set_timezone "${TIMEZONE}"
 set_time_sync
+
+# Configure journald storage limits
 set_journald_limits
 
 # Ensure Docker is installed
