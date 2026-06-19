@@ -4,8 +4,10 @@ set -euo pipefail
 BASH_FUNCTIONS_REF="main"
 FUNCTIONS_LIB_URL="https://raw.githubusercontent.com/oszuidwest/bash-functions/${BASH_FUNCTIONS_REF}/common-functions.sh"
 FUNCTIONS_LIB_PATH=$(mktemp)
+STEREO_TOOL_ZIP_PATH=$(mktemp)
+STEREO_TOOL_PLUGIN_TMP=$(mktemp)
 
-trap 'rm -f "${FUNCTIONS_LIB_PATH}"' EXIT
+trap 'rm -f "${FUNCTIONS_LIB_PATH}" "${STEREO_TOOL_ZIP_PATH}" "${STEREO_TOOL_PLUGIN_TMP}"' EXIT
 
 clear || true
 
@@ -66,7 +68,6 @@ AUDIO_FALLBACK_PATH="${INSTALL_DIR}/audio/fallback.ogg"
 STEREO_TOOL_VERSION="1075"
 STEREO_TOOL_BASE_URL="https://download.thimeo.com"
 STEREO_TOOL_ZIP_URL="${STEREO_TOOL_BASE_URL}/Stereo_Tool_Generic_plugin_${STEREO_TOOL_VERSION}.zip"
-STEREO_TOOL_ZIP_PATH="/tmp/stereotool.zip"
 STEREO_TOOL_INSTALL_DIR="${INSTALL_DIR}/stereotool"
 
 
@@ -177,27 +178,19 @@ apt_install --silent unzip
 # Create installation directory
 mkdir -p "${STEREO_TOOL_INSTALL_DIR}"
 
-# Download and extract StereoTool
+# Download and install StereoTool
 if ! file_download "${STEREO_TOOL_ZIP_URL}" "${STEREO_TOOL_ZIP_PATH}" "StereoTool"; then
   exit 1
 fi
-TMP_DIR=$(mktemp -d)
-unzip -o "${STEREO_TOOL_ZIP_PATH}" -d "${TMP_DIR}"
 
-# Locate the extracted directory
-EXTRACTED_DIR=$(find "${TMP_DIR}" -maxdepth 1 -type d -name "libStereoTool_*" | head -n 1)
-if [ ! -d "${EXTRACTED_DIR}" ]; then
-  echo -e "${RED}Error: Unable to find the extracted StereoTool directory.${NC}"
-  exit 1
-fi
-
-# Copy the appropriate library based on the architecture
+# Select the appropriate library based on the architecture. The StereoTool zip
+# uses backslashes in member names, so ? is used as the path separator pattern.
 case "${OS_ARCH}" in
   amd64)
-    LIB_PATH="${EXTRACTED_DIR}/lib/Linux/IntelAMD/64/libStereoTool_intel64.so"
+    STEREO_TOOL_ARCHIVE_MEMBER="libStereoTool_${STEREO_TOOL_VERSION}?lib?Linux?IntelAMD?64?libStereoTool_intel64.so"
     ;;
   arm64)
-    LIB_PATH="${EXTRACTED_DIR}/lib/Linux/ARM/64/libStereoTool_noX11_arm64.so"
+    STEREO_TOOL_ARCHIVE_MEMBER="libStereoTool_${STEREO_TOOL_VERSION}?lib?Linux?ARM?64?libStereoTool_noX11_arm64.so"
     ;;
   *)
     echo -e "${RED}Unsupported architecture: ${OS_ARCH}${NC}"
@@ -205,15 +198,17 @@ case "${OS_ARCH}" in
     ;;
 esac
 
-if [ ! -f "${LIB_PATH}" ]; then
-  echo -e "${RED}Error: StereoTool library not found at ${LIB_PATH}.${NC}"
+if ! unzip -p "${STEREO_TOOL_ZIP_PATH}" "${STEREO_TOOL_ARCHIVE_MEMBER}" > "${STEREO_TOOL_PLUGIN_TMP}"; then
+  echo -e "${RED}Error: Unable to extract StereoTool library for ${OS_ARCH}.${NC}"
   exit 1
 fi
 
-cp "${LIB_PATH}" "${STEREO_TOOL_INSTALL_DIR}/st_plugin.so"
+if [ ! -s "${STEREO_TOOL_PLUGIN_TMP}" ]; then
+  echo -e "${RED}Error: Extracted StereoTool library for ${OS_ARCH} is empty.${NC}"
+  exit 1
+fi
 
-# Clean up temporary files
-rm -rf "${TMP_DIR}" "${STEREO_TOOL_ZIP_PATH}"
+install -m 644 "${STEREO_TOOL_PLUGIN_TMP}" "${STEREO_TOOL_INSTALL_DIR}/st_plugin.so"
 
 # Write StereoTool configuration
 STEREOTOOL_RC_PATH="${STEREO_TOOL_INSTALL_DIR}/.st_plugin.so.rc"
