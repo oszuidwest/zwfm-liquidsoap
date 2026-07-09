@@ -7,7 +7,7 @@ This repository contains a professional-grade audio streaming solution originall
 
 - **High-availability streaming** with automatic failover between multiple inputs
 - **Professional audio processing** via StereoTool (optional)
-- **Multiple output formats**: Icecast streaming (MP3/AAC), DAB+ encoding, and MicroMPX for FM transmitters
+- **Multiple output formats**: Icecast streaming (MP3/AAC), HLS streaming, DAB+ encoding, and MicroMPX for FM transmitters
 - **Docker-based deployment** for easy installation and management
 
 While originally designed for these three Dutch radio stations, the system is fully configurable for any radio station's needs.
@@ -25,6 +25,8 @@ flowchart LR
     subgraph outputs [" Outputs "]
         MICROMPX["MICROMPX"]
         ICECAST["ICECAST"]
+        HLS["HLS"]
+        BUNNY["BUNNY CDN"]
         ODR["ODR-AUDIOENC"]
     end
 
@@ -40,6 +42,8 @@ flowchart LR
 
     LIQUIDSOAP --> MICROMPX
     LIQUIDSOAP --> ICECAST
+    LIQUIDSOAP --> HLS
+    HLS --> BUNNY
     LIQUIDSOAP --> ODR
 
     ODR <--> PADENC
@@ -50,7 +54,7 @@ flowchart LR
     classDef gray fill:#757575,stroke:#424242,color:#fff
     classDef pink fill:#E91E8A,stroke:#AD1457,color:#fff
 
-    class SRT1,SRT2,FALLBACK,LIQUIDSOAP,MICROMPX,ICECAST,ODR blue
+    class SRT1,SRT2,FALLBACK,LIQUIDSOAP,MICROMPX,ICECAST,HLS,BUNNY,ODR blue
     class PADENC,PADAPI gray
     class ZWFM pink
 ```
@@ -63,8 +67,9 @@ The system delivers audio through dual redundant pathways. Liquidsoap prioritize
 
 1. **Liquidsoap**: Core audio processing engine - handles input switching, fallback logic, and encoding
 2. **Icecast**: Public streaming server for distributing MP3/AAC streams to listeners
-3. **StereoTool**: Professional audio processor and [MicroMPX](https://www.thimeo.com/micrompx/) encoder for FM transmitters (optional, requires license)
-4. **ODR-AudioEnc**: DAB+ audio encoder for digital radio broadcasting (optional)
+3. **HLS**: Optional HTTP Live Streaming output mirrored to Bunny Edge Storage and served through Bunny CDN
+4. **StereoTool**: Professional audio processor and [MicroMPX](https://www.thimeo.com/micrompx/) encoder for FM transmitters (optional, requires license)
+5. **ODR-AudioEnc**: DAB+ audio encoder for digital radio broadcasting (optional)
 
 ### Related Projects
 
@@ -142,6 +147,17 @@ This table lists ALL environment variables used in the system. Variables without
 | `DAB_EDI_DESTINATIONS`            | DAB+ EDI destination(s)                          | _(none)_                     | `tcp://dab-mux.local:9001` or `tcp://dab1:9001,tcp://dab2:9002` | `conf/lib/00_settings.liq`             | All             |
 | `DAB_METADATA_SIZE`               | PAD size in bytes (0-196)                        | `8` when socket is set       | `16`                                                            | `conf/lib/00_settings.liq`             | All             |
 | `DAB_METADATA_SOCKET`             | PAD metadata socket path                         | _(none)_                     | `padenc.sock`                                                   | `conf/lib/00_settings.liq`             | All             |
+| **HLS Configuration (Optional)**  |
+| `HLS_BUNNY_STORAGE_ZONE`          | Bunny Edge Storage zone name                     | _(none)_                     | `zwfm-hls`                                                      | `conf/lib/00_settings.liq`             | All             |
+| `HLS_BUNNY_ACCESS_KEY`            | Bunny Edge Storage read/write password           | _(none)_                     | `secret-storage-password`                                       | `conf/lib/00_settings.liq`             | All             |
+| `HLS_BUNNY_ENDPOINT`              | Bunny Edge Storage API endpoint                  | `storage.bunnycdn.com`       | `storage.bunnycdn.com`                                          | `conf/lib/00_settings.liq`             | All             |
+| `HLS_DIR`                         | Local HLS output directory                       | `/hls`                       | `/hls`                                                          | `conf/lib/00_settings.liq`             | All             |
+| `HLS_BITRATE_LOW`                 | Low HLS AAC bitrate in kbps                      | `48`                         | `48`                                                            | `conf/lib/00_settings.liq`             | All             |
+| `HLS_BITRATE_MID`                 | Mid HLS AAC bitrate in kbps                      | `96`                         | `96`                                                            | `conf/lib/00_settings.liq`             | All             |
+| `HLS_BITRATE_HIGH`                | High HLS AAC bitrate in kbps                     | `192`                        | `192`                                                           | `conf/lib/00_settings.liq`             | All             |
+| `HLS_SEGMENT_DURATION`            | HLS segment duration in seconds                  | `4.0`                        | `4.0`                                                           | `conf/lib/00_settings.liq`             | All             |
+| `HLS_SEGMENTS`                    | Segments per live playlist                       | `10`                         | `10`                                                            | `conf/lib/00_settings.liq`             | All             |
+| `HLS_SEGMENTS_OVERHEAD`           | Extra old segments retained locally              | `5`                          | `5`                                                             | `conf/lib/00_settings.liq`             | All             |
 | **DME Configuration**             |
 | `DME_PRIMARY_HOST`                | Primary DME server                               | _(required)_                 | `ingest1.dme.nl`                                                | `conf/rucphen.liq`, `conf/bredanu.liq` | Rucphen/BredaNu |
 | `DME_PRIMARY_PORT`                | Primary DME port                                 | _(required)_                 | `8010`                                                          | `conf/rucphen.liq`, `conf/bredanu.liq` | Rucphen/BredaNu |
@@ -158,7 +174,7 @@ This table lists ALL environment variables used in the system. Variables without
 ### Notes:
 
 - **Required variables**: Must be set in `.env` file or Liquidsoap will fail to start
-- **Optional features**: DAB+ output is optional - set both `DAB_BITRATE` and `DAB_EDI_DESTINATIONS` to enable. PAD metadata requires `DAB_METADATA_SOCKET`
+- **Optional features**: DAB+ output is optional - set both `DAB_BITRATE` and `DAB_EDI_DESTINATIONS` to enable. HLS output is optional - set both `HLS_BUNNY_STORAGE_ZONE` and `HLS_BUNNY_ACCESS_KEY` to enable. PAD metadata requires `DAB_METADATA_SOCKET`
 - **Multiple EDI outputs**: `DAB_EDI_DESTINATIONS` supports comma-separated values for sending to multiple DAB+ destinations simultaneously
 - **Station column**: "All" means used by all stations, "Rucphen/BredaNu" means used only by stations with DME
 - **Default conventions**: `#{VARIABLE}` means the value is interpolated from another variable
@@ -314,6 +330,61 @@ DAB_EDI_DESTINATIONS=tcp://primary.example.com:9001,tcp://backup.example.com:900
 
 PAD allows sending metadata like song titles and station logos alongside the audio. Recommendation to use as small of a METADATA_SIZE as possible. 8 bytes is enough to transmit a logo in a couple of seconds (ofcourse, how smaller the filesize the faster the logo will transmit). If you're using artwork, you might need to consider using a bigger METADATA_SIZE.
 
+## HLS Output via Bunny CDN
+
+The system supports optional audio-only HLS output. Liquidsoap writes a local HLS live window to `/hls`, then mirrors it to Bunny Edge Storage with native `http.put` and `http.delete` calls. No sidecar uploader or extra Docker image dependency is required.
+
+The HLS ladder is:
+
+- 48 kbps HE-AACv1 ADTS (`aac_48.m3u8`)
+- 96 kbps AAC-LC ADTS (`aac_96.m3u8`)
+- 192 kbps AAC-LC ADTS (`aac_192.m3u8`)
+
+The main playlist is `live.m3u8`, with 4 second segments and a 10 segment playlist by default. Expected listener latency is roughly 15-30 seconds with normal HLS client buffering.
+
+The mirror loop prioritizes consistency over freshness: segment uploads must succeed before playlists that reference them are published. During a Bunny upload failure, listeners may see an older playlist until the missing segment uploads or leaves the live window, instead of seeing a fresh playlist with a segment 404.
+
+### Configuration
+
+Set both Bunny variables to enable HLS:
+
+```bash
+HLS_BUNNY_STORAGE_ZONE=zwfm-hls
+HLS_BUNNY_ACCESS_KEY=storage-zone-read-write-password
+HLS_BUNNY_ENDPOINT=storage.bunnycdn.com
+```
+
+The AccessKey is the storage zone read/write password. Use a dedicated Edge Storage zone for HLS so this credential is scoped to live-stream objects only.
+
+### Bunny Setup
+
+1. Create a Bunny Edge Storage zone, for example `zwfm-hls`. Falkenstein is a good main region for Dutch listeners.
+2. Copy the storage zone read/write password into `HLS_BUNNY_ACCESS_KEY` and set `HLS_BUNNY_ENDPOINT` to the endpoint shown by Bunny.
+3. Create a Bunny CDN pull zone connected to the storage zone and add the desired custom hostname.
+4. Enable CORS on the pull zone and include the `m3u8` and `aac` extensions.
+5. Add an edge rule for `*.m3u8` that overrides cache time to 1-2 seconds.
+6. Keep the default cache time for `.aac` segments long, for example 1 day. Segment names are timestamped and never reused.
+7. Do not enable Perma-Cache for this pull zone.
+
+When changing the HLS ladder names, clean the station prefix in Bunny Edge Storage once. Runtime cleanup removes stale segments, but old variant playlist files from previous ladder names are intentionally left alone.
+
+Player URL pattern:
+
+```text
+https://hls.example.com/{STATION_ID}/live.m3u8
+```
+
+### Validation
+
+After enabling HLS, verify the public URL with:
+
+```bash
+ffprobe https://hls.example.com/zuidwest/live.m3u8
+curl -sI https://hls.example.com/zuidwest/live.m3u8
+```
+
+Expected results: three variants, AAC codec strings (`mp4a.40.5` and `mp4a.40.2`), playlist refreshes after the edge-rule TTL, and `.aac` segments are served with a longer cache lifetime.
+
 ## DME Integration (Dutch Media Exchange)
 
 Radio Rucphen and BredaNu require DME output for distribution through the Dutch public broadcasting system. DME configuration is handled in station-specific configuration files.
@@ -366,6 +437,13 @@ For now-playing information and metadata routing, see the [zwfm-metadata](https:
 - Verify `ICECAST_HOST` and `ICECAST_PORT` are correct
 - Check `ICECAST_SOURCE_PASSWORD` matches server configuration
 - Ensure Icecast server is running and accessible
+
+**HLS playlist is stale or missing segments**
+
+- Verify `HLS_BUNNY_STORAGE_ZONE`, `HLS_BUNNY_ACCESS_KEY`, and `HLS_BUNNY_ENDPOINT`
+- Check Docker logs for `hls` upload, delete, or reconcile messages
+- Confirm the Bunny pull zone has a 1-2 second cache rule for `*.m3u8`
+- Confirm CORS includes `m3u8` and `aac` extensions
 
 **StereoTool not processing**
 
@@ -423,4 +501,3 @@ Copyright 2026 Omroepstichting ZuidWest & Stichting BredaNu. This project is lic
 - [Icecast](https://icecast.org/) - Reliable streaming server
 - [StereoTool](https://www.stereotool.com/) - Professional audio processing
 - [Opendigitalradio](https://www.opendigitalradio.org/) - DAB+ tools and community
-

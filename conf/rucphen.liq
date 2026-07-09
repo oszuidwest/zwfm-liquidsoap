@@ -11,6 +11,7 @@
 %include "lib/50_processing.liq"
 %include "lib/60_output_icecast.liq"
 %include "lib/61_output_dab.liq"
+%include "lib/62_output_hls.liq"
 %include "lib/80_server.liq"
 %include "lib/90_radio.liq"
 
@@ -133,3 +134,6 @@ output_icecast_stream(
 
 # DAB+ output
 output_dab_stream(radio_processed)
+
+# HLS output
+output_hls_stream(radio_processed)
