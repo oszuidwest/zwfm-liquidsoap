@@ -332,7 +332,7 @@ PAD allows sending metadata like song titles and station logos alongside the aud
 
 ## HLS Output via Bunny CDN
 
-The system supports optional audio-only HLS output. Liquidsoap writes a local HLS live window to `/hls`, then mirrors file changes to Bunny Edge Storage with native `http.put` and `http.delete` calls. No sidecar uploader or extra Docker image dependency is required.
+The system supports optional audio-only HLS output. Liquidsoap writes a local HLS live window to `/hls`, then mirrors it to Bunny Edge Storage with native `http.put` and `http.delete` calls. No sidecar uploader or extra Docker image dependency is required.
 
 The HLS ladder is:
 
@@ -341,6 +341,8 @@ The HLS ladder is:
 - 192 kbps AAC-LC ADTS (`aac_192.m3u8`)
 
 The main playlist is `live.m3u8`, with 4 second segments and a 10 segment playlist by default. Expected listener latency is roughly 15-30 seconds with normal HLS client buffering.
+
+The mirror loop prioritizes consistency over freshness: segment uploads must succeed before playlists that reference them are published. During a Bunny upload failure, listeners may see an older playlist until the missing segment uploads or leaves the live window, instead of seeing a fresh playlist with a segment 404.
 
 ### Configuration
 
@@ -363,6 +365,8 @@ The AccessKey is the storage zone read/write password. Use a dedicated Edge Stor
 5. Add an edge rule for `*.m3u8` that overrides cache time to 1-2 seconds.
 6. Keep the default cache time for `.aac` segments long, for example 1 day. Segment names are timestamped and never reused.
 7. Do not enable Perma-Cache for this pull zone.
+
+When changing the HLS ladder names, clean the station prefix in Bunny Edge Storage once. Runtime cleanup removes stale segments, but old variant playlist files from previous ladder names are intentionally left alone.
 
 Player URL pattern:
 

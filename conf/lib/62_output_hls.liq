@@ -201,6 +201,15 @@ def hls_playlist_segment_names(content) =
   )
 end
 
+def hls_snapshot_segment_names(playlists) =
+  list.fold(
+    fun (names, snapshot) ->
+      hls_union(names, hls_playlist_segment_names(snapshot.content)),
+    [],
+    playlists
+  )
+end
+
 def hls_remote_listing() =
   try
     let response =
@@ -378,12 +387,12 @@ def hls_upload_playlists(
   end
 end
 
-def hls_delete_stale_segments((synced_segments:ref), local_segment_names) =
+def hls_delete_stale_segments((synced_segments:ref), protected_segment_names) =
   list.iter(
     fun (remote_name) ->
       begin
         if
-          not list.mem(remote_name, local_segment_names)
+          not list.mem(remote_name, protected_segment_names)
         then
           if
             hls_delete_file(remote_name)
@@ -412,6 +421,8 @@ def hls_mirror_tick(
   let segment_files = hls_local_segment_files()
   let local_segment_names =
     list.map(fun (fname) -> path.basename(fname), segment_files)
+  let protected_segment_names =
+    hls_union(local_segment_names, hls_snapshot_segment_names(playlists))
 
   hls_upload_segments(synced_segments, segment_files)
 
@@ -422,7 +433,7 @@ def hls_mirror_tick(
   if
     playlists_ok
   then
-    hls_delete_stale_segments(synced_segments, local_segment_names)
+    hls_delete_stale_segments(synced_segments, protected_segment_names)
   end
 end
 
