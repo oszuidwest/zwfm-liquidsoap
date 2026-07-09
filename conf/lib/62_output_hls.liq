@@ -5,10 +5,11 @@ let hls_bunny_headers = [("AccessKey", HLS_BUNNY_ACCESS_KEY)]
 let hls_main_playlist_name = "live.m3u8"
 let hls_endpoint_trimmed = string.trim(HLS_BUNNY_ENDPOINT)
 let hls_endpoint_without_https =
-  string.residual(prefix="https://", hls_endpoint_trimmed) ?? hls_endpoint_trimmed
+  string.residual(prefix="https://", hls_endpoint_trimmed)
+    ?? hls_endpoint_trimmed
 let hls_endpoint_without_scheme =
-  string.residual(prefix="http://", hls_endpoint_without_https) ??
-    hls_endpoint_without_https
+  string.residual(prefix="http://", hls_endpoint_without_https)
+    ?? hls_endpoint_without_https
 let hls_endpoint_host =
   r/\/+$/.replace(fun (_) -> "", hls_endpoint_without_scheme)
 
@@ -148,8 +149,7 @@ def hls_local_files(name_predicate) =
     list.filter(
       fun (fname) ->
         begin
-          not file.is_directory(fname)
-          and name_predicate(path.basename(fname))
+          not file.is_directory(fname) and name_predicate(path.basename(fname))
         end,
       file.ls(absolute=true, sorted=true, HLS_DIR)
     )
@@ -164,7 +164,7 @@ end
 
 def hls_read_playlist_snapshot(local_path) =
   try
-    {name=path.basename(local_path), content=file.contents(local_path)}
+    {name = path.basename(local_path), content = file.contents(local_path)}
   catch err do
     log(
       label="hls",
@@ -189,13 +189,7 @@ def hls_playlist_segment_names(content) =
     fun (line) ->
       begin
         let line = string.trim(line)
-        if
-          hls_is_segment_name(line)
-        then
-          path.basename(line)
-        else
-          null
-        end
+        if hls_is_segment_name(line) then path.basename(line) else null end
       end,
     r/\r?\n/.split(content)
   )
@@ -226,17 +220,17 @@ def hls_remote_listing() =
           fun ({object_name}) -> path.basename(object_name),
           remote_entries
         )
-      {ok=true, names=list.filter(hls_is_sync_file_name, names)}
+      {ok = true, names = list.filter(hls_is_sync_file_name, names)}
     elsif
       response.status_code == 404
     then
       log(
         label="hls",
-        "Bunny HLS prefix #{STATION_ID}/ does not exist yet; local files \
-         will create it",
+        "Bunny HLS prefix #{STATION_ID}/ does not exist yet; local files will \
+         create it",
         level=3
       )
-      {ok=true, names=[]}
+      {ok = true, names = []}
     else
       log(
         label="hls",
@@ -245,7 +239,7 @@ def hls_remote_listing() =
         }",
         level=2
       )
-      {ok=false, names=[]}
+      {ok = false, names = []}
     end
   catch err do
     log(
@@ -253,7 +247,7 @@ def hls_remote_listing() =
       "HLS mirror listing exception: #{err.kind}: #{err.message}",
       level=2
     )
-    {ok=false, names=[]}
+    {ok = false, names = []}
   end
 end
 
@@ -339,8 +333,8 @@ def hls_upload_playlist_group(
           else
             log(
               label="hls",
-              "Deferring HLS playlist upload for #{snapshot.name}; at least \
-               one referenced segment is not mirrored yet",
+              "Deferring HLS playlist upload for #{snapshot.name}; at least one \
+               referenced segment is not mirrored yet",
               level=3
             )
             ok := false
