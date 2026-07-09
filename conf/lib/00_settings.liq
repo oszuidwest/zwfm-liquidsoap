@@ -62,5 +62,26 @@ let DAB_EDI_DESTINATIONS = environment.get("DAB_EDI_DESTINATIONS", default="")
 let DAB_METADATA_SOCKET = environment.get("DAB_METADATA_SOCKET", default="")
 let DAB_METADATA_SIZE = environment.get("DAB_METADATA_SIZE", default="")
 
+# HLS configuration (optional - storage zone and access key required to enable)
+let HLS_BUNNY_STORAGE_ZONE =
+  environment.get("HLS_BUNNY_STORAGE_ZONE", default="")
+let HLS_BUNNY_ACCESS_KEY =
+  environment.get("HLS_BUNNY_ACCESS_KEY", default="")
+let HLS_BUNNY_ENDPOINT =
+  environment.get("HLS_BUNNY_ENDPOINT", default="storage.bunnycdn.com")
+let HLS_DIR = environment.get("HLS_DIR", default="/hls")
+let HLS_BITRATE_LOW =
+  int_of_string(environment.get("HLS_BITRATE_LOW", default="48"))
+let HLS_BITRATE_MID =
+  int_of_string(environment.get("HLS_BITRATE_MID", default="96"))
+let HLS_BITRATE_HIGH =
+  int_of_string(environment.get("HLS_BITRATE_HIGH", default="192"))
+let HLS_SEGMENT_DURATION =
+  float_of_string(environment.get("HLS_SEGMENT_DURATION", default="4.0"))
+let HLS_SEGMENTS =
+  int_of_string(environment.get("HLS_SEGMENTS", default="10"))
+let HLS_SEGMENTS_OVERHEAD =
+  int_of_string(environment.get("HLS_SEGMENTS_OVERHEAD", default="5"))
+
 # StereoTool configuration (optional)
 let STEREOTOOL_LICENSE = environment.get("STEREOTOOL_LICENSE", default="")

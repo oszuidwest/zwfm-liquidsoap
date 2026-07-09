@@ -9,6 +9,7 @@ services:
       - ./audio:/audio
       - ./stereotool:/var/cache/liquidsoap/
       - ./socket:/tmp/liquidsoap # Server socket
+      - ./hls:/hls
     environment:
       - TZ=Europe/Amsterdam
     env_file:
