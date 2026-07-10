@@ -1,7 +1,7 @@
 # HLS output configuration
 # Writes a local HLS window and mirrors it to Bunny Edge Storage.
 
-let hls_bunny_headers = [("AccessKey", HLS_BUNNY_ACCESS_KEY)]
+let hls_bunny_headers = [("AccessKey", HLS_BUNNY_ACCESS_KEY), ("Expect", "")]
 let hls_main_playlist_name = "live.m3u8"
 let hls_endpoint_trimmed = string.trim(HLS_BUNNY_ENDPOINT)
 let hls_endpoint_without_https =
