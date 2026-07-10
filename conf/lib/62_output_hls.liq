@@ -29,7 +29,7 @@ def hls_is_playlist_name(name) =
 end
 
 def hls_is_segment_name(name) =
-  r/\.aac$/.test(name)
+  r/\.(aac|ts)$/.test(name)
 end
 
 def hls_is_sync_file_name(name) =
@@ -456,45 +456,51 @@ def output_hls_stream(audio_source) =
     let hls_source = mksafe(buffer(audio_source))
 
     let aac_low =
-      %fdkaac(
-        channels = 2,
-        samplerate = 48000,
-        bitrate = HLS_BITRATE_LOW,
-        afterburner = true,
-        aot = 'mpeg4_he_aac',
-        transmux = 'adts'
+      %ffmpeg(
+        format = "mpegts",
+        %audio(
+          codec = "libfdk_aac",
+          b = "#{HLS_BITRATE_LOW}k",
+          ar = 48000,
+          ac = 2,
+          profile = "aac_he"
+        )
       ).{
         bandwidth = HLS_BITRATE_LOW * 1000 + 8000,
         codecs = "mp4a.40.5",
-        extname = "aac"
+        extname = "ts"
       }
 
     let aac_mid =
-      %fdkaac(
-        channels = 2,
-        samplerate = 48000,
-        bitrate = HLS_BITRATE_MID,
-        afterburner = true,
-        aot = 'mpeg4_aac_lc',
-        transmux = 'adts'
+      %ffmpeg(
+        format = "mpegts",
+        %audio(
+          codec = "libfdk_aac",
+          b = "#{HLS_BITRATE_MID}k",
+          ar = 48000,
+          ac = 2,
+          profile = "aac_low"
+        )
       ).{
         bandwidth = HLS_BITRATE_MID * 1000 + 8000,
         codecs = "mp4a.40.2",
-        extname = "aac"
+        extname = "ts"
       }
 
     let aac_high =
-      %fdkaac(
-        channels = 2,
-        samplerate = 48000,
-        bitrate = HLS_BITRATE_HIGH,
-        afterburner = true,
-        aot = 'mpeg4_aac_lc',
-        transmux = 'adts'
+      %ffmpeg(
+        format = "mpegts",
+        %audio(
+          codec = "libfdk_aac",
+          b = "#{HLS_BITRATE_HIGH}k",
+          ar = 48000,
+          ac = 2,
+          profile = "aac_low"
+        )
       ).{
         bandwidth = HLS_BITRATE_HIGH * 1000 + 8000,
         codecs = "mp4a.40.2",
-        extname = "aac"
+        extname = "ts"
       }
 
     let hls_output =

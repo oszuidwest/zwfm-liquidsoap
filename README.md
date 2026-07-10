@@ -336,9 +336,9 @@ The system supports optional audio-only HLS output. Liquidsoap writes a local HL
 
 The HLS ladder is:
 
-- 48 kbps HE-AACv1 ADTS (`aac_48.m3u8`)
-- 96 kbps AAC-LC ADTS (`aac_96.m3u8`)
-- 192 kbps AAC-LC ADTS (`aac_192.m3u8`)
+- 48 kbps HE-AACv1 in MPEG-TS segments (`aac_48.m3u8`)
+- 96 kbps AAC-LC in MPEG-TS segments (`aac_96.m3u8`)
+- 192 kbps AAC-LC in MPEG-TS segments (`aac_192.m3u8`)
 
 The main playlist is `live.m3u8`, with 4 second segments and a 10 segment playlist by default. Expected listener latency is roughly 15-30 seconds with normal HLS client buffering.
 
@@ -361,9 +361,9 @@ The AccessKey is the storage zone read/write password. Use a dedicated Edge Stor
 1. Create a Bunny Edge Storage zone, for example `zwfm-hls`. Falkenstein is a good main region for Dutch listeners.
 2. Copy the storage zone read/write password into `HLS_BUNNY_ACCESS_KEY` and set `HLS_BUNNY_ENDPOINT` to the endpoint shown by Bunny.
 3. Create a Bunny CDN pull zone connected to the storage zone and add the desired custom hostname.
-4. Enable CORS on the pull zone and include the `m3u8` and `aac` extensions.
+4. Enable CORS on the pull zone and include the `m3u8` and `ts` extensions.
 5. Add an edge rule for `*.m3u8` that overrides cache time to 1-2 seconds.
-6. Keep the default cache time for `.aac` segments long, for example 1 day. Segment names are timestamped and never reused.
+6. Keep the default cache time for `.ts` segments long, for example 1 day. Segment names are timestamped and never reused.
 7. Do not enable Perma-Cache for this pull zone.
 
 When changing the HLS ladder names, clean the station prefix in Bunny Edge Storage once. Runtime cleanup removes stale segments, but old variant playlist files from previous ladder names are intentionally left alone.
@@ -383,7 +383,7 @@ ffprobe https://hls.example.com/zuidwest/live.m3u8
 curl -sI https://hls.example.com/zuidwest/live.m3u8
 ```
 
-Expected results: three variants, AAC codec strings (`mp4a.40.5` and `mp4a.40.2`), playlist refreshes after the edge-rule TTL, and `.aac` segments are served with a longer cache lifetime.
+Expected results: three variants, AAC codec strings (`mp4a.40.5` and `mp4a.40.2`), playlist refreshes after the edge-rule TTL, and `.ts` segments are served with a longer cache lifetime.
 
 ## DME Integration (Dutch Media Exchange)
 
@@ -443,7 +443,7 @@ For now-playing information and metadata routing, see the [zwfm-metadata](https:
 - Verify `HLS_BUNNY_STORAGE_ZONE`, `HLS_BUNNY_ACCESS_KEY`, and `HLS_BUNNY_ENDPOINT`
 - Check Docker logs for `hls` upload, delete, or reconcile messages
 - Confirm the Bunny pull zone has a 1-2 second cache rule for `*.m3u8`
-- Confirm CORS includes `m3u8` and `aac` extensions
+- Confirm CORS includes `m3u8` and `ts` extensions
 
 **StereoTool not processing**
 
