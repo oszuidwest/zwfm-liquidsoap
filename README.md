@@ -137,7 +137,7 @@ This table lists ALL environment variables used in the system. Variables without
 | `SRT_PORT_SECONDARY`              | Secondary SRT listening port                     | `9999`                       | `9999`                                                          | `conf/lib/00_settings.liq`             | All             |
 | **Audio Processing**              |
 | `STEREOTOOL_LICENSE`              | StereoTool license key                           | _(none)_                     | `ABC123DEF456...`                                               | `conf/lib/00_settings.liq`             | All             |
-| `STEREOTOOL_WEB_PORT`             | StereoTool web interface port                    | `8080`                       | `8080`                                                          | `conf/lib/00_settings.liq`             | All             |
+| `STEREOTOOL_WEB_PORT`             | StereoTool web interface host port               | `8080`                       | `8080`                                                          | `docker-compose.yml`                   | All             |
 | **Fallback & Control**            |
 | `SERVER_SOCKET_ENABLED`           | Enable Unix socket for runtime control           | `true`                       | `true`                                                          | `conf/lib/80_server.liq`               | All             |
 | `SERVER_SOCKET_PATH`              | Unix socket file path                            | `/tmp/liquidsoap/liquidsoap.sock` | `/tmp/liquidsoap/liquidsoap.sock`                          | `conf/lib/80_server.liq`               | All             |
