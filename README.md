@@ -155,7 +155,7 @@ This table lists ALL environment variables used in the system. Variables without
 | `HLS_BUNNY_STORAGE_ZONE`          | Bunny Edge Storage zone name                     | _(none)_                     | `zwfm-hls`                                                      | `conf/lib/00_settings.liq`             | All             |
 | `HLS_BUNNY_ACCESS_KEY`            | Bunny Edge Storage read/write password           | _(none)_                     | `secret-storage-password`                                       | `conf/lib/00_settings.liq`             | All             |
 | `HLS_BUNNY_ENDPOINT`              | Bunny Edge Storage API endpoint                  | `storage.bunnycdn.com`       | `storage.bunnycdn.com`                                          | `conf/lib/00_settings.liq`             | All             |
-| `HLS_DIR`                         | Local HLS output directory                       | `/hls`                       | `/hls`                                                          | `conf/lib/00_settings.liq`             | All             |
+| `HLS_DIR`                         | Local HLS output directory (tmpfs mount)         | `/hls`                       | `/hls`                                                          | `conf/lib/00_settings.liq`             | All             |
 | `HLS_BITRATE_LOW`                 | Low HLS AAC bitrate in kbps                      | `48`                         | `48`                                                            | `conf/lib/00_settings.liq`             | All             |
 | `HLS_BITRATE_MID`                 | Mid HLS AAC bitrate in kbps                      | `96`                         | `96`                                                            | `conf/lib/00_settings.liq`             | All             |
 | `HLS_BITRATE_HIGH`                | High HLS AAC bitrate in kbps                     | `192`                        | `192`                                                           | `conf/lib/00_settings.liq`             | All             |
@@ -239,6 +239,7 @@ socat - UNIX-CONNECT:/opt/liquidsoap/socket/liquidsoap.sock
 | `silence.enable` | Enable silence detection |
 | `silence.disable` | Disable silence detection |
 | `silence.status` | Show silence detection state |
+| `hls.status` | Show HLS output health (`ok`, `degraded: <reason>`, or `disabled`) |
 
 All commands take effect immediately.
 
@@ -337,7 +338,7 @@ PAD allows sending metadata like song titles and station logos alongside the aud
 
 ## HLS Output via Bunny CDN
 
-The system supports optional audio-only HLS output. Liquidsoap writes a local HLS live window to `/hls`, then mirrors it to Bunny Edge Storage with native `http.put` and `http.delete` calls. No sidecar uploader or extra Docker image dependency is required.
+The system supports optional audio-only HLS output. Liquidsoap writes a local HLS live window to `/hls` (a 64 MB tmpfs mount defined in `docker-compose.yml`), then mirrors it to Bunny Edge Storage with native `http.put` and `http.delete` calls. No sidecar uploader or extra Docker image dependency is required.
 
 The HLS ladder is:
 
@@ -389,6 +390,17 @@ curl -sI https://hls.example.com/zuidwest/live.m3u8
 ```
 
 Expected results: three variants, AAC codec strings (`mp4a.40.5` and `mp4a.40.2`), playlist refreshes after the edge-rule TTL, and `.ts` segments are served with a longer cache lifetime.
+
+### Failure Isolation
+
+HLS is an optional CDN output and is not allowed to take the primary Icecast, DAB+, or DME outputs off air. Two layers enforce this:
+
+- `/hls` is a dedicated tmpfs mount (64 MB, owned by the container user), so host disk-full conditions, read-only remounts, and ownership drift after deployment cannot reach the HLS writer. The live window needs roughly 2.5 MB; no host directory or manual `chown` is required anymore.
+- The HLS chain runs on its own Liquidsoap clock with an error handler. If writing still fails (for example the tmpfs itself fills up), only the HLS output degrades: the failure is logged at error level, `hls.status` reports `degraded: <reason>`, and a watchdog recreates the output with exponential backoff (5s doubling to 5 minutes) once `/hls` is writable again. Primary outputs keep running throughout, and recovery does not require a restart.
+
+Existing installations pick up the tmpfs mount by re-running `install.sh` (which refreshes `docker-compose.yml`); the old `./hls` host directory is unused afterwards and can be removed.
+
+Monitor `hls.status` via the server socket and alert when it reports `degraded` for longer than one backoff cycle.
 
 ## DME Integration (Dutch Media Exchange)
 
@@ -449,6 +461,13 @@ For now-playing information and metadata routing, see the [zwfm-metadata](https:
 - Check Docker logs for `hls` upload, delete, or reconcile messages
 - Confirm the Bunny pull zone has a 1-2 second cache rule for `*.m3u8`
 - Confirm CORS includes `m3u8` and `ts` extensions
+
+**HLS output is degraded (`hls.status` reports `degraded`)**
+
+- The local HLS writer failed (unwritable or full `/hls`); primary outputs are unaffected
+- Check Docker logs for `HLS output degraded` lines with the exact reason
+- Verify the `/hls` tmpfs mount exists and is not full: `docker exec liquidsoap df -h /hls`
+- The watchdog retries automatically with backoff and logs `HLS output recovered` on success
 
 **StereoTool not processing**
 
