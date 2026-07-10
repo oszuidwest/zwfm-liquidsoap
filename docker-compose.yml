@@ -15,6 +15,10 @@ services:
     env_file:
       - .env
     ports:
+      - name: hls-metadata-api
+        target: ${HLS_METADATA_PORT:-7000}
+        published: ${HLS_METADATA_PORT:-7000}
+        host_ip: ${HLS_METADATA_BIND:-127.0.0.1}
       - '0.0.0.0:8080:8080' # StereoTool GUI (TCP)
       - '0.0.0.0:8888:8888/udp' # SRT Input 1
       - '0.0.0.0:9999:9999/udp' # SRT Input 2

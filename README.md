@@ -158,6 +158,9 @@ This table lists ALL environment variables used in the system. Variables without
 | `HLS_SEGMENT_DURATION`            | HLS segment duration in seconds                  | `4.0`                        | `4.0`                                                           | `conf/lib/00_settings.liq`             | All             |
 | `HLS_SEGMENTS`                    | Segments per live playlist                       | `10`                         | `10`                                                            | `conf/lib/00_settings.liq`             | All             |
 | `HLS_SEGMENTS_OVERHEAD`           | Extra old segments retained locally              | `5`                          | `5`                                                             | `conf/lib/00_settings.liq`             | All             |
+| `HLS_METADATA_BIND`               | Host address for the metadata API                 | `127.0.0.1`                  | `0.0.0.0`                                                       | `docker-compose.yml`                    | All             |
+| `HLS_METADATA_PORT`               | Timed metadata API port                           | `7000`                       | `7000`                                                          | `conf/lib/00_settings.liq`             | All             |
+| `HLS_METADATA_BEARER_TOKEN`       | Enables and protects the timed metadata API       | _(none)_                     | `long-random-token`                                             | `conf/lib/00_settings.liq`             | All             |
 | **DME Configuration**             |
 | `DME_PRIMARY_HOST`                | Primary DME server                               | _(required)_                 | `ingest1.dme.nl`                                                | `conf/rucphen.liq`, `conf/bredanu.liq` | Rucphen/BredaNu |
 | `DME_PRIMARY_PORT`                | Primary DME port                                 | _(required)_                 | `8010`                                                          | `conf/rucphen.liq`, `conf/bredanu.liq` | Rucphen/BredaNu |
@@ -352,9 +355,49 @@ Set both Bunny variables to enable HLS:
 HLS_BUNNY_STORAGE_ZONE=zwfm-hls
 HLS_BUNNY_ACCESS_KEY=storage-zone-read-write-password
 HLS_BUNNY_ENDPOINT=storage.bunnycdn.com
+HLS_METADATA_PORT=7000
+HLS_METADATA_BEARER_TOKEN=replace-with-a-long-random-token
 ```
 
 The AccessKey is the storage zone read/write password. Use a dedicated Edge Storage zone for HLS so this credential is scoped to live-stream objects only.
+
+### Timed metadata
+
+When `HLS_METADATA_BEARER_TOKEN` is configured, Liquidsoap accepts now-playing
+updates at `GET /metadata/hls` on `HLS_METADATA_PORT`. The update is inserted
+into the HLS branch and encoded as timed ID3 in every MPEG-TS variant. Because
+the metadata travels in the media segments, it remains synchronized with the
+audio through the HLS and CDN buffers.
+
+Configure a URL output in
+[zwfm-metadata](https://github.com/oszuidwest/zwfm-metadata) and use the same
+input priority, filters, and delay as the corresponding Icecast output:
+
+```json
+{
+  "type": "url",
+  "name": "hls-timed-metadata",
+  "inputs": ["radio-live", "radio-automation", "default-text"],
+  "formatters": [],
+  "settings": {
+    "delay": 0,
+    "url": "http://liquidsoap:7000/metadata/hls?title={{.title}}&artist={{.artist}}",
+    "method": "GET",
+    "bearerToken": "replace-with-the-same-long-random-token"
+  }
+}
+```
+
+The URL template fields are URL-encoded by `zwfm-metadata`. Keep the endpoint
+on a private network. The Compose configuration binds it to `127.0.0.1` by
+default. When both applications run in containers, attach them to the same
+Docker network and use the `liquidsoap` service name. For a metadata service on
+another host, set `HLS_METADATA_BIND=0.0.0.0` and restrict the port with a
+firewall to that host.
+
+Players must consume timed ID3 to display the values. For example, hls.js emits
+`FRAG_PARSING_METADATA`; native Apple and Android HLS players expose equivalent
+timed metadata callbacks.
 
 ### Bunny Setup
 

@@ -80,6 +80,10 @@ let HLS_SEGMENT_DURATION =
 let HLS_SEGMENTS = int_of_string(environment.get("HLS_SEGMENTS", default="10"))
 let HLS_SEGMENTS_OVERHEAD =
   int_of_string(environment.get("HLS_SEGMENTS_OVERHEAD", default="5"))
+let HLS_METADATA_PORT =
+  int_of_string(environment.get("HLS_METADATA_PORT", default="7000"))
+let HLS_METADATA_BEARER_TOKEN =
+  environment.get("HLS_METADATA_BEARER_TOKEN", default="")
 
 # StereoTool configuration (optional)
 let STEREOTOOL_LICENSE = environment.get("STEREOTOOL_LICENSE", default="")

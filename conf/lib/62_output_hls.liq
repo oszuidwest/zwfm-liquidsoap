@@ -440,6 +440,75 @@ def hls_segment_name(segment_metadata) =
   }"
 end
 
+def hls_header_value(headers, name) =
+  let normalized_name = string.case(name, lower=true)
+  list.fold(
+    fun (value, header) ->
+      begin
+        let (header_name, header_value) = header
+        if
+          string.case(header_name, lower=true) == normalized_name
+        then
+          header_value
+        else
+          value
+        end
+      end,
+    "",
+    headers
+  )
+end
+
+def hls_register_metadata_endpoint(hls_source) =
+  if
+    HLS_METADATA_BEARER_TOKEN == ""
+  then
+    log(
+      label="hls",
+      "HLS timed metadata endpoint disabled - HLS_METADATA_BEARER_TOKEN not configured",
+      level=3
+    )
+  else
+    def hls_metadata_handler(req, res) =
+      res.header("Cache-Control", "no-store")
+      let authorization = hls_header_value(req.headers, "authorization")
+      if
+        authorization != "Bearer #{HLS_METADATA_BEARER_TOKEN}"
+      then
+        res.status_code(401)
+        res.data("Unauthorized\n")
+      else
+        let title = list.assoc(default="", "title", req.query)
+        let artist = list.assoc(default="", "artist", req.query)
+
+        if
+          title == ""
+        then
+          res.status_code(400)
+          res.data("Missing title\n")
+        else
+          hls_source.insert_metadata([("artist", artist), ("title", title)])
+          res.status_code(204)
+          res.data("")
+          log(label="hls", "Inserted HLS timed metadata", level=4)
+        end
+      end
+    end
+
+    harbor.http.register(
+      port=HLS_METADATA_PORT,
+      method="GET",
+      "/metadata/hls",
+      hls_metadata_handler
+    )
+    log(
+      label="hls",
+      "HLS timed metadata endpoint enabled on port #{HLS_METADATA_PORT}",
+      level=3
+    )
+  end
+end
+
 def output_hls_stream(audio_source) =
   if
     HLS_BUNNY_STORAGE_ZONE != "" and HLS_BUNNY_ACCESS_KEY != ""
@@ -468,7 +537,10 @@ def output_hls_stream(audio_source) =
       ).{
         bandwidth = HLS_BITRATE_LOW * 1000 + 8000,
         codecs = "mp4a.40.5",
-        extname = "ts"
+        extname = "ts",
+        id3 = true,
+        id3_version = 3,
+        replay_id3 = true
       }
 
     let aac_mid =
@@ -484,7 +556,10 @@ def output_hls_stream(audio_source) =
       ).{
         bandwidth = HLS_BITRATE_MID * 1000 + 8000,
         codecs = "mp4a.40.2",
-        extname = "ts"
+        extname = "ts",
+        id3 = true,
+        id3_version = 3,
+        replay_id3 = true
       }
 
     let aac_high =
@@ -500,7 +575,10 @@ def output_hls_stream(audio_source) =
       ).{
         bandwidth = HLS_BITRATE_HIGH * 1000 + 8000,
         codecs = "mp4a.40.2",
-        extname = "ts"
+        extname = "ts",
+        id3 = true,
+        id3_version = 3,
+        replay_id3 = true
       }
 
     let hls_output =
@@ -515,6 +593,8 @@ def output_hls_stream(audio_source) =
         [("aac_48", aac_low), ("aac_96", aac_mid), ("aac_192", aac_high)],
         hls_source
       )
+
+    hls_register_metadata_endpoint(hls_source)
 
     let hls_remote_seeded = ref(false)
     let hls_synced_segments = ref([])
