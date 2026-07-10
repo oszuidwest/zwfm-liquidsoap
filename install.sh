@@ -57,6 +57,7 @@ LIQUIDSOAP_LIB_FILES=(
   "50_processing.liq"
   "60_output_icecast.liq"
   "61_output_dab.liq"
+  "62_output_hls.liq"
   "80_server.liq"
   "90_radio.liq"
 )
@@ -78,6 +79,7 @@ DIRECTORIES=(
   "${INSTALL_DIR}/scripts/lib"
   "${INSTALL_DIR}/audio"
   "${INSTALL_DIR}/socket"
+  "${INSTALL_DIR}/hls"
 )
 
 # Environment setup
@@ -225,6 +227,7 @@ EOL
 echo -e "${BLUE}►► Setting ownership...${NC}"
 chown -R 100:101 "${STEREO_TOOL_INSTALL_DIR}"
 chown -R 100:101 "${INSTALL_DIR}/socket"
+chown -R 100:101 "${INSTALL_DIR}/hls"
 
 echo -e "${BLUE}►► Validating Docker Compose configuration...${NC}"
 (cd "${INSTALL_DIR}" && docker compose --env-file .env config -q)
