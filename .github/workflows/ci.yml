@@ -31,3 +31,12 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: false
           pull: true
+
+  publish:
+    name: Publish Docker Image
+    needs: [quality, build]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
+      packages: write
+    uses: ./.github/workflows/docker.yml

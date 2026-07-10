@@ -11,6 +11,10 @@ on:
         type: boolean
   workflow_call:
 
+permissions:
+  contents: read
+  packages: write
+
 jobs:
   build-and-publish:
     runs-on: ubuntu-latest
@@ -33,24 +37,28 @@ jobs:
           echo "Using ODR-AudioEnc version: $ODR_AUDIOENC_VERSION"
           echo "Combined tag: $COMBINED_TAG"
 
-          echo "liquidsoap_version=$LIQUIDSOAP_VERSION" >> $GITHUB_OUTPUT
-          echo "odr_audioenc_version=$ODR_AUDIOENC_VERSION" >> $GITHUB_OUTPUT
-          echo "combined_tag=$COMBINED_TAG" >> $GITHUB_OUTPUT
+          {
+            echo "liquidsoap_version=$LIQUIDSOAP_VERSION"
+            echo "odr_audioenc_version=$ODR_AUDIOENC_VERSION"
+            echo "combined_tag=$COMBINED_TAG"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Check if Version Exists
         id: check_version
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           COMBINED_TAG="${{ steps.versions.outputs.combined_tag }}"
           FORCE_BUILD="${{ github.event.inputs.force_build }}"
 
           if [[ "$FORCE_BUILD" == "true" ]]; then
             echo "Force build enabled, proceeding with build"
-            echo "should_build=true" >> $GITHUB_OUTPUT
+            echo "should_build=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
-          REPO_NAME=$(basename ${{ github.repository }})
-          ORG_NAME=$(dirname ${{ github.repository }})
+          REPO_NAME=$(basename "${{ github.repository }}")
+          ORG_NAME=$(dirname "${{ github.repository }}")
 
           echo "Checking if version exists: $COMBINED_TAG"
           EXISTING_TAGS=$(gh api "orgs/${ORG_NAME}/packages/container/${REPO_NAME}/versions" \
@@ -64,10 +72,10 @@ jobs:
 
           if echo "$EXISTING_TAGS" | grep -q "^$COMBINED_TAG$"; then
             echo "Version already exists: $COMBINED_TAG"
-            echo "should_build=false" >> $GITHUB_OUTPUT
+            echo "should_build=false" >> "$GITHUB_OUTPUT"
           else
             echo "Version not found. Will build: $COMBINED_TAG"
-            echo "should_build=true" >> $GITHUB_OUTPUT
+            echo "should_build=true" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Set up QEMU
@@ -84,7 +92,7 @@ jobs:
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          password: ${{ github.token }}
 
       - name: Build and Push Docker Image
         if: steps.check_version.outputs.should_build == 'true'
@@ -113,19 +121,22 @@ jobs:
       - name: Build Summary
         if: steps.check_version.outputs.should_build == 'true'
         run: |
-          echo "## Docker Build Completed Successfully" >> $GITHUB_STEP_SUMMARY
-          echo "- **Image Tag**: ${{ steps.versions.outputs.combined_tag }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Image**: ghcr.io/${{ github.repository }}:${{ steps.versions.outputs.combined_tag }}" \
-            >> $GITHUB_STEP_SUMMARY
-          echo "- **Digest**: ${{ steps.build.outputs.digest }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Platforms**: linux/amd64, linux/arm64" >> $GITHUB_STEP_SUMMARY
-          if [[ "${{ github.event.inputs.force_build }}" == "true" ]]; then
-            echo "- **Force Build**: Enabled" >> $GITHUB_STEP_SUMMARY
-          fi
+          {
+            echo "## Docker Build Completed Successfully"
+            echo "- **Image Tag**: ${{ steps.versions.outputs.combined_tag }}"
+            echo "- **Image**: ghcr.io/${{ github.repository }}:${{ steps.versions.outputs.combined_tag }}"
+            echo "- **Digest**: ${{ steps.build.outputs.digest }}"
+            echo "- **Platforms**: linux/amd64, linux/arm64"
+            if [[ "${{ github.event.inputs.force_build }}" == "true" ]]; then
+              echo "- **Force Build**: Enabled"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Skip Build Summary
         if: steps.check_version.outputs.should_build == 'false'
         run: |
-          echo "## Docker Build Skipped" >> $GITHUB_STEP_SUMMARY
-          echo "Version ${{ steps.versions.outputs.combined_tag }} already exists" >> $GITHUB_STEP_SUMMARY
-          echo "Use 'Force build' option to rebuild existing version" >> $GITHUB_STEP_SUMMARY
+          {
+            echo "## Docker Build Skipped"
+            echo "Version ${{ steps.versions.outputs.combined_tag }} already exists"
+            echo "Use 'Force build' option to rebuild existing version"
+          } >> "$GITHUB_STEP_SUMMARY"
