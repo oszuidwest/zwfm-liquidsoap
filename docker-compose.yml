@@ -11,7 +11,7 @@ services:
       - ./socket:/tmp/liquidsoap # Server socket
       - ./hls:/hls
     environment:
-      - TZ=Europe/Amsterdam
+      - TZ=${CONTAINER_TIMEZONE:-Europe/Amsterdam}
     env_file:
       - .env
     ports:
