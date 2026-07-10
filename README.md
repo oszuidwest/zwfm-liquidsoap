@@ -398,6 +398,8 @@ HLS is an optional CDN output and is not allowed to take the primary Icecast, DA
 - `/hls` is a dedicated tmpfs mount (64 MB, owned by the container user), so host disk-full conditions, read-only remounts, and ownership drift after deployment cannot reach the HLS writer. The live window needs roughly 2.5 MB; no host directory or manual `chown` is required anymore.
 - The HLS chain runs on its own Liquidsoap clock with an error handler. If writing still fails (for example the tmpfs itself fills up), only the HLS output degrades: the failure is logged at error level, `hls.status` reports `degraded: <reason>`, and a watchdog recreates the output with exponential backoff (5s doubling to 5 minutes) once `/hls` is writable again. Primary outputs keep running throughout, and recovery does not require a restart.
 
+Existing installations pick up the tmpfs mount by re-running `install.sh` (which refreshes `docker-compose.yml`); the old `./hls` host directory is unused afterwards and can be removed.
+
 Monitor `hls.status` via the server socket and alert when it reports `degraded` for longer than one backoff cycle.
 
 ## DME Integration (Dutch Media Exchange)
