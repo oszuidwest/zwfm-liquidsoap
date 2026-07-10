@@ -9,10 +9,6 @@ services:
       - ./audio:/audio
       - ./stereotool:/var/cache/liquidsoap/
       - ./socket:/tmp/liquidsoap # Server socket
-    # HLS window on tmpfs: host disk-full, read-only remounts and ownership
-    # drift cannot break it. 64M is ~25x the default live window.
-    tmpfs:
-      - /hls:size=64m,uid=100,gid=101,mode=0755
     environment:
       - TZ=${CONTAINER_TIMEZONE:-Europe/Amsterdam}
     env_file:
@@ -24,3 +20,7 @@ services:
     command: /scripts/radio.liq
     restart: unless-stopped
     user: "liquidsoap:liquidsoap"
+    # HLS window on tmpfs: host disk-full, read-only remounts and ownership
+    # drift cannot break it. 64M is ~25x the default live window.
+    tmpfs:
+      - /hls:size=64m,uid=100,gid=101,mode=0755
