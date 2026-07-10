@@ -63,6 +63,8 @@ flowchart LR
 
 The system delivers audio through dual redundant pathways. Liquidsoap prioritizes the main input (SRT 1). If it becomes unavailable or silent, the system automatically switches to SRT 2. Should both inputs fail, it falls back to an emergency audio file (configured via `EMERGENCY_AUDIO_PATH`). For maximum reliability, both inputs should receive the same broadcast via separate network paths.
 
+The emergency audio file is a required production dependency: at startup Liquidsoap verifies that the file exists and can be decoded, and refuses to start otherwise. This prevents a deployment from silently losing its last safety net. For development or testing without an audio file, set `EMERGENCY_ALLOW_BLANK=true` to explicitly accept a silent fallback.
+
 ### Components
 
 1. **Liquidsoap**: Core audio processing engine - handles input switching, fallback logic, and encoding
@@ -139,11 +141,13 @@ This table lists ALL environment variables used in the system. Variables without
 | `STEREOTOOL_WEB_BIND`             | Host address for the StereoTool web interface     | `0.0.0.0`                    | `127.0.0.1`                                                     | `docker-compose.yml`                    | All             |
 | `STEREOTOOL_WEB_PORT`             | StereoTool web interface host port                | `8080`                       | `8080`                                                          | `docker-compose.yml`                    | All             |
 | **Fallback & Control**            |
-| `SERVER_SOCKET_ENABLED`           | Enable Unix socket for runtime control           | `true`                       | `true`                                                          | `conf/lib/90_server.liq`               | All             |
-| `SERVER_SOCKET_PATH`              | Unix socket file path                            | `/tmp/liquidsoap/liquidsoap.sock` | `/tmp/liquidsoap/liquidsoap.sock`                          | `conf/lib/90_server.liq`               | All             |
+| `SERVER_SOCKET_ENABLED`           | Enable Unix socket for runtime control           | `true`                       | `true`                                                          | `conf/lib/80_server.liq`               | All             |
+| `SERVER_SOCKET_PATH`              | Unix socket file path                            | `/tmp/liquidsoap/liquidsoap.sock` | `/tmp/liquidsoap/liquidsoap.sock`                          | `conf/lib/80_server.liq`               | All             |
 | `EMERGENCY_AUDIO_PATH`            | Fallback audio file when all inputs fail         | `/audio/fallback.ogg`        | `/audio/noodband.mp3`                                           | `conf/lib/00_settings.liq`             | All             |
+| `EMERGENCY_ALLOW_BLANK`           | Allow silent fallback when emergency audio is missing/invalid (dev/test only) | `false` | `true`                                              | `conf/lib/00_settings.liq`             | All             |
 | `SILENCE_SWITCH_SECONDS`          | Max silence duration (seconds)                   | `15.0`                       | `20.0`                                                          | `conf/lib/00_settings.liq`             | All             |
 | `AUDIO_VALID_SECONDS`             | Min audio duration (seconds)                     | `15.0`                       | `10.0`                                                          | `conf/lib/00_settings.liq`             | All             |
+| `SILENCE_THRESHOLD`               | Audio level (dB) below which input counts as silent | `-40.0`                   | `-45.0`                                                         | `conf/lib/00_settings.liq`             | All             |
 | **DAB+ Configuration (Optional)** |
 | `DAB_BITRATE`                     | DAB+ encoder bitrate                             | _(none)_                     | `128`                                                           | `conf/lib/00_settings.liq`             | All             |
 | `DAB_EDI_DESTINATIONS`            | DAB+ EDI destination(s)                          | _(none)_                     | `tcp://dab-mux.local:9001` or `tcp://dab1:9001,tcp://dab2:9002` | `conf/lib/00_settings.liq`             | All             |
@@ -153,7 +157,7 @@ This table lists ALL environment variables used in the system. Variables without
 | `HLS_BUNNY_STORAGE_ZONE`          | Bunny Edge Storage zone name                     | _(none)_                     | `zwfm-hls`                                                      | `conf/lib/00_settings.liq`             | All             |
 | `HLS_BUNNY_ACCESS_KEY`            | Bunny Edge Storage read/write password           | _(none)_                     | `secret-storage-password`                                       | `conf/lib/00_settings.liq`             | All             |
 | `HLS_BUNNY_ENDPOINT`              | Bunny Edge Storage API endpoint                  | `storage.bunnycdn.com`       | `storage.bunnycdn.com`                                          | `conf/lib/00_settings.liq`             | All             |
-| `HLS_DIR`                         | Local HLS output directory                       | `/hls`                       | `/hls`                                                          | `conf/lib/00_settings.liq`             | All             |
+| `HLS_DIR`                         | Local HLS output directory (tmpfs mount)         | `/hls`                       | `/hls`                                                          | `conf/lib/00_settings.liq`             | All             |
 | `HLS_BITRATE_LOW`                 | Low HLS AAC bitrate in kbps                      | `48`                         | `48`                                                            | `conf/lib/00_settings.liq`             | All             |
 | `HLS_BITRATE_MID`                 | Mid HLS AAC bitrate in kbps                      | `96`                         | `96`                                                            | `conf/lib/00_settings.liq`             | All             |
 | `HLS_BITRATE_HIGH`                | High HLS AAC bitrate in kbps                     | `192`                        | `192`                                                           | `conf/lib/00_settings.liq`             | All             |
@@ -245,6 +249,7 @@ socat - UNIX-CONNECT:/opt/liquidsoap/socket/liquidsoap.sock
 | `silence.enable` | Enable silence detection |
 | `silence.disable` | Disable silence detection |
 | `silence.status` | Show silence detection state |
+| `hls.status` | Show HLS output health (`ok`, `degraded: <reason>`, or `disabled`) |
 
 All commands take effect immediately.
 
@@ -258,7 +263,7 @@ When silence detection is **enabled** (default):
 
 - Studio inputs automatically switch away when silent for more than 15 seconds
 - If both studios are silent/disconnected, the system plays the fallback file
-- If no fallback file exists, the system plays silence
+- The fallback file is validated at startup (see [System Design](#system-design) and `EMERGENCY_ALLOW_BLANK`)
 - Provides automatic redundancy for unattended operation
 
 When silence detection is **disabled**:
@@ -278,6 +283,7 @@ The default silence detection parameters can be adjusted via environment variabl
 
 - `SILENCE_SWITCH_SECONDS`: Maximum silence duration in seconds (default: 15.0)
 - `AUDIO_VALID_SECONDS`: The minimum duration of continuous audio required for an input to be considered valid (default: 15.0)
+- `SILENCE_THRESHOLD`: Audio level in dB below which the input is considered silent (default: -40.0)
 
 ## Streaming to SRT Inputs
 
@@ -409,7 +415,7 @@ players expose equivalent timed metadata callbacks.
 
 ## HLS Output via Bunny CDN
 
-The system supports optional audio-only HLS output. Liquidsoap writes a local HLS live window to `/hls`, then mirrors it to Bunny Edge Storage with native `http.put` and `http.delete` calls. No sidecar uploader or extra Docker image dependency is required.
+The system supports optional audio-only HLS output. Liquidsoap writes a local HLS live window to `/hls` (a 64 MB tmpfs mount defined in `docker-compose.yml`), then mirrors it to Bunny Edge Storage with native `http.put` and `http.delete` calls. No sidecar uploader or extra Docker image dependency is required.
 
 The HLS ladder is:
 
@@ -461,6 +467,17 @@ curl -sI https://hls.example.com/zuidwest/live.m3u8
 ```
 
 Expected results: three variants, AAC codec strings (`mp4a.40.5` and `mp4a.40.2`), playlist refreshes after the edge-rule TTL, and `.ts` segments are served with a longer cache lifetime.
+
+### Failure Isolation
+
+HLS is an optional CDN output and is not allowed to take the primary Icecast, DAB+, or DME outputs off air. Two layers enforce this:
+
+- `/hls` is a dedicated tmpfs mount (64 MB, owned by the container user), so host disk-full conditions, read-only remounts, and ownership drift after deployment cannot reach the HLS writer. The live window needs roughly 2.5 MB; no host directory or manual `chown` is required anymore.
+- The HLS chain runs on its own Liquidsoap clock with an error handler. If writing still fails (for example the tmpfs itself fills up), only the HLS output degrades: the failure is logged at error level, `hls.status` reports `degraded: <reason>`, and a watchdog recreates the output with exponential backoff (5s doubling to 5 minutes) once `/hls` is writable again. Primary outputs keep running throughout, and recovery does not require a restart.
+
+Existing installations pick up the tmpfs mount by re-running `install.sh` (which refreshes `docker-compose.yml`); the old `./hls` host directory is unused afterwards and can be removed.
+
+Monitor `hls.status` via the server socket and alert when it reports `degraded` for longer than one backoff cycle.
 
 ## DME Integration (Dutch Media Exchange)
 
@@ -521,6 +538,13 @@ For now-playing information and metadata routing, see the [zwfm-metadata](https:
 - Check Docker logs for `hls` upload, delete, or reconcile messages
 - Confirm the Bunny pull zone has a 1-2 second cache rule for `*.m3u8`
 - Confirm CORS includes `m3u8` and `ts` extensions
+
+**HLS output is degraded (`hls.status` reports `degraded`)**
+
+- The local HLS writer failed (unwritable or full `/hls`); primary outputs are unaffected
+- Check Docker logs for `HLS output degraded` lines with the exact reason
+- Verify the `/hls` tmpfs mount exists and is not full: `docker exec liquidsoap df -h /hls`
+- The watchdog retries automatically with backoff and logs `HLS output recovered` on success
 
 **StereoTool not processing**
 
