@@ -15,7 +15,7 @@ services:
     env_file:
       - .env
     ports:
-      - '0.0.0.0:8080:8080' # StereoTool GUI (TCP)
+      - '0.0.0.0:${STEREOTOOL_WEB_PORT:-8080}:8080' # StereoTool GUI (TCP)
       - '0.0.0.0:8888:8888/udp' # SRT Input 1
       - '0.0.0.0:9999:9999/udp' # SRT Input 2
     command: /scripts/radio.liq
