@@ -139,12 +139,13 @@ This table lists ALL environment variables used in the system. Variables without
 | `STEREOTOOL_LICENSE`              | StereoTool license key                           | _(none)_                     | `ABC123DEF456...`                                               | `conf/lib/00_settings.liq`             | All             |
 | `STEREOTOOL_WEB_PORT`             | StereoTool web interface port                    | `8080`                       | `8080`                                                          | `conf/lib/00_settings.liq`             | All             |
 | **Fallback & Control**            |
-| `SERVER_SOCKET_ENABLED`           | Enable Unix socket for runtime control           | `true`                       | `true`                                                          | `conf/lib/90_server.liq`               | All             |
-| `SERVER_SOCKET_PATH`              | Unix socket file path                            | `/tmp/liquidsoap/liquidsoap.sock` | `/tmp/liquidsoap/liquidsoap.sock`                          | `conf/lib/90_server.liq`               | All             |
+| `SERVER_SOCKET_ENABLED`           | Enable Unix socket for runtime control           | `true`                       | `true`                                                          | `conf/lib/80_server.liq`               | All             |
+| `SERVER_SOCKET_PATH`              | Unix socket file path                            | `/tmp/liquidsoap/liquidsoap.sock` | `/tmp/liquidsoap/liquidsoap.sock`                          | `conf/lib/80_server.liq`               | All             |
 | `EMERGENCY_AUDIO_PATH`            | Fallback audio file when all inputs fail         | `/audio/fallback.ogg`        | `/audio/noodband.mp3`                                           | `conf/lib/00_settings.liq`             | All             |
 | `EMERGENCY_ALLOW_BLANK`           | Allow silent fallback when emergency audio is missing/invalid (dev/test only) | `false` | `true`                                              | `conf/lib/00_settings.liq`             | All             |
 | `SILENCE_SWITCH_SECONDS`          | Max silence duration (seconds)                   | `15.0`                       | `20.0`                                                          | `conf/lib/00_settings.liq`             | All             |
 | `AUDIO_VALID_SECONDS`             | Min audio duration (seconds)                     | `15.0`                       | `10.0`                                                          | `conf/lib/00_settings.liq`             | All             |
+| `SILENCE_THRESHOLD`               | Audio level (dB) below which input counts as silent | `-40.0`                   | `-45.0`                                                         | `conf/lib/00_settings.liq`             | All             |
 | **DAB+ Configuration (Optional)** |
 | `DAB_BITRATE`                     | DAB+ encoder bitrate                             | _(none)_                     | `128`                                                           | `conf/lib/00_settings.liq`             | All             |
 | `DAB_EDI_DESTINATIONS`            | DAB+ EDI destination(s)                          | _(none)_                     | `tcp://dab-mux.local:9001` or `tcp://dab1:9001,tcp://dab2:9002` | `conf/lib/00_settings.liq`             | All             |
@@ -251,7 +252,7 @@ When silence detection is **enabled** (default):
 
 - Studio inputs automatically switch away when silent for more than 15 seconds
 - If both studios are silent/disconnected, the system plays the fallback file
-- The fallback file is validated at startup: if it is missing or cannot be decoded, Liquidsoap refuses to start (unless `EMERGENCY_ALLOW_BLANK=true` explicitly allows a silent fallback for development/testing)
+- The fallback file is validated at startup (see [System Design](#system-design) and `EMERGENCY_ALLOW_BLANK`)
 - Provides automatic redundancy for unattended operation
 
 When silence detection is **disabled**:
@@ -271,6 +272,7 @@ The default silence detection parameters can be adjusted via environment variabl
 
 - `SILENCE_SWITCH_SECONDS`: Maximum silence duration in seconds (default: 15.0)
 - `AUDIO_VALID_SECONDS`: The minimum duration of continuous audio required for an input to be considered valid (default: 15.0)
+- `SILENCE_THRESHOLD`: Audio level in dB below which the input is considered silent (default: -40.0)
 
 ## Streaming to SRT Inputs
 
