@@ -131,11 +131,13 @@ This table lists ALL environment variables used in the system. Variables without
 | `ICECAST_BITRATE_AAC_HIGH`        | High AAC bitrate (kbps)                          | `576`                        | `320`                                                           | `conf/lib/00_settings.liq`             | All             |
 | **SRT Studio Inputs**             |
 | `SRT_PASSPHRASE`                  | SRT encryption passphrase                        | _(required)_                 | `alpha-bravo-charlie-delta`                                     | `conf/lib/00_settings.liq`             | All             |
-| `SRT_PORT_PRIMARY`                | Primary SRT listening port                       | `8888`                       | `8888`                                                          | `conf/lib/00_settings.liq`             | All             |
-| `SRT_PORT_SECONDARY`              | Secondary SRT listening port                     | `9999`                       | `9999`                                                          | `conf/lib/00_settings.liq`             | All             |
+| `SRT_BIND`                        | Host address for both SRT inputs                  | `0.0.0.0`                    | `192.0.2.10`                                                    | `docker-compose.yml`                    | All             |
+| `SRT_PORT_PRIMARY`                | Primary SRT listening port                       | `8888`                       | `8888`                                                          | Liquidsoap and Compose                  | All             |
+| `SRT_PORT_SECONDARY`              | Secondary SRT listening port                     | `9999`                       | `9999`                                                          | Liquidsoap and Compose                  | All             |
 | **Audio Processing**              |
 | `STEREOTOOL_LICENSE`              | StereoTool license key                           | _(none)_                     | `ABC123DEF456...`                                               | `conf/lib/00_settings.liq`             | All             |
-| `STEREOTOOL_WEB_PORT`             | StereoTool web interface port                    | `8080`                       | `8080`                                                          | `conf/lib/00_settings.liq`             | All             |
+| `STEREOTOOL_WEB_BIND`             | Host address for the StereoTool web interface     | `0.0.0.0`                    | `127.0.0.1`                                                     | `docker-compose.yml`                    | All             |
+| `STEREOTOOL_WEB_PORT`             | StereoTool web interface host port                | `8080`                       | `8080`                                                          | `docker-compose.yml`                    | All             |
 | **Fallback & Control**            |
 | `SERVER_SOCKET_ENABLED`           | Enable Unix socket for runtime control           | `true`                       | `true`                                                          | `conf/lib/90_server.liq`               | All             |
 | `SERVER_SOCKET_PATH`              | Unix socket file path                            | `/tmp/liquidsoap/liquidsoap.sock` | `/tmp/liquidsoap/liquidsoap.sock`                          | `conf/lib/90_server.liq`               | All             |
@@ -158,9 +160,10 @@ This table lists ALL environment variables used in the system. Variables without
 | `HLS_SEGMENT_DURATION`            | HLS segment duration in seconds                  | `4.0`                        | `4.0`                                                           | `conf/lib/00_settings.liq`             | All             |
 | `HLS_SEGMENTS`                    | Segments per live playlist                       | `10`                         | `10`                                                            | `conf/lib/00_settings.liq`             | All             |
 | `HLS_SEGMENTS_OVERHEAD`           | Extra old segments retained locally              | `5`                          | `5`                                                             | `conf/lib/00_settings.liq`             | All             |
-| `HLS_METADATA_BIND`               | Host address for the metadata API                 | `127.0.0.1`                  | `0.0.0.0`                                                       | `docker-compose.yml`                    | All             |
-| `HLS_METADATA_PORT`               | Timed metadata API port                           | `7000`                       | `7000`                                                          | `conf/lib/00_settings.liq`             | All             |
-| `HLS_METADATA_BEARER_TOKEN`       | Enables and protects the timed metadata API       | _(none)_                     | `long-random-token`                                             | `conf/lib/00_settings.liq`             | All             |
+| **Stream Metadata (Optional)**    |
+| `STREAM_METADATA_BIND`            | Host address for the metadata API                 | `127.0.0.1`                  | `0.0.0.0`                                                       | `docker-compose.yml`                    | All             |
+| `STREAM_METADATA_PORT`            | Shared stream metadata API port                   | `7000`                       | `7000`                                                          | `conf/lib/00_settings.liq`             | All             |
+| `STREAM_METADATA_BEARER_TOKEN`    | Enables and protects the stream metadata API      | _(none)_                     | `long-random-token`                                             | `conf/lib/00_settings.liq`             | All             |
 | **DME Configuration**             |
 | `DME_PRIMARY_HOST`                | Primary DME server                               | _(required)_                 | `ingest1.dme.nl`                                                | `conf/rucphen.liq`, `conf/bredanu.liq` | Rucphen/BredaNu |
 | `DME_PRIMARY_PORT`                | Primary DME port                                 | _(required)_                 | `8010`                                                          | `conf/rucphen.liq`, `conf/bredanu.liq` | Rucphen/BredaNu |
@@ -203,6 +206,10 @@ docker compose down
 ### StereoTool GUI
 
 When StereoTool is enabled (by providing a `STEREOTOOL_LICENSE` in the `.env` file), access the web interface at: `http://localhost:8080`
+
+Set `STEREOTOOL_WEB_BIND=127.0.0.1` to restrict the interface to the local
+host, or bind it to a specific host address. The default remains `0.0.0.0` for
+backward compatibility.
 
 ### Audio Processing with StereoTool
 
@@ -300,8 +307,13 @@ For production use, consider using [rpi-audio-encoder](https://github.com/oszuid
 
 The SRT listening ports can be customized via environment variables:
 
+- `SRT_BIND`: Host address for both published SRT ports (default: 0.0.0.0)
 - `SRT_PORT_PRIMARY`: Primary studio input port (default: 8888)
 - `SRT_PORT_SECONDARY`: Secondary studio input port (default: 9999)
+
+Use a specific address for `SRT_BIND` when studio traffic should only enter on
+one host interface. This controls Docker's published host address; Liquidsoap
+continues to listen on the corresponding container ports.
 
 ## DAB+ Digital Radio Broadcasting
 
@@ -333,6 +345,68 @@ DAB_EDI_DESTINATIONS=tcp://primary.example.com:9001,tcp://backup.example.com:900
 
 PAD allows sending metadata like song titles and station logos alongside the audio. Recommendation to use as small of a METADATA_SIZE as possible. 8 bytes is enough to transmit a logo in a couple of seconds (ofcourse, how smaller the filesize the faster the logo will transmit). If you're using artwork, you might need to consider using a bigger METADATA_SIZE.
 
+## Shared Stream Metadata
+
+When `STREAM_METADATA_BEARER_TOKEN` is configured, Liquidsoap accepts
+now-playing updates at `GET /metadata` on `STREAM_METADATA_PORT`. Metadata is
+inserted into the main radio source before processing and the output fan-out.
+One update therefore reaches every compatible Liquidsoap stream output:
+
+- Icecast MP3 and AAC mounts
+- DME Icecast mounts for Radio Rucphen and BredaNu
+- HLS variants, encoded as timed ID3 in each MPEG-TS segment
+
+DAB+ PAD and StereoTool/RDS remain protocol-specific metadata outputs. DAB uses
+the configured PAD socket, while StereoTool metadata is sent through its API;
+neither is derived from Liquidsoap source metadata.
+
+Any metadata producer can call the endpoint. For example:
+
+```bash
+curl --get http://127.0.0.1:7000/metadata \
+  --header "Authorization: Bearer ${STREAM_METADATA_BEARER_TOKEN}" \
+  --data-urlencode "title=Song title" \
+  --data-urlencode "artist=Artist name"
+```
+
+The producer can be a playout or automation system, studio application,
+webhook, or script. The only requirements are a non-empty `title`, an optional
+`artist`, and the configured bearer token.
+
+As an optional integration, configure one URL output in
+[zwfm-metadata](https://github.com/oszuidwest/zwfm-metadata) with the desired
+input priority, filters, and delay:
+
+```json
+{
+  "type": "url",
+  "name": "liquidsoap-stream-metadata",
+  "inputs": ["radio-live", "radio-automation", "default-text"],
+  "formatters": [],
+  "settings": {
+    "delay": 0,
+    "url": "http://liquidsoap:7000/metadata?title={{.title}}&artist={{.artist}}",
+    "method": "GET",
+    "bearerToken": "replace-with-the-same-long-random-token"
+  }
+}
+```
+
+The URL template fields are URL-encoded by `zwfm-metadata`. When using that
+integration, this single output can replace direct Icecast metadata outputs for
+mounts produced by this Liquidsoap instance. Keep separate outputs for DAB PAD,
+StereoTool/RDS, and any streams produced elsewhere.
+
+Keep the endpoint on a private network. The Compose configuration binds it to
+`127.0.0.1` by default. When both applications run in containers, attach them
+to the same Docker network and use the `liquidsoap` service name. For a metadata
+service on another host, set `STREAM_METADATA_BIND=0.0.0.0` and restrict the
+port with a firewall to that host.
+
+For HLS playback, players must consume timed ID3 to display the values. For
+example, hls.js emits `FRAG_PARSING_METADATA`; native Apple and Android HLS
+players expose equivalent timed metadata callbacks.
+
 ## HLS Output via Bunny CDN
 
 The system supports optional audio-only HLS output. Liquidsoap writes a local HLS live window to `/hls`, then mirrors it to Bunny Edge Storage with native `http.put` and `http.delete` calls. No sidecar uploader or extra Docker image dependency is required.
@@ -355,49 +429,9 @@ Set both Bunny variables to enable HLS:
 HLS_BUNNY_STORAGE_ZONE=zwfm-hls
 HLS_BUNNY_ACCESS_KEY=storage-zone-read-write-password
 HLS_BUNNY_ENDPOINT=storage.bunnycdn.com
-HLS_METADATA_PORT=7000
-HLS_METADATA_BEARER_TOKEN=replace-with-a-long-random-token
 ```
 
 The AccessKey is the storage zone read/write password. Use a dedicated Edge Storage zone for HLS so this credential is scoped to live-stream objects only.
-
-### Timed metadata
-
-When `HLS_METADATA_BEARER_TOKEN` is configured, Liquidsoap accepts now-playing
-updates at `GET /metadata/hls` on `HLS_METADATA_PORT`. The update is inserted
-into the HLS branch and encoded as timed ID3 in every MPEG-TS variant. Because
-the metadata travels in the media segments, it remains synchronized with the
-audio through the HLS and CDN buffers.
-
-Configure a URL output in
-[zwfm-metadata](https://github.com/oszuidwest/zwfm-metadata) and use the same
-input priority, filters, and delay as the corresponding Icecast output:
-
-```json
-{
-  "type": "url",
-  "name": "hls-timed-metadata",
-  "inputs": ["radio-live", "radio-automation", "default-text"],
-  "formatters": [],
-  "settings": {
-    "delay": 0,
-    "url": "http://liquidsoap:7000/metadata/hls?title={{.title}}&artist={{.artist}}",
-    "method": "GET",
-    "bearerToken": "replace-with-the-same-long-random-token"
-  }
-}
-```
-
-The URL template fields are URL-encoded by `zwfm-metadata`. Keep the endpoint
-on a private network. The Compose configuration binds it to `127.0.0.1` by
-default. When both applications run in containers, attach them to the same
-Docker network and use the `liquidsoap` service name. For a metadata service on
-another host, set `HLS_METADATA_BIND=0.0.0.0` and restrict the port with a
-firewall to that host.
-
-Players must consume timed ID3 to display the values. For example, hls.js emits
-`FRAG_PARSING_METADATA`; native Apple and Android HLS players expose equivalent
-timed metadata callbacks.
 
 ### Bunny Setup
 
