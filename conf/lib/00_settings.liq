@@ -56,6 +56,12 @@ let SILENCE_THRESHOLD =
 let EMERGENCY_AUDIO_PATH =
   environment.get("EMERGENCY_AUDIO_PATH", default="/audio/fallback.ogg")
 
+# Allow a silent (blank) emergency fallback when the audio file is missing
+# or unusable. Explicit opt-in for development/testing only - production
+# deployments should fail fast instead of risking dead air.
+let EMERGENCY_ALLOW_BLANK =
+  environment.get("EMERGENCY_ALLOW_BLANK", default="false") == "true"
+
 # DAB+ configuration (optional - both required to enable)
 let DAB_BITRATE = environment.get("DAB_BITRATE", default="")
 let DAB_EDI_DESTINATIONS = environment.get("DAB_EDI_DESTINATIONS", default="")

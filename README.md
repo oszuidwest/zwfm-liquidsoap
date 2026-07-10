@@ -63,6 +63,8 @@ flowchart LR
 
 The system delivers audio through dual redundant pathways. Liquidsoap prioritizes the main input (SRT 1). If it becomes unavailable or silent, the system automatically switches to SRT 2. Should both inputs fail, it falls back to an emergency audio file (configured via `EMERGENCY_AUDIO_PATH`). For maximum reliability, both inputs should receive the same broadcast via separate network paths.
 
+The emergency audio file is a required production dependency: at startup Liquidsoap verifies that the file exists and can be decoded, and refuses to start otherwise. This prevents a deployment from silently losing its last safety net. For development or testing without an audio file, set `EMERGENCY_ALLOW_BLANK=true` to explicitly accept a silent fallback.
+
 ### Components
 
 1. **Liquidsoap**: Core audio processing engine - handles input switching, fallback logic, and encoding
@@ -140,6 +142,7 @@ This table lists ALL environment variables used in the system. Variables without
 | `SERVER_SOCKET_ENABLED`           | Enable Unix socket for runtime control           | `true`                       | `true`                                                          | `conf/lib/90_server.liq`               | All             |
 | `SERVER_SOCKET_PATH`              | Unix socket file path                            | `/tmp/liquidsoap/liquidsoap.sock` | `/tmp/liquidsoap/liquidsoap.sock`                          | `conf/lib/90_server.liq`               | All             |
 | `EMERGENCY_AUDIO_PATH`            | Fallback audio file when all inputs fail         | `/audio/fallback.ogg`        | `/audio/noodband.mp3`                                           | `conf/lib/00_settings.liq`             | All             |
+| `EMERGENCY_ALLOW_BLANK`           | Allow silent fallback when emergency audio is missing/invalid (dev/test only) | `false` | `true`                                              | `conf/lib/00_settings.liq`             | All             |
 | `SILENCE_SWITCH_SECONDS`          | Max silence duration (seconds)                   | `15.0`                       | `20.0`                                                          | `conf/lib/00_settings.liq`             | All             |
 | `AUDIO_VALID_SECONDS`             | Min audio duration (seconds)                     | `15.0`                       | `10.0`                                                          | `conf/lib/00_settings.liq`             | All             |
 | **DAB+ Configuration (Optional)** |
@@ -248,7 +251,7 @@ When silence detection is **enabled** (default):
 
 - Studio inputs automatically switch away when silent for more than 15 seconds
 - If both studios are silent/disconnected, the system plays the fallback file
-- If no fallback file exists, the system plays silence
+- The fallback file is validated at startup: if it is missing or cannot be decoded, Liquidsoap refuses to start (unless `EMERGENCY_ALLOW_BLANK=true` explicitly allows a silent fallback for development/testing)
 - Provides automatic redundancy for unattended operation
 
 When silence detection is **disabled**:
