@@ -56,9 +56,8 @@ let SILENCE_THRESHOLD =
 let EMERGENCY_AUDIO_PATH =
   environment.get("EMERGENCY_AUDIO_PATH", default="/audio/fallback.ogg")
 
-# Allow a silent (blank) emergency fallback when the audio file is missing
-# or unusable. Explicit opt-in for development/testing only - production
-# deployments should fail fast instead of risking dead air.
+# Opt-in silent fallback when the emergency audio file is unusable
+# (development/testing only)
 let EMERGENCY_ALLOW_BLANK =
   environment.get("EMERGENCY_ALLOW_BLANK", default="false") == "true"
 
