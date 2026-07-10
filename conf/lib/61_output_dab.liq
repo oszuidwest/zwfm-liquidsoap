@@ -45,9 +45,19 @@ def output_dab_stream(audio_source) =
       edi_urls
     )
 
-    # Feed audio to ODR-AudioEnc
+    # Feed audio to ODR-AudioEnc. Without reopen_on_error a dead encoder
+    # raises a fatal clock error that stops the whole process; returning a
+    # delay respawns the encoder instead and leaves other outputs untouched.
     output.external(
       %wav(channels = 2, samplerate = 48000),
+      reopen_on_error=fun (err) ->
+        begin
+          log(
+            "DAB+ encoder error: #{err} - restarting ODR-AudioEnc in 5s",
+            level=2
+          )
+          5.0
+        end,
       odr_command(),
       audio_to_dab
     )
