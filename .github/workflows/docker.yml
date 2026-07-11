@@ -140,3 +140,20 @@ jobs:
             echo "Version ${{ steps.versions.outputs.combined_tag }} already exists"
             echo "Use 'Force build' option to rebuild existing version"
           } >> "$GITHUB_STEP_SUMMARY"
+
+  cleanup:
+    needs: build-and-publish
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+
+    steps:
+      # Every push of a rebuilt image orphans the previous manifest set
+      # (manifest list + per-arch children) as untagged versions. This
+      # deletes only truly unreferenced manifests; arch children of tagged
+      # manifest lists are preserved.
+      - name: Delete orphaned untagged images
+        uses: dataaxiom/ghcr-cleanup-action@v1
+        with:
+          packages: zwfm-liquidsoap
+          validate: true
