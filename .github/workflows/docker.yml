@@ -10,6 +10,13 @@ on:
         default: "false"
         type: boolean
   workflow_call:
+  schedule:
+    # Weekly rebuild so published images pick up Debian security updates
+    - cron: "0 3 * * 1"
+
+concurrency:
+  group: docker-publish
+  cancel-in-progress: false
 
 permissions:
   contents: read
@@ -43,20 +50,28 @@ jobs:
             echo "combined_tag=$COMBINED_TAG"
           } >> "$GITHUB_OUTPUT"
 
-      - name: Check if Version Exists
+      - name: Determine if Build Is Needed
         id: check_version
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          COMBINED_TAG="${{ steps.versions.outputs.combined_tag }}"
-          FORCE_BUILD="${{ github.event.inputs.force_build }}"
-
-          if [[ "$FORCE_BUILD" == "true" ]]; then
+          if [[ "${{ github.event.inputs.force_build }}" == "true" ]]; then
             echo "Force build enabled, proceeding with build"
             echo "should_build=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
+          if [[ "${{ github.event_name }}" == "schedule" ]]; then
+            # Skip only when the check succeeds and finds no pending upgrade
+            docker run --rm --user root --entrypoint sh "ghcr.io/${{ github.repository }}:latest" -c \
+              'apt-get update -qq && apt-get -s upgrade >/tmp/upgrades && ! grep -q "^Inst " /tmp/upgrades' \
+              && SHOULD_BUILD=false || SHOULD_BUILD=true
+            echo "Scheduled build required: $SHOULD_BUILD"
+            echo "should_build=$SHOULD_BUILD" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          COMBINED_TAG="${{ steps.versions.outputs.combined_tag }}"
           REPO_NAME=$(basename "${{ github.repository }}")
           ORG_NAME=$(dirname "${{ github.repository }}")
 
@@ -137,7 +152,7 @@ jobs:
         run: |
           {
             echo "## Docker Build Skipped"
-            echo "Version ${{ steps.versions.outputs.combined_tag }} already exists"
+            echo "No build required for version ${{ steps.versions.outputs.combined_tag }}"
             echo "Use 'Force build' option to rebuild existing version"
           } >> "$GITHUB_STEP_SUMMARY"
 
