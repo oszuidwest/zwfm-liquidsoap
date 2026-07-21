@@ -82,6 +82,12 @@ jobs:
             fi
           done
 
+      - name: Test DAB output helpers
+        run: |
+          docker run --rm -v "$PWD:/app" -w /app \
+            savonet/liquidsoap:${{ steps.version.outputs.version }} \
+            liquidsoap tests/test-dab-output.liq
+
       - name: Set Lint Success
         id: lint_result
         run: echo "success=true" >> $GITHUB_OUTPUT

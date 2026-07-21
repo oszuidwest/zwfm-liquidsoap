@@ -78,6 +78,22 @@ let dab_ack_monitor_command =
       ]
   )
 
+def dab_edi_args(destinations) =
+  let destinations =
+    list.map(
+      fun (destination) -> string.trim(destination),
+      string.split(separator=",", destinations)
+    )
+  if
+    list.exists(fun (destination) -> destination == "", destinations)
+  then
+    failwith(
+      "Invalid DAB EDI destinations: empty destination"
+    )
+  end
+  list.map(fun (destination) -> "--edi=#{destination}", destinations)
+end
+
 def dab_ack_monitor_tick() =
   try
     let snapshot =
@@ -116,11 +132,7 @@ def output_dab_stream(audio_source) =
           if DAB_METADATA_SIZE != "" then DAB_METADATA_SIZE else "8" end
         ["--pad=#{pad_size}", "--pad-socket=#{DAB_METADATA_SOCKET}"]
       end
-    let edi_args =
-      list.map(
-        fun (edi_url) -> "--edi=#{string.trim(edi_url)}",
-        string.split(separator=",", DAB_EDI_DESTINATIONS)
-      )
+    let edi_args = dab_edi_args(DAB_EDI_DESTINATIONS)
     let odr_command =
       process.quote.command(
         "/bin/odr-audioenc",
