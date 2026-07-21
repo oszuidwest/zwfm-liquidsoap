@@ -49,7 +49,14 @@ def dab_set_ack_status(snapshot) =
   if
     next_state != previous_state
   then
-    let log_level = if next_state == "ok" then 3 else 2 end
+    let log_level =
+      if
+        list.mem(next_state, ["ok", "starting", "unmonitored", "disabled"])
+      then
+        3
+      else
+        2
+      end
     log(
       label="dab",
       "TCP ACK monitor: #{previous_state} -> #{next_state}",
