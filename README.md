@@ -349,7 +349,7 @@ PAD allows sending metadata like song titles and station logos alongside the aud
 
 ## Shared Stream Metadata
 
-When `STREAM_METADATA_BEARER_TOKEN` is configured, Liquidsoap accepts now-playing updates at `GET /metadata` on `STREAM_METADATA_PORT`. Metadata is inserted into the main radio source before processing and the output fan-out. One update therefore reaches every compatible Liquidsoap stream output:
+When `STREAM_METADATA_BEARER_TOKEN` is configured, Liquidsoap accepts now-playing updates at `POST /metadata` on `STREAM_METADATA_PORT`. Metadata is inserted into the main radio source before processing and the output fan-out. One update therefore reaches every compatible Liquidsoap stream output:
 
 - Icecast MP3 and AAC mounts
 - DME Icecast mounts for Radio Rucphen and BredaNu
@@ -360,15 +360,16 @@ DAB+ PAD and StereoTool/RDS remain protocol-specific metadata outputs. DAB uses 
 Any metadata producer can call the endpoint. For example:
 
 ```bash
-curl --get http://127.0.0.1:7000/metadata \
+curl http://127.0.0.1:7000/metadata \
+  --request POST \
   --header "Authorization: Bearer ${STREAM_METADATA_BEARER_TOKEN}" \
-  --data-urlencode "title=Song title" \
-  --data-urlencode "artist=Artist name"
+  --header "Content-Type: application/json" \
+  --data '{"title":"Song title","artist":"Artist name"}'
 ```
 
 The only requirements are a non-empty `title`, an optional `artist`, and the configured bearer token.
 
-The endpoint returns `204 No Content` on success, `400 Bad Request` when `title` is missing, and `401 Unauthorized` when the bearer token is missing or wrong. Omitting `artist` sends a title-only update. When no bearer token is configured, the metadata endpoint is not registered, so connection failures are expected. Otherwise, verify the container health, configured bind address and port, and firewall rules.
+The endpoint returns `204 No Content` on success, `400 Bad Request` when the JSON body is invalid or `title` is missing, and `401 Unauthorized` when the bearer token is missing or wrong. Omitting `artist` sends a title-only update. When no bearer token is configured, the metadata endpoint is not registered, so connection failures are expected. Otherwise, verify the container health, configured bind address and port, and firewall rules.
 
 As an optional integration, configure one URL output in [zwfm-metadata](https://github.com/oszuidwest/zwfm-metadata) with the desired input priority, filters, and delay:
 
@@ -380,14 +381,14 @@ As an optional integration, configure one URL output in [zwfm-metadata](https://
   "formatters": [],
   "settings": {
     "delay": 0,
-    "url": "http://liquidsoap:7000/metadata?title={{.title}}&artist={{.artist}}",
-    "method": "GET",
+    "url": "http://liquidsoap:7000/metadata",
+    "method": "POST",
     "bearerToken": "replace-with-the-same-long-random-token"
   }
 }
 ```
 
-The URL template fields are URL-encoded by `zwfm-metadata`. When using that integration, this single output can replace direct Icecast metadata outputs for mounts produced by this Liquidsoap instance.
+The POST body contains the structured metadata JSON from `zwfm-metadata`. Liquidsoap reads the `title` and `artist` fields and ignores other fields. When using this integration, this single output can replace direct Icecast metadata outputs for mounts produced by this Liquidsoap instance.
 
 Keep the endpoint on a private network. The Compose configuration binds it to `127.0.0.1` by default. When both applications run in containers, attach them to the same Docker network and use the `liquidsoap` service name. For a metadata service on another host, use a trusted private or VPN network, or place the endpoint behind a TLS reverse proxy. If binding to `0.0.0.0`, restrict the port with a firewall to that host and never expose the raw HTTP endpoint to an untrusted network.
 

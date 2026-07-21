@@ -40,39 +40,52 @@ def register_stream_metadata_endpoint(radio_source) =
         res.status_code(401)
         res.data("Unauthorized\n")
       else
-        let title = req.query["title"]
-        let artist = req.query["artist"]
+        try
+          let json.parse ({title, artist} : {title: string, artist: string?}) =
+            req.body()
+          let artist = artist ?? ""
 
-        if
-          title == ""
-        then
+          if
+            title == ""
+          then
+            log(
+              label="metadata",
+              "Rejected metadata request: missing title",
+              level=3
+            )
+            res.status_code(400)
+            res.data(
+              "Missing title\n"
+            )
+          else
+            # An omitted artist sends a title-only update instead of an empty
+            # artist tag
+            let new_metadata =
+              if
+                artist == ""
+              then
+                [("title", title)]
+              else
+                [("artist", artist), ("title", title)]
+              end
+
+            radio_source.insert_metadata(new_metadata)
+            res.status_code(204)
+            log(
+              label="metadata",
+              "Inserted stream metadata: artist='#{artist}' title='#{title}'",
+              level=3
+            )
+          end
+        catch err : [error.json] do
           log(
             label="metadata",
-            "Rejected metadata request: missing title",
+            "Rejected metadata request: invalid JSON body: #{err.message}",
             level=3
           )
           res.status_code(400)
           res.data(
-            "Missing title\n"
-          )
-        else
-          # An omitted artist sends a title-only update instead of an empty
-          # artist tag
-          let new_metadata =
-            if
-              artist == ""
-            then
-              [("title", title)]
-            else
-              [("artist", artist), ("title", title)]
-            end
-
-          radio_source.insert_metadata(new_metadata)
-          res.status_code(204)
-          log(
-            label="metadata",
-            "Inserted stream metadata: artist='#{artist}' title='#{title}'",
-            level=3
+            "Invalid JSON body\n"
           )
         end
       end
@@ -80,7 +93,7 @@ def register_stream_metadata_endpoint(radio_source) =
 
     harbor.http.register(
       port=STREAM_METADATA_PORT,
-      method="GET",
+      method="POST",
       "/metadata",
       stream_metadata_handler
     )
