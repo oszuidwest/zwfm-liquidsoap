@@ -369,7 +369,7 @@ curl http://127.0.0.1:7000/metadata \
 
 The only requirements are a non-empty `title`, an optional `artist`, and the configured bearer token.
 
-The endpoint returns `204 No Content` on success, `400 Bad Request` when the JSON body is invalid or `title` is missing, `401 Unauthorized` when the bearer token is missing or wrong, and `413 Payload Too Large` when the body exceeds 16 KiB or uses chunked transfer encoding. Omitting `artist` sends a title-only update. When no bearer token is configured, the metadata endpoint is not registered, so connection failures are expected. Otherwise, verify the container health, configured bind address and port, and firewall rules.
+The endpoint returns `204 No Content` on success, `400 Bad Request` when the JSON body is invalid or `title` is missing, `401 Unauthorized` when the bearer token is missing or wrong, and `413 Payload Too Large` when the body exceeds 16 KiB or uses a `Transfer-Encoding` header (chunked bodies are not supported). Omitting `artist` sends a title-only update. When no bearer token is configured, the metadata endpoint is not registered, so connection failures are expected. Otherwise, verify the container health, configured bind address and port, and firewall rules.
 
 As an optional integration, configure one URL output in [zwfm-metadata](https://github.com/oszuidwest/zwfm-metadata) with the desired input priority, filters, and delay:
 

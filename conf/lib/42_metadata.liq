@@ -24,23 +24,6 @@ def read_stream_metadata_body(req) =
   read_stream_metadata_chunks("")
 end
 
-def stream_metadata_body_too_large(req) =
-  # Liquidsoap buffers each chunked HTTP chunk before req.data() returns it,
-  # so chunked bodies cannot be bounded safely inside the handler.
-  if
-    req.headers["transfer-encoding"] != ""
-  then
-    true
-  else
-    try
-      int_of_string(req.headers["content-length"]) >
-        STREAM_METADATA_MAX_BODY_BYTES
-    catch _ do
-      false
-    end
-  end
-end
-
 def register_stream_metadata_endpoint(radio_source) =
   if
     STREAM_METADATA_BEARER_TOKEN == ""
@@ -88,13 +71,14 @@ def register_stream_metadata_endpoint(radio_source) =
           "bad or missing bearer token"
         )
       elsif
-        stream_metadata_body_too_large(req)
+        # Liquidsoap buffers each chunked HTTP chunk before req.data() returns
+        # it, so chunked bodies cannot be bounded inside the handler
+        req.headers["transfer-encoding"] != ""
       then
         reject(
           413,
           "Payload Too Large\n",
-          "body exceeds #{STREAM_METADATA_MAX_BODY_BYTES} bytes or uses \
-           unsupported transfer encoding"
+          "unsupported transfer encoding"
         )
       else
         let request_body = read_stream_metadata_body(req)
