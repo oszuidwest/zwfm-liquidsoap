@@ -77,6 +77,17 @@ let DAB_ACK_DOWN_SECONDS =
 let DAB_ACK_STARTUP_GRACE_SECONDS =
   int_of_string(environment.get("DAB_ACK_STARTUP_GRACE_SECONDS", default="10"))
 
+if
+  DAB_ACK_WARN_SECONDS < 0
+  or DAB_ACK_DOWN_SECONDS <= DAB_ACK_WARN_SECONDS
+  or DAB_ACK_STARTUP_GRACE_SECONDS < 0
+then
+  failwith(
+    "Invalid DAB ACK thresholds: require 0 <= warning < down and startup grace \
+     >= 0"
+  )
+end
+
 # HLS configuration (optional - storage zone and access key required to enable)
 let HLS_BUNNY_STORAGE_ZONE =
   environment.get("HLS_BUNNY_STORAGE_ZONE", default="")

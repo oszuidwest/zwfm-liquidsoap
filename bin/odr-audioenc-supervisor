@@ -49,9 +49,15 @@ child_pid=$!
 exec 3<&-
 
 pid_tmp="${ODR_AUDIOENC_PID_FILE}.${$}"
-printf '%s\n' "${child_pid}" > "${pid_tmp}"
-mv -f -- "${pid_tmp}" "${ODR_AUDIOENC_PID_FILE}"
-pid_tmp=""
+if printf '%s\n' "${child_pid}" > "${pid_tmp}" \
+  && mv -f -- "${pid_tmp}" "${ODR_AUDIOENC_PID_FILE}"; then
+  pid_tmp=""
+else
+  publication_status=$?
+  forward_signal TERM
+  wait "${child_pid}" 2>/dev/null || true
+  exit "${publication_status}"
+fi
 
 if wait "${child_pid}"; then
   exit_status=0

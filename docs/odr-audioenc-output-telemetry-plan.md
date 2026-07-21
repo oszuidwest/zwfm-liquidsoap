@@ -922,7 +922,13 @@ UNIX-datagramsocket nodig.
 5. Verwijder de oude monitor niet zolang niet expliciet is besloten welk lokaal
    assurance-niveau voldoende is.
 
-## 12. Liquidsoap-statusmodel
+## 12. Toekomstig Liquidsoap-statusmodel voor native telemetrie
+
+Dit hoofdstuk is uitsluitend een voorstel voor de latere native `--stats`-
+integratie en beschrijft niet het huidige no-forkcontract. De nu geïmplementeerde
+TCP ACK-monitor gebruikt ook `unmonitored` en standaardgrenzen van 5 seconden
+voor `degraded` en 15 seconden voor `down`; de actuele operationele contracttekst
+staat in de README.
 
 ### 12.1 Globale DAB-status
 

@@ -250,7 +250,7 @@ socat - UNIX-CONNECT:/opt/liquidsoap/socket/liquidsoap.sock
 | `silence.enable`            | Sets silence detection to on                                       |
 | `silence.disable`           | Sets silence detection to off                                      |
 | `silence.status`            | Shows the silence detection state                                  |
-| `dab.status`                | Shows TCP acknowledgement progress for each DAB+ destination       |
+| `dab.status`                | Shows acknowledgement progress for each DAB+ TCP destination       |
 | `hls.status`                | Shows the HLS output health (`ok`, `degraded: <reason>`, or `disabled`) |
 
 All commands have an immediate effect.
@@ -370,6 +370,10 @@ A healthy response resembles:
 ok
 tcp://primary.example.com:9001 ok (TCP ESTAB, ack_age=0s, bytes_sent=123456, bytes_acked=123457, send_queue=0, unacked=0, retrans=0)
 ```
+
+On Linux, `bytes_acked` can be exactly one greater than `bytes_sent` because the
+ACK counter follows TCP sequence-space progress, including the SYN, while the
+sent counter contains data bytes only.
 
 Possible overall states are:
 
