@@ -65,6 +65,10 @@ def register_stream_metadata_endpoint(radio_source) =
         req.headers["authorization"] !=
           "Bearer #{STREAM_METADATA_BEARER_TOKEN}"
       then
+        res.header(
+          "WWW-Authenticate",
+          "Bearer realm=\"metadata\""
+        )
         reject(
           401,
           "Unauthorized\n",
@@ -122,7 +126,7 @@ def register_stream_metadata_endpoint(radio_source) =
               res.status_code(204)
               log(
                 label="metadata",
-                "Inserted stream metadata: artist='#{artist}' title='#{title}'",
+                "Inserted stream metadata",
                 level=3
               )
             end
