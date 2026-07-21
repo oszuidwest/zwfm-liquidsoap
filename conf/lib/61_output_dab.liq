@@ -139,7 +139,7 @@ def output_dab_stream(audio_source) =
     let edi_args = dab_edi_args(DAB_EDI_DESTINATIONS)
     let odr_command =
       process.quote.command(
-        "/bin/odr-audioenc",
+        "/usr/local/bin/odr-audioenc",
         args=list.flatten(
           [["-i", "-", "--bitrate=#{DAB_BITRATE}", "--sbr"], pad_args, edi_args]
         )

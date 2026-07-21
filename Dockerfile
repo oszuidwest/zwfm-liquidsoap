@@ -8,8 +8,8 @@ USER root
 RUN apt-get update \
  && apt-get upgrade -y --no-install-recommends \
  && apt-get install -y --no-install-recommends iproute2 wget \
- && wget -q -O /bin/odr-audioenc "https://github.com/oszuidwest/zwfm-odrbuilds/releases/download/odr-audioenc-${ODR_AUDIOENC_VERSION}/odr-audioenc-${ODR_AUDIOENC_VERSION}-minimal-debian13-${TARGETARCH}" \
- && chmod +x /bin/odr-audioenc \
+ && wget -q -O /usr/local/bin/odr-audioenc "https://github.com/oszuidwest/zwfm-odrbuilds/releases/download/odr-audioenc-${ODR_AUDIOENC_VERSION}/odr-audioenc-${ODR_AUDIOENC_VERSION}-minimal-debian13-${TARGETARCH}" \
+ && chmod +x /usr/local/bin/odr-audioenc \
  && apt-get remove -y wget \
  && apt-get autoremove -y \
  && apt-get clean \
