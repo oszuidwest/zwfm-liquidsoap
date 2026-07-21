@@ -191,6 +191,11 @@ for destination in ${DESTINATIONS}; do
     fi
   done
 
+  if [ "${last_progress}" -gt "${now}" ] \
+    || [ "${first_seen}" -gt "${now}" ]; then
+    reset_destination_state
+  fi
+
   debug "${destination}: previous connection=${previous_connection} acked=${previous_acked} progress=${last_progress} first=${first_seen}"
 
   socket_line=$(

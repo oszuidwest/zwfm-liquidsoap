@@ -104,6 +104,22 @@ output=$(monitor 203 "${DESTINATION}" 5 15 2)
 assert_status degraded "${output}"
 
 rm -rf -- "${STATE_DIR}"
+mkdir -p -- "${STATE_DIR}"
+printf '%s\n' \
+  '10.0.0.2:41000>192.0.2.10:9171 1 200 100' \
+  > "${STATE_DIR}/destination-1.state"
+output=$(monitor 100 "${DESTINATION}")
+assert_status starting "${output}"
+
+printf '%s\n' \
+  '10.0.0.2:41000>192.0.2.10:9171 1 0 200' \
+  > "${STATE_DIR}/destination-1.state"
+output=$(monitor 100 "${DESTINATION}")
+assert_status starting "${output}"
+output=$(monitor 111 "${DESTINATION}")
+assert_status degraded "${output}"
+
+rm -rf -- "${STATE_DIR}"
 output=$(monitor 120 udp://192.0.2.10:9171)
 assert_status unmonitored "${output}"
 
