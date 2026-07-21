@@ -113,36 +113,36 @@ Copy the applicable example file to `.env`. Then change the values for your stat
 
 ## Environment Variables Reference
 
-This table shows all environment variables in the system. You must set each variable that has no default value. If one of these **required** variables is not set, Liquidsoap does not start.
+This table shows all environment variables in the system. You must set each variable that shows _(required)_. If one of these variables is not set, Liquidsoap does not start. The DME variables are necessary only for Rucphen and BredaNu. A variable that shows _(none)_ is optional. Set it only if you use the related function.
 
 | Variable                          | Description                                            | Default                           | Example                                                         | Used In                                | Station         |
 | --------------------------------- | ------------------------------------------------------ | --------------------------------- | --------------------------------------------------------------- | -------------------------------------- | --------------- |
-| **Station Configuration**         |
+| **Station Configuration**         | | | | | |
 | `STATION_ID`                      | Unique station identifier (lowercase, no spaces)       | _(required)_                      | `zuidwest`                                                      | `conf/lib/00_settings.liq`             | All             |
 | `STATION_NAME`                    | Full station name for metadata                         | _(required)_                      | `ZuidWest FM`                                                   | `conf/lib/00_settings.liq`             | All             |
-| **Icecast Configuration**         |
+| **Icecast Configuration**         | | | | | |
 | `ICECAST_HOST`                    | Icecast server hostname                                | _(required)_                      | `icecast.zuidwest.cloud`                                        | `conf/lib/00_settings.liq`             | All             |
 | `ICECAST_PORT`                    | Icecast server port                                    | _(required)_                      | `8000`                                                          | `conf/lib/00_settings.liq`             | All             |
 | `ICECAST_SOURCE_PASSWORD`         | Icecast source password                                | _(required)_                      | `s3cur3p4ss`                                                    | `conf/lib/00_settings.liq`             | All             |
 | `ICECAST_MOUNT_BASE`              | Base mount point name                                  | `STATION_ID`                      | `zuidwest`                                                      | `conf/lib/00_settings.liq`             | All             |
-| **Stream Mount Points**           |
+| **Stream Mount Points**           | | | | | |
 | `ICECAST_MOUNT_MP3`               | MP3 stream mount                                       | `/#{ICECAST_MOUNT_BASE}.mp3`      | `/zuidwest.mp3`                                                 | `conf/lib/00_settings.liq`             | All             |
 | `ICECAST_MOUNT_AAC_LOW`           | AAC mobile stream mount                                | `/#{ICECAST_MOUNT_BASE}.aac`      | `/zuidwest.aac`                                                 | `conf/lib/00_settings.liq`             | All             |
 | `ICECAST_MOUNT_AAC_HIGH`          | AAC STL stream mount                                   | `/#{ICECAST_MOUNT_BASE}.stl`      | `/zuidwest.stl`                                                 | `conf/lib/00_settings.liq`             | All             |
-| **Stream Bitrates**               |
+| **Stream Bitrates**               | | | | | |
 | `ICECAST_BITRATE_MP3`             | MP3 stream bitrate (kbps)                              | `192`                             | `256`                                                           | `conf/lib/00_settings.liq`             | All             |
 | `ICECAST_BITRATE_AAC_LOW`         | Low AAC bitrate (kbps)                                 | `96`                              | `64`                                                            | `conf/lib/00_settings.liq`             | All             |
 | `ICECAST_BITRATE_AAC_HIGH`        | High AAC bitrate (kbps)                                | `576`                             | `320`                                                           | `conf/lib/00_settings.liq`             | All             |
-| **SRT Studio Inputs**             |
+| **SRT Studio Inputs**             | | | | | |
 | `SRT_PASSPHRASE`                  | SRT encryption passphrase                              | _(required)_                      | `alpha-bravo-charlie-delta`                                     | `conf/lib/00_settings.liq`             | All             |
 | `SRT_BIND`                        | Host address for the two SRT inputs                    | `0.0.0.0`                         | `192.0.2.10`                                                    | `docker-compose.yml`                   | All             |
 | `SRT_PORT_PRIMARY`                | Port for the primary SRT input                         | `8888`                            | `8888`                                                          | Liquidsoap and Compose                 | All             |
 | `SRT_PORT_SECONDARY`              | Port for the secondary SRT input                       | `9999`                            | `9999`                                                          | Liquidsoap and Compose                 | All             |
-| **Audio Processing**              |
+| **Audio Processing**              | | | | | |
 | `STEREOTOOL_LICENSE`              | StereoTool license key                                 | _(none)_                          | `ABC123DEF456...`                                               | `conf/lib/00_settings.liq`             | All             |
 | `STEREOTOOL_WEB_BIND`             | Host address for the StereoTool web interface          | `0.0.0.0`                         | `127.0.0.1`                                                     | `docker-compose.yml`                   | All             |
 | `STEREOTOOL_WEB_PORT`             | Host port for the StereoTool web interface             | `8080`                            | `8080`                                                          | `docker-compose.yml`                   | All             |
-| **Fallback & Control**            |
+| **Fallback & Control**            | | | | | |
 | `SERVER_SOCKET_ENABLED`           | Unix socket for runtime control (on/off)               | `true`                            | `true`                                                          | `conf/lib/80_server.liq`               | All             |
 | `SERVER_SOCKET_PATH`              | Unix socket file path                                  | `/tmp/liquidsoap/liquidsoap.sock` | `/tmp/liquidsoap/liquidsoap.sock`                               | `conf/lib/80_server.liq`               | All             |
 | `EMERGENCY_AUDIO_PATH`            | Emergency audio file if all inputs fail                | `/audio/fallback.ogg`             | `/audio/noodband.mp3`                                           | `conf/lib/00_settings.liq`             | All             |
@@ -150,12 +150,12 @@ This table shows all environment variables in the system. You must set each vari
 | `SILENCE_SWITCH_SECONDS`          | Maximum silence duration (seconds)                     | `15.0`                            | `20.0`                                                          | `conf/lib/00_settings.liq`             | All             |
 | `AUDIO_VALID_SECONDS`             | Minimum duration of continuous audio (seconds)         | `15.0`                            | `10.0`                                                          | `conf/lib/00_settings.liq`             | All             |
 | `SILENCE_THRESHOLD`               | Silence limit; audio below this level (dB) is silence  | `-40.0`                           | `-45.0`                                                         | `conf/lib/00_settings.liq`             | All             |
-| **DAB+ Configuration (Optional)** |
+| **DAB+ Configuration (Optional)** | | | | | |
 | `DAB_BITRATE`                     | DAB+ encoder bitrate                                   | _(none)_                          | `128`                                                           | `conf/lib/00_settings.liq`             | All             |
 | `DAB_EDI_DESTINATIONS`            | DAB+ EDI destination(s)                                | _(none)_                          | `tcp://dab-mux.local:9001` or `tcp://dab1:9001,tcp://dab2:9002` | `conf/lib/00_settings.liq`             | All             |
 | `DAB_METADATA_SIZE`               | PAD size in bytes (0-196)                              | `8` when socket is set            | `16`                                                            | `conf/lib/00_settings.liq`             | All             |
 | `DAB_METADATA_SOCKET`             | PAD metadata socket path                               | _(none)_                          | `padenc.sock`                                                   | `conf/lib/00_settings.liq`             | All             |
-| **HLS Configuration (Optional)**  |
+| **HLS Configuration (Optional)**  | | | | | |
 | `HLS_BUNNY_STORAGE_ZONE`          | Bunny Edge Storage zone name                           | _(none)_                          | `zwfm-hls`                                                      | `conf/lib/00_settings.liq`             | All             |
 | `HLS_BUNNY_ACCESS_KEY`            | Bunny Edge Storage read/write password                 | _(none)_                          | `secret-storage-password`                                       | `conf/lib/00_settings.liq`             | All             |
 | `HLS_BUNNY_ENDPOINT`              | Bunny Edge Storage API endpoint                        | `storage.bunnycdn.com`            | `storage.bunnycdn.com`                                          | `conf/lib/00_settings.liq`             | All             |
@@ -166,11 +166,11 @@ This table shows all environment variables in the system. You must set each vari
 | `HLS_SEGMENT_DURATION`            | HLS segment duration in seconds                        | `4.0`                             | `4.0`                                                           | `conf/lib/00_settings.liq`             | All             |
 | `HLS_SEGMENTS`                    | Segments per live playlist                             | `10`                              | `10`                                                            | `conf/lib/00_settings.liq`             | All             |
 | `HLS_SEGMENTS_OVERHEAD`           | Extra old segments kept locally                        | `5`                               | `5`                                                             | `conf/lib/00_settings.liq`             | All             |
-| **Stream Metadata (Optional)**    |
+| **Stream Metadata (Optional)**    | | | | | |
 | `STREAM_METADATA_BIND`            | Host address for the metadata API                      | `127.0.0.1`                       | `0.0.0.0`                                                       | `docker-compose.yml`                   | All             |
 | `STREAM_METADATA_PORT`            | Port for the shared metadata API                       | `7000`                            | `7000`                                                          | Liquidsoap and Compose                 | All             |
 | `STREAM_METADATA_BEARER_TOKEN`    | Bearer token that sets the metadata API to on          | _(none)_                          | `long-random-token`                                             | `conf/lib/00_settings.liq`             | All             |
-| **DME Configuration**             |
+| **DME Configuration**             | | | | | |
 | `DME_PRIMARY_HOST`                | Primary DME server                                     | _(required)_                      | `ingest1.dme.nl`                                                | `conf/rucphen.liq`, `conf/bredanu.liq` | Rucphen/BredaNu |
 | `DME_PRIMARY_PORT`                | Primary DME port                                       | _(required)_                      | `8010`                                                          | `conf/rucphen.liq`, `conf/bredanu.liq` | Rucphen/BredaNu |
 | `DME_PRIMARY_USER`                | Primary DME username                                   | _(required)_                      | `rucphen-live`                                                  | `conf/rucphen.liq`, `conf/bredanu.liq` | Rucphen/BredaNu |
@@ -180,12 +180,12 @@ This table shows all environment variables in the system. You must set each vari
 | `DME_SECONDARY_USER`              | Secondary DME username                                 | _(required)_                      | `bredanu-backup`                                                | `conf/rucphen.liq`, `conf/bredanu.liq` | Rucphen/BredaNu |
 | `DME_SECONDARY_PASSWORD`          | Secondary DME password                                 | _(required)_                      | `backup456pwd`                                                  | `conf/rucphen.liq`, `conf/bredanu.liq` | Rucphen/BredaNu |
 | `DME_MOUNT_POINT`                 | DME mount point                                        | _(required)_                      | `/live-stream`                                                  | `conf/rucphen.liq`, `conf/bredanu.liq` | Rucphen/BredaNu |
-| **Docker Configuration**          |
+| **Docker Configuration**          | | | | | |
 | `CONTAINER_TIMEZONE`              | Container timezone                                     | `Europe/Amsterdam`                | `Europe/Amsterdam`                                              | `docker-compose.yml`                   | All             |
 
 ### Notes
 
-- **Required variables**: set these variables in the `.env` file. If one is not set, Liquidsoap does not start.
+- **Required variables**: set each variable that shows _(required)_ in the `.env` file. If one is not set, Liquidsoap does not start. The DME variables apply only to Rucphen and BredaNu.
 - **Optional outputs**: DAB+ output is off until you set `DAB_BITRATE` and `DAB_EDI_DESTINATIONS`. HLS output is off until you set `HLS_BUNNY_STORAGE_ZONE` and `HLS_BUNNY_ACCESS_KEY`. PAD metadata is off until you set `DAB_METADATA_SOCKET`.
 - **More than one EDI output**: `DAB_EDI_DESTINATIONS` accepts a comma-separated list. The system then sends DAB+ to all destinations at the same time.
 - **Station column**: "All" applies to all stations. "Rucphen/BredaNu" applies only to the stations with DME.
@@ -257,7 +257,7 @@ The system has automatic silence detection. It monitors the studio inputs and co
 
 If silence detection is **on** (default):
 
-- If a studio input is silent for more than 15 seconds, the system changes to the next source.
+- If a studio input is silent for more than `SILENCE_SWITCH_SECONDS` (default: 15 seconds), the system changes to the next source.
 - If the two studios are silent or disconnected, the system plays the emergency file.
 - At startup, the system does a check of the emergency file (see [System Design](#system-design) and `EMERGENCY_ALLOW_BLANK`).
 - The station can operate without an operator.
@@ -468,13 +468,13 @@ Set all DME variables for these stations:
 ```bash
 # Primary ingest point
 DME_PRIMARY_HOST=ingest1.dme.nl
-DME_PRIMARY_PORT=8000
+DME_PRIMARY_PORT=8010
 DME_PRIMARY_USER=station-live
 DME_PRIMARY_PASSWORD=secret
 
 # Secondary ingest point
 DME_SECONDARY_HOST=ingest2.dme.nl
-DME_SECONDARY_PORT=8000
+DME_SECONDARY_PORT=8020
 DME_SECONDARY_USER=station-backup
 DME_SECONDARY_PASSWORD=secret
 
@@ -555,8 +555,11 @@ cd zwfm-liquidsoap
 
 # Build the Docker image
 docker buildx build --platform linux/amd64,linux/arm64 -t zwfm-liquidsoap:local .
+```
 
-# Start the services with the custom image
+The Compose file points to the image on `ghcr.io`. To start the services with your local image, set the `image:` value in `docker-compose.yml` to `zwfm-liquidsoap:local`. Then start the services:
+
+```bash
 docker compose up -d
 ```
 
