@@ -1,10 +1,13 @@
 #!/bin/sh
 
+# Reports EDI destination health from TCP ACK progress in ss output. The
+# AudioEnc sockets are matched by process name in the users field; a dead
+# encoder is reported separately by Liquidsoap's reopen_on_error handler.
+
 set -eu
 set -f
 
 SS_BIN=${SS_BIN:-ss}
-PID_FILE=/tmp/dab-ack-monitor/audioenc.pid
 STATE_DIR=/tmp/dab-ack-monitor/state
 DESTINATIONS=""
 ACK_WARN_SECONDS=5
@@ -22,12 +25,11 @@ usage()
 Usage: dab-tcp-ack-monitor [options]
 
 Options:
-  --pid-file PATH              AudioEnc PID file
   --state-dir PATH             Persistent monitor state directory
   --destinations URLS          Comma-separated EDI destination URLs
   --ack-warn-seconds SECONDS   Seconds without ACK progress before degraded
   --ack-down-seconds SECONDS   Seconds without ACK progress before down
-  --startup-grace-seconds SEC  Initial grace period for AudioEnc and TCP
+  --startup-grace-seconds SEC  Initial grace period for the TCP session
 EOF
 }
 
@@ -76,8 +78,7 @@ disconnected_status()
 write_state()
 {
   state_tmp="${state_file}.${$}"
-  printf '%s %s %s %s %s %s\n' \
-    "${pid}" \
+  printf '%s %s %s %s %s\n' \
     "${previous_connection}" \
     "${previous_acked}" \
     "${last_progress}" \
@@ -88,10 +89,6 @@ write_state()
 
 while [ "$#" -gt 0 ]; do
   case $1 in
-    --pid-file)
-      PID_FILE=$2
-      shift 2
-      ;;
     --state-dir)
       STATE_DIR=$2
       shift 2
@@ -145,34 +142,6 @@ if ! is_uint "${now}"; then
   exit 0
 fi
 
-started_file="${STATE_DIR}/monitor.started"
-monitor_started=""
-if [ -r "${started_file}" ]; then
-  read -r monitor_started < "${started_file}" || true
-fi
-if ! is_uint "${monitor_started}"; then
-  monitor_started=${now}
-  printf '%s\n' "${monitor_started}" > "${started_file}"
-fi
-
-pid=""
-if [ -r "${PID_FILE}" ]; then
-  read -r pid < "${PID_FILE}" || true
-fi
-
-seen_file="${STATE_DIR}/audioenc.seen"
-
-if ! is_uint "${pid}" || [ "${pid}" -le 1 ] || ! kill -0 "${pid}" 2>/dev/null; then
-  monitor_age=$((now - monitor_started))
-  if [ ! -e "${seen_file}" ] && [ "${monitor_age}" -le "${STARTUP_GRACE_SECONDS}" ]; then
-    printf '%s\n' 'starting' 'AudioEnc process has not started yet'
-  else
-    printf '%s\n' 'down' 'AudioEnc process is not running'
-  fi
-  exit 0
-fi
-[ -e "${seen_file}" ] || : > "${seen_file}"
-
 tcp_total=0
 ok_count=0
 down_count=0
@@ -210,30 +179,25 @@ for destination in ${DESTINATIONS}; do
 
   state_file="${STATE_DIR}/destination-${tcp_total}.state"
 
-  previous_pid=0
   reset_destination_state
   if [ -r "${state_file}" ]; then
-    IFS="${wsp}" read -r previous_pid previous_connection previous_acked \
+    IFS="${wsp}" read -r previous_connection previous_acked \
       last_progress first_seen ever_connected < "${state_file}" || true
   fi
 
-  for numeric_state in "${previous_pid}" "${previous_acked}" \
-    "${last_progress}" "${first_seen}" "${ever_connected}"; do
+  for numeric_state in "${previous_acked}" "${last_progress}" \
+    "${first_seen}" "${ever_connected}"; do
     if ! is_uint "${numeric_state}"; then
-      previous_pid=0
+      reset_destination_state
       break
     fi
   done
-
-  if [ "${previous_pid}" -ne "${pid}" ]; then
-    reset_destination_state
-  fi
 
   debug "${destination}: previous connection=${previous_connection} acked=${previous_acked} progress=${last_progress} first=${first_seen} ever=${ever_connected}"
 
   socket_line=$(
     "${SS_BIN}" -tinpHO dst "${host}" dport = ":${port}" 2>/dev/null \
-      | awk -v needle="pid=${pid}," '
+      | awk -v needle='"odr-audioenc",' '
           index($0, needle) {
             if ($1 == "ESTAB") {
               print

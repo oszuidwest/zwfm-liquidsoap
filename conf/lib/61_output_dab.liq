@@ -49,8 +49,8 @@ def dab_set_ack_status(snapshot) =
   dab_ack_status := snapshot
 end
 
-# The monitor reads the AudioEnc PID at the same built-in default path the
-# supervisor publishes it to, so no paths need to be passed here.
+# The monitor identifies AudioEnc's EDI sockets in ss output by process
+# name; a dead encoder is reported by the reopen_on_error handler below.
 let dab_ack_monitor_command =
   "/usr/local/bin/dab-tcp-ack-monitor --destinations #{
     process.quote(DAB_EDI_DESTINATIONS)
@@ -86,19 +86,9 @@ def output_dab_stream(audio_source) =
     # Buffer provides clock isolation
     let audio_to_dab = mksafe(buffer(audio_source))
 
-    # The supervisor only records the AudioEnc PID and then execs it in
-    # place; stdin, stderr, signals and the exit status pass through.
-    let odr_binary =
-      if
-        DAB_ACK_MONITOR_ENABLED
-      then
-        "/usr/local/bin/odr-audioenc-supervisor"
-      else
-        "/bin/odr-audioenc"
-      end
     let odr_command =
       ref(
-        "#{odr_binary} -i - --bitrate=#{process.quote(DAB_BITRATE)} --sbr"
+        "/bin/odr-audioenc -i - --bitrate=#{process.quote(DAB_BITRATE)} --sbr"
       )
 
     # Add PAD configuration if socket is set

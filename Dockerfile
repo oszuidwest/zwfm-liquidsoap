@@ -16,6 +16,5 @@ RUN apt-get update \
  && rm -rf /var/lib/apt/lists/*
 
 COPY --chmod=0755 bin/dab-tcp-ack-monitor /usr/local/bin/dab-tcp-ack-monitor
-COPY --chmod=0755 bin/odr-audioenc-supervisor /usr/local/bin/odr-audioenc-supervisor
 
 USER liquidsoap

@@ -6,7 +6,6 @@ REPO_ROOT=$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)
 MONITOR="${REPO_ROOT}/bin/dab-tcp-ack-monitor"
 TEST_DIR=$(mktemp -d)
 FAKE_SS_DIR="${TEST_DIR}/ss"
-PID_FILE="${TEST_DIR}/audioenc.pid"
 STATE_DIR="${TEST_DIR}/state"
 FAKE_SS="${TEST_DIR}/fake-ss"
 
@@ -17,7 +16,6 @@ cleanup()
 trap cleanup EXIT
 
 mkdir -p -- "${FAKE_SS_DIR}"
-printf '%s\n' "$$" > "${PID_FILE}"
 
 cat > "${FAKE_SS}" <<'EOF'
 #!/bin/sh
@@ -43,7 +41,6 @@ monitor()
     FAKE_SS_DIR=${FAKE_SS_DIR} \
     SS_BIN=${FAKE_SS} \
     "${MONITOR}" \
-      --pid-file "${PID_FILE}" \
       --state-dir "${STATE_DIR}" \
       --destinations "${destinations}" \
       --ack-warn-seconds 5 \
@@ -68,7 +65,7 @@ write_socket()
   sent=$2
   acked=$3
   cat > "${FAKE_SS_DIR}/${port}" <<EOF
-ESTAB 0 0 10.0.0.2:41000 192.0.2.10:${port} users:(("odr-audioenc",pid=$$,fd=5)) cubic bytes_sent:${sent} bytes_acked:${acked} unacked:0 retrans:0/0
+ESTAB 0 0 10.0.0.2:41000 192.0.2.10:${port} users:(("odr-audioenc",pid=4242,fd=5)) cubic bytes_sent:${sent} bytes_acked:${acked} unacked:0 retrans:0/0
 EOF
 }
 
@@ -92,13 +89,11 @@ write_socket 9175 0 0
 output=$(monitor 118 "${DESTINATION},tcp://192.0.2.20:9175")
 assert_status degraded "${output}"
 
-rm -f -- "${PID_FILE}"
+rm -f -- "${FAKE_SS_DIR}/9171"
 output=$(monitor 119 "${DESTINATION}")
 assert_status down "${output}"
 
 rm -rf -- "${STATE_DIR}"
-mkdir -p -- "${STATE_DIR}"
-printf '%s\n' "$$" > "${PID_FILE}"
 output=$(monitor 120 udp://192.0.2.10:9171)
 assert_status unmonitored "${output}"
 

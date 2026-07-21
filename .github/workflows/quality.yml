@@ -27,10 +27,8 @@ jobs:
           check_together: "yes"
           severity: warning
 
-      - name: Test DAB helper scripts
-        run: |
-          ./tests/test-odr-audioenc-supervisor.sh
-          ./tests/test-dab-tcp-ack-monitor.sh
+      - name: Test DAB TCP ACK monitor
+        run: ./tests/test-dab-tcp-ack-monitor.sh
 
       # Dockerfile linting
       - name: Hadolint

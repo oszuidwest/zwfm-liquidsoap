@@ -377,14 +377,14 @@ sent counter contains data bytes only.
 
 Possible overall states are:
 
-- `starting`: AudioEnc is within its startup grace period, or all configured TCP
-  destinations are still starting.
+- `starting`: all configured TCP destinations are within the startup grace
+  period and have not connected yet.
 - `ok`: every TCP destination has recent acknowledgement progress.
 - `degraded`: the TCP destinations have mixed health, including when one is down
   while another remains healthy, or at least one has exceeded
   `DAB_ACK_WARN_SECONDS` without acknowledgement progress.
-- `down`: AudioEnc is not running after the startup grace period, or all configured
-  TCP destinations are down. A single destination exceeding
+- `down`: all configured TCP destinations are down, which includes the case
+  where AudioEnc is not running. A single destination exceeding
   `DAB_ACK_DOWN_SECONDS` while another remains healthy produces `degraded`.
 - `unmonitored`: monitoring is disabled or no TCP EDI destination is configured.
 
