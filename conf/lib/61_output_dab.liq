@@ -2,6 +2,14 @@
 # Uses ODR-AudioEnc for DAB+ encoding with EDI output
 
 if
+  DAB_ACK_POLL_SECONDS <= 0.0
+then
+  failwith(
+    "Invalid DAB ACK poll interval: require a value greater than 0"
+  )
+end
+
+if
   DAB_ACK_WARN_SECONDS < 0
   or DAB_ACK_DOWN_SECONDS <= DAB_ACK_WARN_SECONDS
   or DAB_ACK_STARTUP_GRACE_SECONDS < 0

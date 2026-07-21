@@ -273,7 +273,8 @@ for destination in ${DESTINATIONS}; do
       if [ "${last_progress}" -eq 0 ] \
         && [ "${ack_age}" -le "${STARTUP_GRACE_SECONDS}" ]; then
         endpoint_status=starting
-      elif [ "${ack_age}" -le "${ACK_WARN_SECONDS}" ]; then
+      elif [ "${last_progress}" -gt 0 ] \
+        && [ "${ack_age}" -le "${ACK_WARN_SECONDS}" ]; then
         endpoint_status=ok
       elif [ "${ack_age}" -le "${ACK_DOWN_SECONDS}" ]; then
         endpoint_status=degraded

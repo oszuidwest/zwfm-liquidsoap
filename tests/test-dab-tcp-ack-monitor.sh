@@ -37,15 +37,18 @@ monitor()
 {
   now=$1
   destinations=$2
+  ack_warn_seconds=${3:-5}
+  ack_down_seconds=${4:-15}
+  startup_grace_seconds=${5:-10}
   DAB_ACK_MONITOR_NOW=${now} \
     FAKE_SS_DIR=${FAKE_SS_DIR} \
     SS_BIN=${FAKE_SS} \
     "${MONITOR}" \
       --state-dir "${STATE_DIR}" \
       --destinations "${destinations}" \
-      --ack-warn-seconds 5 \
-      --ack-down-seconds 15 \
-      --startup-grace-seconds 10
+      --ack-warn-seconds "${ack_warn_seconds}" \
+      --ack-down-seconds "${ack_down_seconds}" \
+      --startup-grace-seconds "${startup_grace_seconds}"
 }
 
 assert_status()
@@ -92,6 +95,13 @@ assert_status degraded "${output}"
 rm -f -- "${FAKE_SS_DIR}/9171"
 output=$(monitor 119 "${DESTINATION}")
 assert_status down "${output}"
+
+rm -rf -- "${STATE_DIR}"
+write_socket 9171 100 1
+output=$(monitor 200 "${DESTINATION}" 5 15 2)
+assert_status starting "${output}"
+output=$(monitor 203 "${DESTINATION}" 5 15 2)
+assert_status degraded "${output}"
 
 rm -rf -- "${STATE_DIR}"
 output=$(monitor 120 udp://192.0.2.10:9171)

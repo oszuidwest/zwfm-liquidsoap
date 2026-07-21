@@ -156,9 +156,9 @@ This table shows all environment variables in the system. You must set each vari
 | `DAB_METADATA_SIZE`               | PAD size in bytes (0-196)                              | `8` when socket is set            | `16`                                                            | `conf/lib/00_settings.liq`             | All             |
 | `DAB_METADATA_SOCKET`             | PAD metadata socket path                               | _(none)_                          | `padenc.sock`                                                   | `conf/lib/00_settings.liq`             | All             |
 | `DAB_ACK_MONITOR_ENABLED`         | Monitors TCP acknowledgement progress                  | `true`                            | `false`                                                         | `conf/lib/00_settings.liq`             | All             |
-| `DAB_ACK_POLL_SECONDS`            | Interval between TCP ACK checks                        | `1.0`                             | `2.0`                                                           | `conf/lib/00_settings.liq`             | All             |
-| `DAB_ACK_WARN_SECONDS`            | No-ACK interval before status becomes degraded         | `5`                               | `10`                                                            | `conf/lib/00_settings.liq`             | All             |
-| `DAB_ACK_DOWN_SECONDS`            | No-ACK interval before status becomes down             | `15`                              | `30`                                                            | `conf/lib/00_settings.liq`             | All             |
+| `DAB_ACK_POLL_SECONDS`            | Positive interval between TCP ACK checks               | `1.0`                             | `2.0`                                                           | `conf/lib/00_settings.liq`             | All             |
+| `DAB_ACK_WARN_SECONDS`            | No-ACK interval before a destination becomes degraded  | `5`                               | `10`                                                            | `conf/lib/00_settings.liq`             | All             |
+| `DAB_ACK_DOWN_SECONDS`            | No-ACK interval before a destination becomes down      | `15`                              | `30`                                                            | `conf/lib/00_settings.liq`             | All             |
 | `DAB_ACK_STARTUP_GRACE_SECONDS`   | Grace period for AudioEnc and its initial TCP session  | `10`                              | `20`                                                            | `conf/lib/00_settings.liq`             | All             |
 | **HLS Configuration (Optional)**  | | | | | |
 | `HLS_BUNNY_STORAGE_ZONE`          | Bunny Edge Storage zone name                           | _(none)_                          | `zwfm-hls`                                                      | `conf/lib/00_settings.liq`             | All             |
@@ -377,8 +377,9 @@ sent counter contains data bytes only.
 
 Possible overall states are:
 
+- `disabled`: DAB+ output is not configured.
 - `starting`: all configured TCP destinations are within the startup grace
-  period and have not connected yet.
+  period and have not produced acknowledgement progress yet.
 - `ok`: every TCP destination has recent acknowledgement progress.
 - `degraded`: the TCP destinations have mixed health, including when one is down
   while another remains healthy, or at least one has exceeded
