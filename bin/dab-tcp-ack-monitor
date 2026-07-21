@@ -59,14 +59,13 @@ reset_destination_state()
   previous_acked=0
   last_progress=0
   first_seen=${now}
-  ever_connected=0
 }
 
 # down once the endpoint has connected before or the grace period is over.
 disconnected_status()
 {
   if
-    [ "${ever_connected}" -eq 0 ] \
+    [ "${previous_connection}" = - ] \
       && [ $((now - first_seen)) -le "${STARTUP_GRACE_SECONDS}" ]
   then
     endpoint_status=starting
@@ -78,12 +77,11 @@ disconnected_status()
 write_state()
 {
   state_tmp="${state_file}.${$}"
-  printf '%s %s %s %s %s\n' \
+  printf '%s %s %s %s\n' \
     "${previous_connection}" \
     "${previous_acked}" \
     "${last_progress}" \
-    "${first_seen}" \
-    "${ever_connected}" > "${state_tmp}"
+    "${first_seen}" > "${state_tmp}"
   mv -f -- "${state_tmp}" "${state_file}"
 }
 
@@ -182,18 +180,18 @@ for destination in ${DESTINATIONS}; do
   reset_destination_state
   if [ -r "${state_file}" ]; then
     IFS="${wsp}" read -r previous_connection previous_acked \
-      last_progress first_seen ever_connected < "${state_file}" || true
+      last_progress first_seen < "${state_file}" || true
   fi
 
   for numeric_state in "${previous_acked}" "${last_progress}" \
-    "${first_seen}" "${ever_connected}"; do
+    "${first_seen}"; do
     if ! is_uint "${numeric_state}"; then
       reset_destination_state
       break
     fi
   done
 
-  debug "${destination}: previous connection=${previous_connection} acked=${previous_acked} progress=${last_progress} first=${first_seen} ever=${ever_connected}"
+  debug "${destination}: previous connection=${previous_connection} acked=${previous_acked} progress=${last_progress} first=${first_seen}"
 
   socket_line=$(
     "${SS_BIN}" -tinpHO dst "${host}" dport = ":${port}" 2>/dev/null \
@@ -253,8 +251,6 @@ for destination in ${DESTINATIONS}; do
       disconnected_status
       append_detail "${destination} ${endpoint_status} (TCP ${tcp_state})"
     else
-      ever_connected=1
-
       debug "${destination}: current connection=${connection} sent=${bytes_sent} acked=${bytes_acked}"
 
       if [ "${connection}" != "${previous_connection}" ]; then
