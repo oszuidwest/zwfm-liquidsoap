@@ -389,7 +389,7 @@ As an optional integration, configure one URL output in [zwfm-metadata](https://
 
 The URL template fields are URL-encoded by `zwfm-metadata`. When using that integration, this single output can replace direct Icecast metadata outputs for mounts produced by this Liquidsoap instance.
 
-Keep the endpoint on a private network. The Compose configuration binds it to `127.0.0.1` by default. When both applications run in containers, attach them to the same Docker network and use the `liquidsoap` service name. For a metadata service on another host, set `STREAM_METADATA_BIND=0.0.0.0` and restrict the port with a firewall to that host.
+Keep the endpoint on a private network. The Compose configuration binds it to `127.0.0.1` by default. When both applications run in containers, attach them to the same Docker network and use the `liquidsoap` service name. For a metadata service on another host, use a trusted private or VPN network, or place the endpoint behind a TLS reverse proxy. If binding to `0.0.0.0`, restrict the port with a firewall to that host and never expose the raw HTTP endpoint to an untrusted network.
 
 For HLS playback, players must consume timed ID3 to display the values. For example, hls.js emits `FRAG_PARSING_METADATA`; native Apple and Android HLS players expose equivalent timed metadata callbacks.
 
