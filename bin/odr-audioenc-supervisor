@@ -30,6 +30,21 @@ forward_signal()
   fi
 }
 
+wait_for_child()
+{
+  while :; do
+    if wait "${child_pid}"; then
+      child_exit_status=0
+    else
+      child_exit_status=$?
+    fi
+
+    if ! kill -0 "${child_pid}" 2>/dev/null; then
+      return "${child_exit_status}"
+    fi
+  done
+}
+
 trap cleanup EXIT
 trap 'forward_signal TERM' TERM
 trap 'forward_signal INT' INT
@@ -55,11 +70,11 @@ if printf '%s\n' "${child_pid}" > "${pid_tmp}" \
 else
   publication_status=$?
   forward_signal TERM
-  wait "${child_pid}" 2>/dev/null || true
+  wait_for_child 2>/dev/null || true
   exit "${publication_status}"
 fi
 
-if wait "${child_pid}"; then
+if wait_for_child; then
   exit_status=0
 else
   exit_status=$?
