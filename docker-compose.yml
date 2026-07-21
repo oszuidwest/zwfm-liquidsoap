@@ -11,6 +11,11 @@ services:
       - ./socket:/tmp/liquidsoap # Server socket
     environment:
       - TZ=${CONTAINER_TIMEZONE:-Europe/Amsterdam}
+      # Pin listener ports to the values Compose interpolated for the port
+      # mappings, so a shell override cannot diverge from env_file
+      - SRT_PORT_PRIMARY=${SRT_PORT_PRIMARY:-8888}
+      - SRT_PORT_SECONDARY=${SRT_PORT_SECONDARY:-9999}
+      - STREAM_METADATA_PORT=${STREAM_METADATA_PORT:-7000}
     env_file:
       - .env
     ports:

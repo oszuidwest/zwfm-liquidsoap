@@ -36,8 +36,7 @@ def register_radio_commands(s, ~sources) =
 
     # Get status command
     server.register(
-      description=
-        "Show current mode and active source",
+      description="Show current mode and active source",
       "#{source_id}.status",
       fun (_) ->
         begin
@@ -51,15 +50,13 @@ def register_radio_commands(s, ~sources) =
     let source_names = list.map(fun (item) -> fst(item), sources)
     let source_names_str =
       string.concat(
-        separator=
-          ", ",
+        separator=", ",
         source_names
       )
 
     # Force specific source command
     server.register(
-      description=
-        "Force a specific source (#{source_names_str})",
+      description="Force a specific source (#{source_names_str})",
       "#{source_id}.force",
       fun (arg) ->
         begin
@@ -76,8 +73,7 @@ def register_radio_commands(s, ~sources) =
 
     # Return to auto mode command
     server.register(
-      description=
-        "Return to automatic fallback mode",
+      description="Return to automatic fallback mode",
       "#{source_id}.auto",
       fun (_) ->
         begin
@@ -88,8 +84,7 @@ def register_radio_commands(s, ~sources) =
 
     # Skip to next available source command
     server.register(
-      description=
-        "Skip to next available source",
+      description="Skip to next available source",
       "#{source_id}.skip",
       fun (_) ->
         begin

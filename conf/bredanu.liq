@@ -36,12 +36,11 @@ let studio_b = create_studio_input(id="studio_b", port=SRT_PORT_SECONDARY)
 # Build radio source with fallback chain, force support, and server commands
 let radio =
   create_radio(
-    sources=
-      [
-        ("studio_a", studio_a),
-        ("studio_b", studio_b),
-        ("fallback", emergency_fallback)
-      ]
+    sources=[
+      ("studio_a", studio_a),
+      ("studio_b", studio_b),
+      ("fallback", emergency_fallback)
+    ]
   )
 
 # Create processed audio source
@@ -49,68 +48,61 @@ let radio_processed = create_processed_audio(radio)
 
 # Output streams - BredaNu uses processed audio
 output_icecast_stream(
-  format=
-    %ffmpeg(
-      format = "mp3",
-      %audio(
-        codec = "libmp3lame",
-        b = "#{ICECAST_BITRATE_MP3}k",
-        ar = 48000,
-        ac = 2
-      )
-    ),
-  description=
-    "Hoge Kwaliteit Stream (192kbit MP3)",
+  format=%ffmpeg(
+    format = "mp3",
+    %audio(
+      codec = "libmp3lame",
+      b = "#{ICECAST_BITRATE_MP3}k",
+      ar = 48000,
+      ac = 2
+    )
+  ),
+  description="Hoge Kwaliteit Stream (192kbit MP3)",
   mount=ICECAST_MOUNT_MP3,
   audio_source=radio_processed
 )
 
 output_icecast_stream(
-  format=
-    %fdkaac(
-      channels = 2,
-      samplerate = 48000,
-      bitrate = ICECAST_BITRATE_AAC_LOW,
-      afterburner = true,
-      aot = 'mpeg4_aac_lc',
-      transmux = 'adts',
-      sbr_mode = true
-    ),
-  description=
-    "Mobile Stream (96kbit AAC)",
+  format=%fdkaac(
+    channels = 2,
+    samplerate = 48000,
+    bitrate = ICECAST_BITRATE_AAC_LOW,
+    afterburner = true,
+    aot = 'mpeg4_aac_lc',
+    transmux = 'adts',
+    sbr_mode = true
+  ),
+  description="Mobile Stream (96kbit AAC)",
   mount=ICECAST_MOUNT_AAC_LOW,
   audio_source=radio_processed
 )
 
 output_icecast_stream(
-  format=
-    %fdkaac(
-      channels = 2,
-      samplerate = 48000,
-      bitrate = ICECAST_BITRATE_AAC_HIGH,
-      afterburner = true,
-      aot = 'mpeg4_aac_lc',
-      transmux = 'adts',
-      sbr_mode = true
-    ),
-  description=
-    "Transport Stream (576kbit AAC)",
+  format=%fdkaac(
+    channels = 2,
+    samplerate = 48000,
+    bitrate = ICECAST_BITRATE_AAC_HIGH,
+    afterburner = true,
+    aot = 'mpeg4_aac_lc',
+    transmux = 'adts',
+    sbr_mode = true
+  ),
+  description="Transport Stream (576kbit AAC)",
   mount=ICECAST_MOUNT_AAC_HIGH,
   audio_source=radio_processed
 )
 
 # Dutch Media Exchange outputs (dual ingestion points)
 output_icecast_stream(
-  format=
-    %fdkaac(
-      channels = 2,
-      samplerate = 48000,
-      bitrate = ICECAST_BITRATE_AAC_HIGH,
-      afterburner = true,
-      aot = 'mpeg4_aac_lc',
-      transmux = 'adts',
-      sbr_mode = true
-    ),
+  format=%fdkaac(
+    channels = 2,
+    samplerate = 48000,
+    bitrate = ICECAST_BITRATE_AAC_HIGH,
+    afterburner = true,
+    aot = 'mpeg4_aac_lc',
+    transmux = 'adts',
+    sbr_mode = true
+  ),
   description="",
   mount=DME_MOUNT_POINT,
   audio_source=radio_processed,
@@ -122,16 +114,15 @@ output_icecast_stream(
 )
 
 output_icecast_stream(
-  format=
-    %fdkaac(
-      channels = 2,
-      samplerate = 48000,
-      bitrate = ICECAST_BITRATE_AAC_HIGH,
-      afterburner = true,
-      aot = 'mpeg4_aac_lc',
-      transmux = 'adts',
-      sbr_mode = true
-    ),
+  format=%fdkaac(
+    channels = 2,
+    samplerate = 48000,
+    bitrate = ICECAST_BITRATE_AAC_HIGH,
+    afterburner = true,
+    aot = 'mpeg4_aac_lc',
+    transmux = 'adts',
+    sbr_mode = true
+  ),
   description="",
   mount=DME_MOUNT_POINT,
   audio_source=radio_processed,
