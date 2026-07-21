@@ -11,6 +11,7 @@ CAPTURE_FILE="${TEST_DIR}/stdin"
 FAKE_BIN_DIR="${TEST_DIR}/bin"
 CAPTURED_PID_FILE="${TEST_DIR}/publication-child.pid"
 SIGNAL_READY_FILE="${TEST_DIR}/signal-ready"
+SIGNAL_TIMEOUT_FILE="${TEST_DIR}/signal-timeout"
 
 cleanup()
 {
@@ -114,7 +115,30 @@ done
 
 signal_child_pid=$(cat "${PID_FILE}")
 kill -TERM "${supervisor_pid}"
+
+(
+  attempt=0
+  while kill -0 "${supervisor_pid}" 2>/dev/null; do
+    attempt=$((attempt + 1))
+    if [ "${attempt}" -ge 50 ]; then
+      printf '%s\n' timeout > "${SIGNAL_TIMEOUT_FILE}"
+      kill -KILL "${supervisor_pid}" 2>/dev/null || true
+      kill -KILL "${signal_child_pid}" 2>/dev/null || true
+      exit 0
+    fi
+    sleep 0.1
+  done
+) &
+watchdog_pid=$!
+
 wait "${supervisor_pid}" || true
+wait "${watchdog_pid}" || true
+
+if [ -e "${SIGNAL_TIMEOUT_FILE}" ]; then
+  printf 'Supervisor did not exit after TERM (supervisor=%s, child=%s)\n' \
+    "${supervisor_pid}" "${signal_child_pid}" >&2
+  exit 1
+fi
 
 if kill -0 "${signal_child_pid}" 2>/dev/null; then
   kill -TERM "${signal_child_pid}" 2>/dev/null || true
