@@ -366,9 +366,9 @@ curl --get http://127.0.0.1:7000/metadata \
   --data-urlencode "artist=Artist name"
 ```
 
-The producer can be a playout or automation system, studio application, webhook, or script. The only requirements are a non-empty `title`, an optional `artist`, and the configured bearer token.
+The only requirements are a non-empty `title`, an optional `artist`, and the configured bearer token.
 
-The endpoint returns `204 No Content` on success, `400 Bad Request` when `title` is missing, and `401 Unauthorized` when the bearer token is missing or wrong. Omitting `artist` sends a title-only update. A connection reset on the metadata port means the endpoint is disabled because no bearer token is configured.
+The endpoint returns `204 No Content` on success, `400 Bad Request` when `title` is missing, and `401 Unauthorized` when the bearer token is missing or wrong. Omitting `artist` sends a title-only update. When no bearer token is configured, the metadata endpoint is not registered, so connection failures are expected. Otherwise, verify the container health, configured bind address and port, and firewall rules.
 
 As an optional integration, configure one URL output in [zwfm-metadata](https://github.com/oszuidwest/zwfm-metadata) with the desired input priority, filters, and delay:
 
@@ -387,7 +387,7 @@ As an optional integration, configure one URL output in [zwfm-metadata](https://
 }
 ```
 
-The URL template fields are URL-encoded by `zwfm-metadata`. When using that integration, this single output can replace direct Icecast metadata outputs for mounts produced by this Liquidsoap instance. Keep separate outputs for DAB PAD, StereoTool/RDS, and any streams produced elsewhere.
+The URL template fields are URL-encoded by `zwfm-metadata`. When using that integration, this single output can replace direct Icecast metadata outputs for mounts produced by this Liquidsoap instance.
 
 Keep the endpoint on a private network. The Compose configuration binds it to `127.0.0.1` by default. When both applications run in containers, attach them to the same Docker network and use the `liquidsoap` service name. For a metadata service on another host, set `STREAM_METADATA_BIND=0.0.0.0` and restrict the port with a firewall to that host.
 

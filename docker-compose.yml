@@ -19,26 +19,11 @@ services:
     env_file:
       - .env
     ports:
-      # SRT Input 1
-      - target: ${SRT_PORT_PRIMARY:-8888}
-        published: ${SRT_PORT_PRIMARY:-8888}
-        host_ip: ${SRT_BIND:-0.0.0.0}
-        protocol: udp
-      # SRT Input 2
-      - target: ${SRT_PORT_SECONDARY:-9999}
-        published: ${SRT_PORT_SECONDARY:-9999}
-        host_ip: ${SRT_BIND:-0.0.0.0}
-        protocol: udp
-      # StereoTool GUI
-      - target: 8080
-        published: ${STEREOTOOL_WEB_PORT:-8080}
-        host_ip: ${STEREOTOOL_WEB_BIND:-0.0.0.0}
-        protocol: tcp
-      # Stream metadata API
-      - target: ${STREAM_METADATA_PORT:-7000}
-        published: ${STREAM_METADATA_PORT:-7000}
-        host_ip: ${STREAM_METADATA_BIND:-127.0.0.1}
-        protocol: tcp
+      - '${SRT_BIND:-0.0.0.0}:${SRT_PORT_PRIMARY:-8888}:${SRT_PORT_PRIMARY:-8888}/udp' # SRT Input 1
+      - '${SRT_BIND:-0.0.0.0}:${SRT_PORT_SECONDARY:-9999}:${SRT_PORT_SECONDARY:-9999}/udp' # SRT Input 2
+      - '${STEREOTOOL_WEB_BIND:-0.0.0.0}:${STEREOTOOL_WEB_PORT:-8080}:8080' # StereoTool GUI (TCP)
+      # Stream metadata API (TCP)
+      - '${STREAM_METADATA_BIND:-127.0.0.1}:${STREAM_METADATA_PORT:-7000}:${STREAM_METADATA_PORT:-7000}'
     command: /scripts/radio.liq
     restart: unless-stopped
     user: "liquidsoap:liquidsoap"
