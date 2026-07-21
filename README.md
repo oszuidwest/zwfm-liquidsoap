@@ -553,14 +553,20 @@ docker run --rm -v "$PWD:/app" -w /app savonet/liquidsoap:v2.4.5 liquidsoap -c c
 git clone https://github.com/oszuidwest/zwfm-liquidsoap.git
 cd zwfm-liquidsoap
 
-# Build the Docker image
-docker buildx build --platform linux/amd64,linux/arm64 -t zwfm-liquidsoap:local .
+# Build the image for your platform and load it into the local image store
+docker buildx build --load -t zwfm-liquidsoap:local .
 ```
 
 The Compose file points to the image on `ghcr.io`. To start the services with your local image, set the `image:` value in `docker-compose.yml` to `zwfm-liquidsoap:local`. Then start the services:
 
 ```bash
 docker compose up -d
+```
+
+A multi-platform build is also possible. Use it only as a build test, because the result stays in the build cache. It does not go into the local image store:
+
+```bash
+docker buildx build --platform linux/amd64,linux/arm64 -t zwfm-liquidsoap:local .
 ```
 
 ### Contribute
