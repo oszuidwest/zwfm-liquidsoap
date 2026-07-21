@@ -395,11 +395,13 @@ For HLS playback, the players must read the timed ID3 data to show the values. F
 
 The system has an optional audio-only HLS output. Liquidsoap writes a local HLS live window to `/hls`. This directory is a 64 MB tmpfs mount in `docker-compose.yml`. Liquidsoap then copies the files to Bunny Edge Storage with the native `http.put` and `http.delete` calls. An external uploader or an extra Docker image is not necessary.
 
-The HLS ladder is:
+The default HLS ladder is:
 
 - 48 kbps HE-AACv1 in MPEG-TS segments (`aac_48.m3u8`)
 - 96 kbps AAC-LC in MPEG-TS segments (`aac_96.m3u8`)
 - 192 kbps AAC-LC in MPEG-TS segments (`aac_192.m3u8`)
+
+The variables `HLS_BITRATE_LOW`, `HLS_BITRATE_MID`, and `HLS_BITRATE_HIGH` set these bitrates.
 
 The main playlist is `live.m3u8`. The default configuration has segments of 4 seconds and playlists of 10 segments. The usual listener latency is approximately 15 to 30 seconds with standard HLS client buffers.
 
@@ -492,7 +494,7 @@ For now-playing information and metadata routes, see the [zwfm-metadata](https:/
 
 **No audio output**
 
-- Make sure that the firewall permits the SRT ports (8888/9999).
+- Make sure that the firewall permits the SRT ports (`SRT_PORT_PRIMARY` and `SRT_PORT_SECONDARY`; defaults: 8888/9999).
 - Make sure that `SRT_PASSPHRASE` is the same on the encoder and on Liquidsoap.
 - Examine the Docker logs: `docker compose logs -f`
 
