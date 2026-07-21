@@ -367,7 +367,7 @@ curl http://127.0.0.1:7000/metadata \
 
 The rules are: a `title` that is not empty, an optional `artist`, and the correct bearer token.
 
-The endpoint returns `204 No Content` if the update is correct. It returns `400 Bad Request` if the JSON body is invalid or `title` is missing. It returns `401 Unauthorized` if the bearer token is missing or wrong. It returns `413 Payload Too Large` if the body is larger than 16 KiB or has a `Transfer-Encoding` header. Chunked bodies are not supported. If you do not send `artist`, the update contains only the title. If no bearer token is set, the endpoint is not registered; connection failures are then normal. If the endpoint does not respond, do a check of the container health, the bind address, the port, and the firewall rules.
+The endpoint returns `204 No Content` if the update is correct. It returns `400 Bad Request` if the JSON body is invalid or `title` is missing. It returns `401 Unauthorized` if the bearer token is missing or wrong. The `401` response includes the `WWW-Authenticate: Bearer realm="metadata"` header. It returns `413 Payload Too Large` if the body is larger than 16 KiB or has a `Transfer-Encoding` header. Chunked bodies are not supported. If you do not send `artist`, the update contains only the title. If no bearer token is set, the endpoint is not registered; connection failures are then normal. If the endpoint does not respond, do a check of the container health, the bind address, the port, and the firewall rules.
 
 As an option, configure one URL output in [zwfm-metadata](https://github.com/oszuidwest/zwfm-metadata). Set the input priority, the filters, and the delay:
 
