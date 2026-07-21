@@ -20,17 +20,21 @@ concurrency:
 
 permissions:
   contents: read
-  packages: write
 
 jobs:
   build-and-publish:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
     outputs:
       image_digest: ${{ steps.build.outputs.digest }}
 
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
       - name: Get Software Versions
         id: versions
@@ -50,30 +54,30 @@ jobs:
             echo "combined_tag=$COMBINED_TAG"
           } >> "$GITHUB_OUTPUT"
 
+      - name: Set up QEMU for Update Check
+        if: github.event_name == 'schedule'
+        uses: docker/setup-qemu-action@v4
+        with:
+          platforms: arm64
+
       - name: Determine if Build Is Needed
         id: check_version
         env:
+          COMBINED_TAG: ${{ steps.versions.outputs.combined_tag }}
+          EVENT_NAME: ${{ github.event_name }}
+          FORCE_BUILD: ${{ inputs.force_build }}
           GH_TOKEN: ${{ github.token }}
+          IMAGE: ghcr.io/${{ github.repository }}:latest
+          REPOSITORY: ${{ github.repository }}
         run: |
-          if [[ "${{ github.event.inputs.force_build }}" == "true" ]]; then
+          if [[ "$FORCE_BUILD" == "true" ]]; then
             echo "Force build enabled, proceeding with build"
             echo "should_build=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
-          if [[ "${{ github.event_name }}" == "schedule" ]]; then
-            # Skip only when the check succeeds and finds no pending upgrade
-            docker run --rm --user root --entrypoint sh "ghcr.io/${{ github.repository }}:latest" -c \
-              'apt-get update -qq && apt-get -s upgrade >/tmp/upgrades && ! grep -q "^Inst " /tmp/upgrades' \
-              && SHOULD_BUILD=false || SHOULD_BUILD=true
-            echo "Scheduled build required: $SHOULD_BUILD"
-            echo "should_build=$SHOULD_BUILD" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          COMBINED_TAG="${{ steps.versions.outputs.combined_tag }}"
-          REPO_NAME=$(basename "${{ github.repository }}")
-          ORG_NAME=$(dirname "${{ github.repository }}")
+          REPO_NAME=$(basename "$REPOSITORY")
+          ORG_NAME=$(dirname "$REPOSITORY")
 
           echo "Checking if version exists: $COMBINED_TAG"
           EXISTING_TAGS=$(gh api "orgs/${ORG_NAME}/packages/container/${REPO_NAME}/versions" \
@@ -85,16 +89,34 @@ jobs:
           echo "$EXISTING_TAGS"
           echo "---"
 
-          if echo "$EXISTING_TAGS" | grep -q "^$COMBINED_TAG$"; then
-            echo "Version already exists: $COMBINED_TAG"
-            echo "should_build=false" >> "$GITHUB_OUTPUT"
-          else
+          if ! grep -Fxq -- "$COMBINED_TAG" <<< "$EXISTING_TAGS"; then
             echo "Version not found. Will build: $COMBINED_TAG"
             echo "should_build=true" >> "$GITHUB_OUTPUT"
+            exit 0
           fi
 
-      - name: Set up QEMU
-        if: steps.check_version.outputs.should_build == 'true'
+          if [[ "$EVENT_NAME" != "schedule" ]]; then
+            echo "Version already exists: $COMBINED_TAG"
+            echo "should_build=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Skip only when both platform checks succeed without pending upgrades
+          for PLATFORM in linux/amd64 linux/arm64; do
+            echo "Checking package updates for $PLATFORM"
+            if ! docker run --rm --platform "$PLATFORM" --user root --entrypoint sh "$IMAGE" -c \
+              'apt-get update -qq && apt-get -s upgrade >/tmp/upgrades && ! grep -q "^Inst " /tmp/upgrades'; then
+              echo "Scheduled build required for $PLATFORM"
+              echo "should_build=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          done
+
+          echo "Published image is up to date on both platforms"
+          echo "should_build=false" >> "$GITHUB_OUTPUT"
+
+      - name: Set up QEMU for Build
+        if: github.event_name != 'schedule' && steps.check_version.outputs.should_build == 'true'
         uses: docker/setup-qemu-action@v4
 
       - name: Set up Docker Buildx
@@ -135,24 +157,31 @@ jobs:
 
       - name: Build Summary
         if: steps.check_version.outputs.should_build == 'true'
+        env:
+          COMBINED_TAG: ${{ steps.versions.outputs.combined_tag }}
+          DIGEST: ${{ steps.build.outputs.digest }}
+          FORCE_BUILD: ${{ inputs.force_build }}
+          IMAGE: ghcr.io/${{ github.repository }}:${{ steps.versions.outputs.combined_tag }}
         run: |
           {
             echo "## Docker Build Completed Successfully"
-            echo "- **Image Tag**: ${{ steps.versions.outputs.combined_tag }}"
-            echo "- **Image**: ghcr.io/${{ github.repository }}:${{ steps.versions.outputs.combined_tag }}"
-            echo "- **Digest**: ${{ steps.build.outputs.digest }}"
+            echo "- **Image Tag**: $COMBINED_TAG"
+            echo "- **Image**: $IMAGE"
+            echo "- **Digest**: $DIGEST"
             echo "- **Platforms**: linux/amd64, linux/arm64"
-            if [[ "${{ github.event.inputs.force_build }}" == "true" ]]; then
+            if [[ "$FORCE_BUILD" == "true" ]]; then
               echo "- **Force Build**: Enabled"
             fi
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Skip Build Summary
         if: steps.check_version.outputs.should_build == 'false'
+        env:
+          COMBINED_TAG: ${{ steps.versions.outputs.combined_tag }}
         run: |
           {
             echo "## Docker Build Skipped"
-            echo "No build required for version ${{ steps.versions.outputs.combined_tag }}"
+            echo "No build required for version $COMBINED_TAG"
             echo "Use 'Force build' option to rebuild existing version"
           } >> "$GITHUB_STEP_SUMMARY"
 
