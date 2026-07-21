@@ -11,8 +11,10 @@ end
 
 if
   DAB_ACK_WARN_SECONDS < 0
-  or DAB_ACK_DOWN_SECONDS <= DAB_ACK_WARN_SECONDS
-  or DAB_ACK_STARTUP_GRACE_SECONDS < 0
+or
+  DAB_ACK_DOWN_SECONDS <= DAB_ACK_WARN_SECONDS
+or
+  DAB_ACK_STARTUP_GRACE_SECONDS < 0
 then
   failwith(
     "Invalid DAB ACK thresholds: require 0 <= warning < down and startup grace \
@@ -27,7 +29,8 @@ let dab_ack_status =
   )
 
 def dab_ack_snapshot_state(snapshot) =
-  list.hd(default="down", r/\r?\n/.split(snapshot))
+  let (state, _) = string.split.first(separator="\n", snapshot)
+  string.trim(state)
 end
 
 def dab_set_ack_status(snapshot) =
@@ -60,11 +63,20 @@ end
 # The monitor identifies AudioEnc's EDI sockets in ss output by process
 # name; a dead encoder is reported by the reopen_on_error handler below.
 let dab_ack_monitor_command =
-  "/usr/local/bin/dab-tcp-ack-monitor --destinations #{
-    process.quote(DAB_EDI_DESTINATIONS)
-  } --ack-warn-seconds #{DAB_ACK_WARN_SECONDS} --ack-down-seconds #{
-    DAB_ACK_DOWN_SECONDS
-  } --startup-grace-seconds #{DAB_ACK_STARTUP_GRACE_SECONDS}"
+  process.quote.command(
+    "/usr/local/bin/dab-tcp-ack-monitor",
+    args=
+      [
+        "--destinations",
+        DAB_EDI_DESTINATIONS,
+        "--ack-warn-seconds",
+        "#{DAB_ACK_WARN_SECONDS}",
+        "--ack-down-seconds",
+        "#{DAB_ACK_DOWN_SECONDS}",
+        "--startup-grace-seconds",
+        "#{DAB_ACK_STARTUP_GRACE_SECONDS}"
+      ]
+  )
 
 def dab_ack_monitor_tick() =
   try
@@ -94,34 +106,33 @@ def output_dab_stream(audio_source) =
     # Buffer provides clock isolation
     let audio_to_dab = mksafe(buffer(audio_source))
 
-    let odr_command =
-      ref(
-        "/bin/odr-audioenc -i - --bitrate=#{process.quote(DAB_BITRATE)} --sbr"
+    let pad_args =
+      if
+        DAB_METADATA_SOCKET == ""
+      then
+        []
+      else
+        let pad_size =
+          if DAB_METADATA_SIZE != "" then DAB_METADATA_SIZE else "8" end
+        ["--pad=#{pad_size}", "--pad-socket=#{DAB_METADATA_SOCKET}"]
+      end
+    let edi_args =
+      list.map(
+        fun (edi_url) -> "--edi=#{string.trim(edi_url)}",
+        string.split(separator=",", DAB_EDI_DESTINATIONS)
       )
-
-    # Add PAD configuration if socket is set
-    if
-      DAB_METADATA_SOCKET != ""
-    then
-      let pad_size =
-        if DAB_METADATA_SIZE != "" then DAB_METADATA_SIZE else "8" end
-      odr_command :=
-        "#{odr_command()} --pad=#{process.quote(pad_size)} --pad-socket=#{
-          process.quote(DAB_METADATA_SOCKET)
-        }"
-    end
-
-    # Add EDI outputs - supports comma-separated list
-    let edi_urls = string.split(separator=",", DAB_EDI_DESTINATIONS)
-    list.iter(
-      fun (edi_url) ->
-        begin
-          let trimmed_url = string.trim(edi_url)
-          odr_command :=
-            "#{odr_command()} --edi=#{process.quote(trimmed_url)}"
-        end,
-      edi_urls
-    )
+    let odr_command =
+      process.quote.command(
+        "/bin/odr-audioenc",
+        args=
+          list.flatten(
+            [
+              ["-i", "-", "--bitrate=#{DAB_BITRATE}", "--sbr"],
+              pad_args,
+              edi_args
+            ]
+          )
+      )
 
     if
       DAB_ACK_MONITOR_ENABLED
@@ -147,18 +158,19 @@ def output_dab_stream(audio_source) =
     ignore(
       output.external(
         %wav(channels = 2, samplerate = 48000),
-        reopen_on_error=fun (err) ->
-          begin
-            dab_set_ack_status(
-              "down\nDAB+ encoder error: #{err}"
-            )
-            log(
-              "DAB+ encoder error: #{err} - restarting ODR-AudioEnc in 5s",
-              level=2
-            )
-            5.0
-          end,
-        odr_command(),
+        reopen_on_error=
+          fun (err) ->
+            begin
+              dab_set_ack_status(
+                "down\nDAB+ encoder error: #{err}"
+              )
+              log(
+                "DAB+ encoder error: #{err} - restarting ODR-AudioEnc in 5s",
+                level=2
+              )
+              5.0
+            end,
+        odr_command,
         audio_to_dab
       )
     )
@@ -171,7 +183,8 @@ def output_dab_stream(audio_source) =
   end
 
   server.register(
-    description="Show DAB+ TCP acknowledgement health",
+    description=
+      "Show DAB+ TCP acknowledgement health",
     "dab.status",
     fun (_) -> dab_ack_status()
   )

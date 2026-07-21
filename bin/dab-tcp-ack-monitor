@@ -8,7 +8,7 @@ set -eu
 set -f
 
 SS_BIN=${SS_BIN:-ss}
-STATE_DIR=/tmp/dab-ack-monitor/state
+STATE_DIR=/dev/shm/dab-ack-monitor/state
 DESTINATIONS=""
 ACK_WARN_SECONDS=5
 ACK_DOWN_SECONDS=15

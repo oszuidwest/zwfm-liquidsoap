@@ -8,4 +8,3 @@ hls/
 # Ignore all markdown files except README
 *.md
 !README.md
-!docs/odr-audioenc-output-telemetry-plan.md
