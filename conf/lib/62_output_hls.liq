@@ -552,6 +552,8 @@ def output_hls_stream(audio_source) =
         [hls_source]
       )
 
+      # Source metadata is emitted as timed ID3 (v2.3, replayed per segment)
+      # in the MPEG-TS variants by default; no per-stream id3 settings needed.
       let aac_low =
         %ffmpeg(
           format = "mpegts",

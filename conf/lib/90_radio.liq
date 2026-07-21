@@ -124,5 +124,8 @@ def create_radio(~sources) =
   # Register server commands for source control
   register_radio_commands(radio, sources=sources)
 
+  # Accept external now-playing updates (no-op unless a bearer token is set)
+  register_stream_metadata_endpoint(radio)
+
   radio
 end

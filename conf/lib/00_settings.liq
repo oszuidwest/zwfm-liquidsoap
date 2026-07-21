@@ -86,5 +86,11 @@ let HLS_SEGMENTS = int_of_string(environment.get("HLS_SEGMENTS", default="10"))
 let HLS_SEGMENTS_OVERHEAD =
   int_of_string(environment.get("HLS_SEGMENTS_OVERHEAD", default="5"))
 
+# Stream metadata endpoint (optional - bearer token required to enable)
+let STREAM_METADATA_PORT =
+  int_of_string(environment.get("STREAM_METADATA_PORT", default="7000"))
+let STREAM_METADATA_BEARER_TOKEN =
+  environment.get("STREAM_METADATA_BEARER_TOKEN", default="")
+
 # StereoTool configuration (optional)
 let STEREOTOOL_LICENSE = environment.get("STEREOTOOL_LICENSE", default="")
