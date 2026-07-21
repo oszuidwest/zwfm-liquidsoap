@@ -347,7 +347,7 @@ PAD sends metadata together with the audio. Examples are song titles and station
 
 ## Shared Stream Metadata
 
-If `STREAM_METADATA_BEARER_TOKEN` is set, Liquidsoap accepts now-playing updates. The endpoint is `GET /metadata` on `STREAM_METADATA_PORT`. The system inserts the metadata into the main radio source. This point is before the processing and the output fan-out. As a result, one update goes to all compatible stream outputs:
+If `STREAM_METADATA_BEARER_TOKEN` is set, Liquidsoap accepts now-playing updates. The endpoint is `POST /metadata` on `STREAM_METADATA_PORT`. The system inserts the metadata into the main radio source. This point is before the processing and the output fan-out. As a result, one update goes to all compatible stream outputs:
 
 - the Icecast MP3 and AAC mounts
 - the DME Icecast mounts for Radio Rucphen and BredaNu
@@ -358,15 +358,16 @@ DAB+ PAD and StereoTool/RDS stay protocol-specific metadata outputs. DAB uses th
 Each metadata producer can call the endpoint. Example:
 
 ```bash
-curl --get http://127.0.0.1:7000/metadata \
+curl http://127.0.0.1:7000/metadata \
+  --request POST \
   --header "Authorization: Bearer ${STREAM_METADATA_BEARER_TOKEN}" \
-  --data-urlencode "title=Song title" \
-  --data-urlencode "artist=Artist name"
+  --header "Content-Type: application/json" \
+  --data '{"title":"Song title","artist":"Artist name"}'
 ```
 
 The rules are: a `title` that is not empty, an optional `artist`, and the correct bearer token.
 
-The endpoint returns `204 No Content` if the update is correct. It returns `400 Bad Request` if `title` is missing. It returns `401 Unauthorized` if the bearer token is missing or wrong. If you do not send `artist`, the update contains only the title. If no bearer token is set, the endpoint is not registered; connection failures are then normal. If the endpoint does not respond, do a check of the container health, the bind address, the port, and the firewall rules.
+The endpoint returns `204 No Content` if the update is correct. It returns `400 Bad Request` if the JSON body is invalid or `title` is missing. It returns `401 Unauthorized` if the bearer token is missing or wrong. It returns `413 Payload Too Large` if the body is larger than 16 KiB or has a `Transfer-Encoding` header. Chunked bodies are not supported. If you do not send `artist`, the update contains only the title. If no bearer token is set, the endpoint is not registered; connection failures are then normal. If the endpoint does not respond, do a check of the container health, the bind address, the port, and the firewall rules.
 
 As an option, configure one URL output in [zwfm-metadata](https://github.com/oszuidwest/zwfm-metadata). Set the input priority, the filters, and the delay:
 
@@ -378,14 +379,14 @@ As an option, configure one URL output in [zwfm-metadata](https://github.com/osz
   "formatters": [],
   "settings": {
     "delay": 0,
-    "url": "http://liquidsoap:7000/metadata?title={{.title}}&artist={{.artist}}",
-    "method": "GET",
+    "url": "http://liquidsoap:7000/metadata",
+    "method": "POST",
     "bearerToken": "replace-with-the-same-long-random-token"
   }
 }
 ```
 
-`zwfm-metadata` URL-encodes the template fields. With this integration, this one output can replace the direct Icecast metadata outputs for the mounts of this Liquidsoap instance.
+The POST body contains the structured metadata JSON from `zwfm-metadata`. Liquidsoap reads the `title` and `artist` fields and ignores the other fields. With this integration, this one output can replace the direct Icecast metadata outputs for the mounts of this Liquidsoap instance.
 
 Keep the endpoint on a private network. The Compose configuration binds it to `127.0.0.1` by default. If the two applications operate in containers, attach them to the same Docker network. Then use the service name `liquidsoap`. For a metadata service on a different host, use a private network or a VPN. A TLS reverse proxy is also possible. If you bind to `0.0.0.0`, limit access to the port with a firewall. Do not make the HTTP endpoint available to an unsafe network.
 

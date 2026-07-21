@@ -1,6 +1,29 @@
 # Shared stream metadata endpoint
 # Inserts authenticated now-playing updates before the output fan-out.
 
+let STREAM_METADATA_MAX_BODY_BYTES = 16_384
+
+def read_stream_metadata_body(req) =
+  def rec read_stream_metadata_chunks(body) =
+    let chunk = req.data()
+
+    if
+      chunk == ""
+    then
+      {body = body, too_large = false}
+    elsif
+      string.bytes.length(body) + string.bytes.length(chunk) >
+        STREAM_METADATA_MAX_BODY_BYTES
+    then
+      {body = "", too_large = true}
+    else
+      read_stream_metadata_chunks(body ^ chunk)
+    end
+  end
+
+  read_stream_metadata_chunks("")
+end
+
 def register_stream_metadata_endpoint(radio_source) =
   if
     STREAM_METADATA_BEARER_TOKEN == ""
@@ -27,60 +50,100 @@ def register_stream_metadata_endpoint(radio_source) =
     def stream_metadata_handler(req, res) =
       res.header("Cache-Control", "no-store")
 
+      def reject(code, body, reason) =
+        log(
+          label="metadata",
+          "Rejected metadata request: #{reason}",
+          level=3
+        )
+        res.status_code(code)
+        res.data(body)
+      end
+
       # Harbor lowercases incoming header names before handlers run
       if
         req.headers["authorization"] !=
           "Bearer #{STREAM_METADATA_BEARER_TOKEN}"
       then
-        log(
-          label="metadata",
-          "Rejected metadata request: bad or missing bearer token",
-          level=3
+        res.header(
+          "WWW-Authenticate",
+          "Bearer realm=\"metadata\""
         )
-        res.status_code(401)
-        res.data("Unauthorized\n")
+        reject(
+          401,
+          "Unauthorized\n",
+          "bad or missing bearer token"
+        )
+      elsif
+        # Liquidsoap buffers each chunked HTTP chunk before req.data() returns
+        # it, so chunked bodies cannot be bounded inside the handler
+        req.headers["transfer-encoding"] != ""
+      then
+        reject(
+          413,
+          "Payload Too Large\n",
+          "unsupported transfer encoding"
+        )
       else
-        let title = req.query["title"]
-        let artist = req.query["artist"]
+        let request_body = read_stream_metadata_body(req)
 
         if
-          title == ""
+          request_body.too_large
         then
-          log(
-            label="metadata",
-            "Rejected metadata request: missing title",
-            level=3
-          )
-          res.status_code(400)
-          res.data(
-            "Missing title\n"
+          reject(
+            413,
+            "Payload Too Large\n",
+            "body exceeds #{STREAM_METADATA_MAX_BODY_BYTES} bytes"
           )
         else
-          # An omitted artist sends a title-only update instead of an empty
-          # artist tag
-          let new_metadata =
-            if
-              artist == ""
-            then
-              [("title", title)]
-            else
-              [("artist", artist), ("title", title)]
-            end
+          try
+            let json.parse ({title, artist} :
+              {title: string, artist: string?}
+            ) = request_body.body
+            let artist = artist ?? ""
 
-          radio_source.insert_metadata(new_metadata)
-          res.status_code(204)
-          log(
-            label="metadata",
-            "Inserted stream metadata: artist='#{artist}' title='#{title}'",
-            level=3
-          )
+            if
+              title == ""
+            then
+              reject(
+                400,
+                "Missing title\n",
+                "missing title"
+              )
+            else
+              # An omitted artist sends a title-only update instead of an empty
+              # artist tag
+              let new_metadata =
+                if
+                  artist == ""
+                then
+                  [("title", title)]
+                else
+                  [("artist", artist), ("title", title)]
+                end
+
+              radio_source.insert_metadata(new_metadata)
+              res.status_code(204)
+              log(
+                label="metadata",
+                "Inserted stream metadata",
+                level=3
+              )
+            end
+          catch err : [error.json] do
+            reject(
+              400,
+              "Invalid JSON body\n",
+              "invalid JSON body: #{err.message}"
+            )
+          end
         end
       end
     end
 
     harbor.http.register(
       port=STREAM_METADATA_PORT,
-      method="GET",
+      method="POST",
       "/metadata",
       stream_metadata_handler
     )
