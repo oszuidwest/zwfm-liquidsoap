@@ -1,10 +1,18 @@
 # DAB+ output configuration
 # Uses ODR-AudioEnc for DAB+ encoding with EDI output
 
-let DAB_ACK_PID_FILE = "/tmp/dab-ack-monitor/audioenc.pid"
-let DAB_ACK_STATE_DIR = "/tmp/dab-ack-monitor/state"
+if
+  DAB_ACK_WARN_SECONDS < 0
+  or DAB_ACK_DOWN_SECONDS <= DAB_ACK_WARN_SECONDS
+  or DAB_ACK_STARTUP_GRACE_SECONDS < 0
+then
+  failwith(
+    "Invalid DAB ACK thresholds: require 0 <= warning < down and startup grace \
+     >= 0"
+  )
+end
 
-let dab_ack_state = ref("disabled")
+# Two-line status snapshot: first line is the state, the rest is detail.
 let dab_ack_status =
   ref(
     "disabled\nDAB+ output is disabled"
@@ -24,37 +32,36 @@ def dab_set_ack_status(snapshot) =
     else
       snapshot
     end
+  let previous_state = dab_ack_snapshot_state(dab_ack_status())
   let next_state = dab_ack_snapshot_state(snapshot)
 
   if
-    next_state != dab_ack_state()
+    next_state != previous_state
   then
     let log_level = if next_state == "ok" then 3 else 2 end
     log(
       label="dab",
-      "TCP ACK monitor: #{dab_ack_state()} -> #{next_state}",
+      "TCP ACK monitor: #{previous_state} -> #{next_state}",
       level=log_level
     )
-    dab_ack_state := next_state
   end
 
   dab_ack_status := snapshot
 end
 
-def dab_ack_monitor_command() =
-  "/usr/local/bin/dab-tcp-ack-monitor --pid-file #{
-    process.quote(DAB_ACK_PID_FILE)
-  } --state-dir #{process.quote(DAB_ACK_STATE_DIR)} --destinations #{
+# The monitor reads the AudioEnc PID at the same built-in default path the
+# supervisor publishes it to, so no paths need to be passed here.
+let dab_ack_monitor_command =
+  "/usr/local/bin/dab-tcp-ack-monitor --destinations #{
     process.quote(DAB_EDI_DESTINATIONS)
   } --ack-warn-seconds #{DAB_ACK_WARN_SECONDS} --ack-down-seconds #{
     DAB_ACK_DOWN_SECONDS
   } --startup-grace-seconds #{DAB_ACK_STARTUP_GRACE_SECONDS}"
-end
 
 def dab_ack_monitor_tick() =
   try
     let snapshot =
-      process.read(timeout=5.0, log_errors=false, dab_ack_monitor_command())
+      process.read(timeout=5.0, log_errors=false, dab_ack_monitor_command)
     dab_set_ack_status(snapshot)
   catch err do
     dab_set_ack_status(
@@ -79,8 +86,8 @@ def output_dab_stream(audio_source) =
     # Buffer provides clock isolation
     let audio_to_dab = mksafe(buffer(audio_source))
 
-    # The supervisor only records the child PID and preserves stdin, stderr,
-    # signals and the AudioEnc exit status. It does not process the audio.
+    # The supervisor only records the AudioEnc PID and then execs it in
+    # place; stdin, stderr, signals and the exit status pass through.
     let odr_binary =
       if
         DAB_ACK_MONITOR_ENABLED
@@ -124,13 +131,11 @@ def output_dab_stream(audio_source) =
       dab_set_ack_status(
         "starting\nWaiting for AudioEnc TCP acknowledgements"
       )
-      let poll_seconds =
-        if DAB_ACK_POLL_SECONDS < 0.25 then 0.25 else DAB_ACK_POLL_SECONDS end
       thread.run(
         fast=false,
         delay=1.0,
-        every=poll_seconds,
-        fun () -> dab_ack_monitor_tick()
+        every=max(0.25, DAB_ACK_POLL_SECONDS),
+        dab_ack_monitor_tick
       )
     else
       dab_set_ack_status(
@@ -141,7 +146,7 @@ def output_dab_stream(audio_source) =
     # Feed audio to ODR-AudioEnc. Without reopen_on_error a dead encoder
     # raises a fatal clock error that stops the whole process; returning a
     # delay respawns the encoder instead and leaves other outputs untouched.
-    let _ =
+    ignore(
       output.external(
         %wav(channels = 2, samplerate = 48000),
         reopen_on_error=fun (err) ->
@@ -158,10 +163,8 @@ def output_dab_stream(audio_source) =
         odr_command(),
         audio_to_dab
       )
-  else
-    dab_set_ack_status(
-      "disabled\nDAB+ output is disabled"
     )
+  else
     log(
       "DAB+ output disabled - DAB_BITRATE and/or DAB_EDI_DESTINATIONS not \
        configured",

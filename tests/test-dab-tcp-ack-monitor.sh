@@ -67,9 +67,8 @@ write_socket()
   port=$1
   sent=$2
   acked=$3
-  send_queue=${4:-0}
   cat > "${FAKE_SS_DIR}/${port}" <<EOF
-ESTAB 0 ${send_queue} 10.0.0.2:41000 192.0.2.10:${port} users:(("odr-audioenc",pid=$$,fd=5)) cubic bytes_sent:${sent} bytes_acked:${acked} unacked:0 retrans:0/0
+ESTAB 0 0 10.0.0.2:41000 192.0.2.10:${port} users:(("odr-audioenc",pid=$$,fd=5)) cubic bytes_sent:${sent} bytes_acked:${acked} unacked:0 retrans:0/0
 EOF
 }
 

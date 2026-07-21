@@ -11,6 +11,11 @@ ACK_WARN_SECONDS=5
 ACK_DOWN_SECONDS=15
 STARTUP_GRACE_SECONDS=10
 
+# wsp is a literal space plus tab; nl is a literal newline.
+wsp=' 	'
+nl='
+'
+
 usage()
 {
   cat <<'EOF'
@@ -34,11 +39,6 @@ is_uint()
   esac
 }
 
-trim()
-{
-  printf '%s' "$1" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//'
-}
-
 debug()
 {
   if [ "${DAB_ACK_MONITOR_DEBUG:-false}" = true ]; then
@@ -46,64 +46,43 @@ debug()
   fi
 }
 
-metric()
-{
-  metric_line=$1
-  metric_name=$2
-  metric_default=$3
-
-  metric_value=$(printf '%s\n' "${metric_line}" | awk -v prefix="${metric_name}:" '
-    {
-      for (i = 1; i <= NF; i++) {
-        if (index($i, prefix) == 1) {
-          sub(prefix, "", $i)
-          print $i
-          exit
-        }
-      }
-    }
-  ')
-
-  if [ "${metric_name}" = "retrans" ]; then
-    metric_value=${metric_value##*/}
-  fi
-
-  if is_uint "${metric_value}"; then
-    printf '%s' "${metric_value}"
-  else
-    printf '%s' "${metric_default}"
-  fi
-}
-
 append_detail()
 {
-  if [ -n "${details}" ]; then
-    details="${details}\n$1"
+  details="${details}${details:+${nl}}$1"
+}
+
+reset_destination_state()
+{
+  previous_connection=-
+  previous_acked=0
+  last_progress=0
+  first_seen=${now}
+  ever_connected=0
+}
+
+# down once the endpoint has connected before or the grace period is over.
+disconnected_status()
+{
+  if
+    [ "${ever_connected}" -eq 0 ] \
+      && [ $((now - first_seen)) -le "${STARTUP_GRACE_SECONDS}" ]
+  then
+    endpoint_status=starting
   else
-    details=$1
+    endpoint_status=down
   fi
 }
 
 write_state()
 {
-  state_file=$1
-  state_pid=$2
-  state_connection=$3
-  state_sent=$4
-  state_acked=$5
-  state_last_progress=$6
-  state_first_seen=$7
-  state_ever_connected=$8
   state_tmp="${state_file}.${$}"
-
-  printf '%s %s %s %s %s %s %s\n' \
-    "${state_pid}" \
-    "${state_connection}" \
-    "${state_sent}" \
-    "${state_acked}" \
-    "${state_last_progress}" \
-    "${state_first_seen}" \
-    "${state_ever_connected}" > "${state_tmp}"
+  printf '%s %s %s %s %s %s\n' \
+    "${pid}" \
+    "${previous_connection}" \
+    "${previous_acked}" \
+    "${last_progress}" \
+    "${first_seen}" \
+    "${ever_connected}" > "${state_tmp}"
   mv -f -- "${state_tmp}" "${state_file}"
 }
 
@@ -158,7 +137,7 @@ if ! command -v "${SS_BIN}" >/dev/null 2>&1; then
 fi
 
 umask 077
-mkdir -p -- "${STATE_DIR}"
+[ -d "${STATE_DIR}" ] || mkdir -p -- "${STATE_DIR}"
 
 now=${DAB_ACK_MONITOR_NOW:-$(date +%s)}
 if ! is_uint "${now}"; then
@@ -167,47 +146,42 @@ if ! is_uint "${now}"; then
 fi
 
 started_file="${STATE_DIR}/monitor.started"
+monitor_started=""
 if [ -r "${started_file}" ]; then
-  monitor_started=$(sed -n '1p' "${started_file}" 2>/dev/null || true)
+  read -r monitor_started < "${started_file}" || true
 fi
-if ! is_uint "${monitor_started:-}"; then
+if ! is_uint "${monitor_started}"; then
   monitor_started=${now}
   printf '%s\n' "${monitor_started}" > "${started_file}"
 fi
 
 pid=""
 if [ -r "${PID_FILE}" ]; then
-  pid=$(sed -n '1p' "${PID_FILE}" 2>/dev/null || true)
+  read -r pid < "${PID_FILE}" || true
 fi
 
-active_pid_file="${STATE_DIR}/audioenc.active-pid"
-had_audioenc=false
-if [ -s "${active_pid_file}" ]; then
-  had_audioenc=true
-fi
+seen_file="${STATE_DIR}/audioenc.seen"
 
 if ! is_uint "${pid}" || [ "${pid}" -le 1 ] || ! kill -0 "${pid}" 2>/dev/null; then
   monitor_age=$((now - monitor_started))
-  if [ "${had_audioenc}" = false ] && [ "${monitor_age}" -le "${STARTUP_GRACE_SECONDS}" ]; then
+  if [ ! -e "${seen_file}" ] && [ "${monitor_age}" -le "${STARTUP_GRACE_SECONDS}" ]; then
     printf '%s\n' 'starting' 'AudioEnc process has not started yet'
   else
     printf '%s\n' 'down' 'AudioEnc process is not running'
   fi
   exit 0
 fi
-printf '%s\n' "${pid}" > "${active_pid_file}"
+[ -e "${seen_file}" ] || : > "${seen_file}"
 
 tcp_total=0
 ok_count=0
-degraded_count=0
 down_count=0
 starting_count=0
 details=""
 
 old_ifs=${IFS}
-IFS=,
-for raw_destination in ${DESTINATIONS}; do
-  destination=$(trim "${raw_destination}")
+IFS=",${wsp}"
+for destination in ${DESTINATIONS}; do
   case ${destination} in
     tcp://*)
       ;;
@@ -226,110 +200,93 @@ for raw_destination in ${DESTINATIONS}; do
   host=${host#\[}
   host=${host%\]}
 
+  tcp_total=$((tcp_total + 1))
+
   if [ -z "${host}" ] || ! is_uint "${port}" || [ "${port}" -gt 65535 ]; then
-    tcp_total=$((tcp_total + 1))
     down_count=$((down_count + 1))
     append_detail "${destination} down (invalid TCP destination)"
     continue
   fi
 
-  tcp_total=$((tcp_total + 1))
-  state_key=$(printf '%s' "${destination}" | cksum | awk '{print $1}')
-  state_file="${STATE_DIR}/destination-${state_key}.state"
+  state_file="${STATE_DIR}/destination-${tcp_total}.state"
 
   previous_pid=0
-  previous_connection=-
-  previous_sent=0
-  previous_acked=0
-  last_progress=0
-  first_seen=${now}
-  ever_connected=0
-
+  reset_destination_state
   if [ -r "${state_file}" ]; then
-    IFS=' ' read -r previous_pid previous_connection previous_sent previous_acked \
+    IFS="${wsp}" read -r previous_pid previous_connection previous_acked \
       last_progress first_seen ever_connected < "${state_file}" || true
   fi
 
-  for numeric_state in "${previous_pid}" "${previous_sent}" "${previous_acked}" \
+  for numeric_state in "${previous_pid}" "${previous_acked}" \
     "${last_progress}" "${first_seen}" "${ever_connected}"; do
     if ! is_uint "${numeric_state}"; then
       previous_pid=0
-      previous_connection=-
-      previous_sent=0
-      previous_acked=0
-      last_progress=0
-      first_seen=${now}
-      ever_connected=0
       break
     fi
   done
 
   if [ "${previous_pid}" -ne "${pid}" ]; then
-    previous_pid=${pid}
-    previous_connection=-
-    previous_sent=0
-    previous_acked=0
-    last_progress=0
-    first_seen=${now}
-    ever_connected=0
+    reset_destination_state
   fi
 
-  debug "${destination}: previous pid=${previous_pid} connection=${previous_connection} sent=${previous_sent} acked=${previous_acked} progress=${last_progress} first=${first_seen} ever=${ever_connected}"
+  debug "${destination}: previous connection=${previous_connection} acked=${previous_acked} progress=${last_progress} first=${first_seen} ever=${ever_connected}"
 
-  socket_lines=$("${SS_BIN}" -tinpHO dst "${host}" dport = ":${port}" 2>/dev/null || true)
-  socket_line=$(printf '%s\n' "${socket_lines}" | awk -v needle="pid=${pid}," '
-    index($0, needle) {
-      if ($1 == "ESTAB") {
-        print
-        found = 1
-        exit
-      }
-      if (first == "") {
-        first = $0
-      }
-    }
-    END {
-      if (!found && first != "") {
-        print first
-      }
-    }
-  ')
+  socket_line=$(
+    "${SS_BIN}" -tinpHO dst "${host}" dport = ":${port}" 2>/dev/null \
+      | awk -v needle="pid=${pid}," '
+          index($0, needle) {
+            if ($1 == "ESTAB") {
+              print
+              found = 1
+              exit
+            }
+            if (first == "") {
+              first = $0
+            }
+          }
+          END {
+            if (!found && first != "") {
+              print first
+            }
+          }
+        '
+  )
 
   if [ -z "${socket_line}" ]; then
-    if [ "${ever_connected}" -eq 1 ]; then
-      endpoint_status=down
-    elif [ $((now - first_seen)) -le "${STARTUP_GRACE_SECONDS}" ]; then
-      endpoint_status=starting
-    else
-      endpoint_status=down
-    fi
-
+    disconnected_status
     append_detail "${destination} ${endpoint_status} (no AudioEnc TCP socket)"
-    write_state "${state_file}" "${pid}" "${previous_connection}" \
-      "${previous_sent}" "${previous_acked}" "${last_progress}" \
-      "${first_seen}" "${ever_connected}"
   else
-    tcp_state=$(printf '%s\n' "${socket_line}" | awk '{print $1}')
-    send_queue=$(printf '%s\n' "${socket_line}" | awk '{print $3}')
-    connection=$(printf '%s\n' "${socket_line}" | awk '{print $4 ">" $5}')
-    bytes_sent=$(metric "${socket_line}" bytes_sent 0)
-    bytes_acked=$(metric "${socket_line}" bytes_acked 0)
-    unacked=$(metric "${socket_line}" unacked 0)
-    retrans=$(metric "${socket_line}" retrans 0)
+    IFS="${wsp}"
+    # shellcheck disable=SC2086
+    set -- ${socket_line}
+    IFS=",${wsp}"
 
-    if ! is_uint "${send_queue}"; then
-      send_queue=0
-    fi
+    tcp_state=${1:-}
+    send_queue=${3:-0}
+    connection="${4:-?}>${5:-?}"
+    bytes_sent=0
+    bytes_acked=0
+    unacked=0
+    retrans=0
+    for field; do
+      case ${field} in
+        bytes_sent:*) bytes_sent=${field#*:} ;;
+        bytes_acked:*) bytes_acked=${field#*:} ;;
+        unacked:*) unacked=${field#*:} ;;
+        retrans:*)
+          retrans=${field##*:}
+          retrans=${retrans##*/}
+          ;;
+      esac
+    done
+    is_uint "${send_queue}" || send_queue=0
+    is_uint "${bytes_sent}" || bytes_sent=0
+    is_uint "${bytes_acked}" || bytes_acked=0
+    is_uint "${unacked}" || unacked=0
+    is_uint "${retrans}" || retrans=0
 
     if [ "${tcp_state}" != "ESTAB" ]; then
-      if [ "${ever_connected}" -eq 1 ]; then
-        endpoint_status=down
-      elif [ $((now - first_seen)) -le "${STARTUP_GRACE_SECONDS}" ]; then
-        endpoint_status=starting
-      else
-        endpoint_status=down
-      fi
-
+      disconnected_status
       append_detail "${destination} ${endpoint_status} (TCP ${tcp_state})"
     else
       ever_connected=1
@@ -337,7 +294,6 @@ for raw_destination in ${DESTINATIONS}; do
       debug "${destination}: current connection=${connection} sent=${bytes_sent} acked=${bytes_acked}"
 
       if [ "${connection}" != "${previous_connection}" ]; then
-        previous_sent=0
         previous_acked=0
         last_progress=0
       fi
@@ -367,20 +323,16 @@ for raw_destination in ${DESTINATIONS}; do
 
       append_detail "${destination} ${endpoint_status} (TCP ${tcp_state}, ack_age=${ack_age}s, bytes_sent=${bytes_sent}, bytes_acked=${bytes_acked}, send_queue=${send_queue}, unacked=${unacked}, retrans=${retrans})"
       previous_connection=${connection}
-      previous_sent=${bytes_sent}
       previous_acked=${bytes_acked}
     fi
-
-    write_state "${state_file}" "${pid}" "${previous_connection}" \
-      "${previous_sent}" "${previous_acked}" "${last_progress}" \
-      "${first_seen}" "${ever_connected}"
   fi
+
+  write_state
 
   case ${endpoint_status} in
     ok) ok_count=$((ok_count + 1)) ;;
-    degraded) degraded_count=$((degraded_count + 1)) ;;
     down) down_count=$((down_count + 1)) ;;
-    *) starting_count=$((starting_count + 1)) ;;
+    starting) starting_count=$((starting_count + 1)) ;;
   esac
 done
 IFS=${old_ifs}
@@ -399,4 +351,4 @@ else
 fi
 
 printf '%s\n' "${overall_status}"
-printf '%b\n' "${details}"
+printf '%s\n' "${details}"

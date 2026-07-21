@@ -8,10 +8,8 @@ TEST_DIR=$(mktemp -d)
 FAKE_ENCODER="${TEST_DIR}/fake-encoder"
 PID_FILE="${TEST_DIR}/audioenc.pid"
 CAPTURE_FILE="${TEST_DIR}/stdin"
-FAKE_BIN_DIR="${TEST_DIR}/bin"
-CAPTURED_PID_FILE="${TEST_DIR}/publication-child.pid"
-SIGNAL_READY_FILE="${TEST_DIR}/signal-ready"
-SIGNAL_TIMEOUT_FILE="${TEST_DIR}/signal-timeout"
+ARGS_FILE="${TEST_DIR}/args"
+ENCODER_PID_FILE="${TEST_DIR}/encoder.pid"
 
 cleanup()
 {
@@ -21,6 +19,8 @@ trap cleanup EXIT
 
 cat > "${FAKE_ENCODER}" <<'EOF'
 #!/bin/sh
+printf '%s\n' "$$" > "${ENCODER_PID_FILE}"
+printf '%s\n' "$*" > "${ARGS_FILE}"
 cat > "${CAPTURE_FILE}"
 exit 7
 EOF
@@ -29,6 +29,8 @@ chmod +x "${FAKE_ENCODER}"
 set +e
 printf '%s' 'audio-stream' | \
   CAPTURE_FILE=${CAPTURE_FILE} \
+  ARGS_FILE=${ARGS_FILE} \
+  ENCODER_PID_FILE=${ENCODER_PID_FILE} \
   ODR_AUDIOENC_BIN=${FAKE_ENCODER} \
   ODR_AUDIOENC_PID_FILE=${PID_FILE} \
   "${SUPERVISOR}" --fake-argument
@@ -45,111 +47,13 @@ if [ "$(cat "${CAPTURE_FILE}")" != 'audio-stream' ]; then
   exit 1
 fi
 
-if [ -e "${PID_FILE}" ]; then
-  printf '%s\n' 'Supervisor did not clean up PID file' >&2
+if [ "$(cat "${ARGS_FILE}")" != '--fake-argument' ]; then
+  printf '%s\n' 'Supervisor did not forward arguments' >&2
   exit 1
 fi
 
-mkdir -p -- "${FAKE_BIN_DIR}"
-cat > "${FAKE_BIN_DIR}/mv" <<'EOF'
-#!/bin/sh
-cat "$3" > "${CAPTURED_PID_FILE}"
-exit 23
-EOF
-chmod +x "${FAKE_BIN_DIR}/mv"
-
-cat > "${FAKE_ENCODER}" <<'EOF'
-#!/bin/sh
-while :; do
-  sleep 1
-done
-EOF
-chmod +x "${FAKE_ENCODER}"
-
-set +e
-CAPTURED_PID_FILE=${CAPTURED_PID_FILE} \
-  PATH="${FAKE_BIN_DIR}:${PATH}" \
-  ODR_AUDIOENC_BIN=${FAKE_ENCODER} \
-  ODR_AUDIOENC_PID_FILE=${PID_FILE} \
-  "${SUPERVISOR}"
-publication_status=$?
-set -e
-
-if [ "${publication_status}" -ne 23 ]; then
-  printf 'Expected publication exit status 23, got %s\n' "${publication_status}" >&2
-  exit 1
-fi
-
-publication_child_pid=$(cat "${CAPTURED_PID_FILE}")
-if kill -0 "${publication_child_pid}" 2>/dev/null; then
-  printf '%s\n' 'Supervisor orphaned the child after PID publication failed' >&2
-  exit 1
-fi
-
-cat > "${FAKE_ENCODER}" <<'EOF'
-#!/bin/sh
-trap 'sleep 1; exit 0' TERM
-printf '%s\n' ready > "${SIGNAL_READY_FILE}"
-while :; do
-  sleep 1
-done
-EOF
-chmod +x "${FAKE_ENCODER}"
-
-SIGNAL_READY_FILE=${SIGNAL_READY_FILE} \
-  ODR_AUDIOENC_BIN=${FAKE_ENCODER} \
-  ODR_AUDIOENC_PID_FILE=${PID_FILE} \
-  "${SUPERVISOR}" &
-supervisor_pid=$!
-
-attempt=0
-while [ ! -s "${PID_FILE}" ] || [ ! -s "${SIGNAL_READY_FILE}" ]; do
-  attempt=$((attempt + 1))
-  if [ "${attempt}" -ge 50 ]; then
-    printf '%s\n' 'Supervisor signal test did not start' >&2
-    kill -TERM "${supervisor_pid}" 2>/dev/null || true
-    exit 1
-  fi
-  sleep 0.1
-done
-
-signal_child_pid=$(cat "${PID_FILE}")
-kill -TERM "${supervisor_pid}"
-
-(
-  attempt=0
-  while kill -0 "${supervisor_pid}" 2>/dev/null; do
-    attempt=$((attempt + 1))
-    if [ "${attempt}" -ge 50 ]; then
-      printf '%s\n' timeout > "${SIGNAL_TIMEOUT_FILE}"
-      kill -KILL "${supervisor_pid}" 2>/dev/null || true
-      kill -KILL "${signal_child_pid}" 2>/dev/null || true
-      exit 0
-    fi
-    sleep 0.1
-  done
-) &
-watchdog_pid=$!
-
-wait "${supervisor_pid}" || true
-wait "${watchdog_pid}" || true
-
-if [ -e "${SIGNAL_TIMEOUT_FILE}" ]; then
-  printf 'Supervisor did not exit after TERM (supervisor=%s, child=%s)\n' \
-    "${supervisor_pid}" "${signal_child_pid}" >&2
-  exit 1
-fi
-
-if kill -0 "${signal_child_pid}" 2>/dev/null; then
-  kill -TERM "${signal_child_pid}" 2>/dev/null || true
-  sleep 2
-  kill -KILL "${signal_child_pid}" 2>/dev/null || true
-  printf '%s\n' 'Supervisor exited before the signalled child was reaped' >&2
-  exit 1
-fi
-
-if [ -e "${PID_FILE}" ]; then
-  printf '%s\n' 'Supervisor did not clean up PID file after a signal' >&2
+if [ "$(cat "${PID_FILE}")" != "$(cat "${ENCODER_PID_FILE}")" ]; then
+  printf '%s\n' 'PID file does not match the encoder PID' >&2
   exit 1
 fi
 

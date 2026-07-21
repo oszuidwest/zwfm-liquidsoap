@@ -1,54 +1,13 @@
 #!/bin/sh
 
+# Publishes its own PID for dab-tcp-ack-monitor, then execs ODR-AudioEnc in
+# place so stdin, stderr, signals and the exit status pass through natively.
+# The PID file may outlive the encoder; the monitor detects that with kill -0.
+
 set -eu
 
 ODR_AUDIOENC_BIN=${ODR_AUDIOENC_BIN:-/bin/odr-audioenc}
 ODR_AUDIOENC_PID_FILE=${ODR_AUDIOENC_PID_FILE:-/tmp/dab-ack-monitor/audioenc.pid}
-
-child_pid=""
-pid_tmp=""
-
-cleanup()
-{
-  if [ -n "${pid_tmp}" ]; then
-    rm -f -- "${pid_tmp}"
-  fi
-
-  if [ -n "${child_pid}" ] && [ -r "${ODR_AUDIOENC_PID_FILE}" ]; then
-    recorded_pid=$(sed -n '1p' "${ODR_AUDIOENC_PID_FILE}" 2>/dev/null || true)
-    if [ "${recorded_pid}" = "${child_pid}" ]; then
-      rm -f -- "${ODR_AUDIOENC_PID_FILE}"
-    fi
-  fi
-}
-
-forward_signal()
-{
-  signal=$1
-  if [ -n "${child_pid}" ]; then
-    kill "-${signal}" "${child_pid}" 2>/dev/null || true
-  fi
-}
-
-wait_for_child()
-{
-  while :; do
-    if wait "${child_pid}"; then
-      child_exit_status=0
-    else
-      child_exit_status=$?
-    fi
-
-    if ! kill -0 "${child_pid}" 2>/dev/null; then
-      return "${child_exit_status}"
-    fi
-  done
-}
-
-trap cleanup EXIT
-trap 'forward_signal TERM' TERM
-trap 'forward_signal INT' INT
-trap 'forward_signal HUP' HUP
 
 pid_dir=${ODR_AUDIOENC_PID_FILE%/*}
 if [ "${pid_dir}" = "${ODR_AUDIOENC_PID_FILE}" ]; then
@@ -58,26 +17,7 @@ fi
 umask 077
 mkdir -p -- "${pid_dir}"
 
-exec 3<&0
-"${ODR_AUDIOENC_BIN}" "$@" <&3 &
-child_pid=$!
-exec 3<&-
+printf '%s\n' "$$" > "${ODR_AUDIOENC_PID_FILE}.$$"
+mv -f -- "${ODR_AUDIOENC_PID_FILE}.$$" "${ODR_AUDIOENC_PID_FILE}"
 
-pid_tmp="${ODR_AUDIOENC_PID_FILE}.${$}"
-if printf '%s\n' "${child_pid}" > "${pid_tmp}" \
-  && mv -f -- "${pid_tmp}" "${ODR_AUDIOENC_PID_FILE}"; then
-  pid_tmp=""
-else
-  publication_status=$?
-  forward_signal TERM
-  wait_for_child 2>/dev/null || true
-  exit "${publication_status}"
-fi
-
-if wait_for_child; then
-  exit_status=0
-else
-  exit_status=$?
-fi
-
-exit "${exit_status}"
+exec "${ODR_AUDIOENC_BIN}" "$@"
