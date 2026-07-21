@@ -7,12 +7,15 @@ ARG TARGETARCH
 USER root
 RUN apt-get update \
  && apt-get install -y --no-install-recommends --only-upgrade libssl3t64 openssl libgdk-pixbuf-2.0-0 \
- && apt-get install -y --no-install-recommends wget \
+ && apt-get install -y --no-install-recommends iproute2 wget \
  && wget -q -O /bin/odr-audioenc "https://github.com/oszuidwest/zwfm-odrbuilds/releases/download/odr-audioenc-${ODR_AUDIOENC_VERSION}/odr-audioenc-${ODR_AUDIOENC_VERSION}-minimal-debian13-${TARGETARCH}" \
  && chmod +x /bin/odr-audioenc \
  && apt-get remove -y wget \
  && apt-get autoremove -y \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
+
+COPY --chmod=0755 bin/dab-tcp-ack-monitor /usr/local/bin/dab-tcp-ack-monitor
+COPY --chmod=0755 bin/odr-audioenc-supervisor /usr/local/bin/odr-audioenc-supervisor
 
 USER liquidsoap

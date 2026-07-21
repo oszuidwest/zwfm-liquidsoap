@@ -66,6 +66,16 @@ let DAB_BITRATE = environment.get("DAB_BITRATE", default="")
 let DAB_EDI_DESTINATIONS = environment.get("DAB_EDI_DESTINATIONS", default="")
 let DAB_METADATA_SOCKET = environment.get("DAB_METADATA_SOCKET", default="")
 let DAB_METADATA_SIZE = environment.get("DAB_METADATA_SIZE", default="")
+let DAB_ACK_MONITOR_ENABLED =
+  environment.get("DAB_ACK_MONITOR_ENABLED", default="true") == "true"
+let DAB_ACK_POLL_SECONDS =
+  float_of_string(environment.get("DAB_ACK_POLL_SECONDS", default="1.0"))
+let DAB_ACK_WARN_SECONDS =
+  int_of_string(environment.get("DAB_ACK_WARN_SECONDS", default="5"))
+let DAB_ACK_DOWN_SECONDS =
+  int_of_string(environment.get("DAB_ACK_DOWN_SECONDS", default="15"))
+let DAB_ACK_STARTUP_GRACE_SECONDS =
+  int_of_string(environment.get("DAB_ACK_STARTUP_GRACE_SECONDS", default="10"))
 
 # HLS configuration (optional - storage zone and access key required to enable)
 let HLS_BUNNY_STORAGE_ZONE =

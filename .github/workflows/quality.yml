@@ -27,6 +27,11 @@ jobs:
           check_together: "yes"
           severity: warning
 
+      - name: Test DAB TCP ACK monitor
+        run: |
+          ./tests/test-odr-audioenc-supervisor.sh
+          ./tests/test-dab-tcp-ack-monitor.sh
+
       # Dockerfile linting
       - name: Hadolint
         uses: hadolint/hadolint-action@v3.3.0

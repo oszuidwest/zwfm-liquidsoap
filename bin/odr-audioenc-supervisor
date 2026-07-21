@@ -1,0 +1,62 @@
+#!/bin/sh
+
+set -eu
+
+ODR_AUDIOENC_BIN=${ODR_AUDIOENC_BIN:-/bin/odr-audioenc}
+ODR_AUDIOENC_PID_FILE=${ODR_AUDIOENC_PID_FILE:-/tmp/dab-ack-monitor/audioenc.pid}
+
+child_pid=""
+pid_tmp=""
+
+cleanup()
+{
+  if [ -n "${pid_tmp}" ]; then
+    rm -f -- "${pid_tmp}"
+  fi
+
+  if [ -n "${child_pid}" ] && [ -r "${ODR_AUDIOENC_PID_FILE}" ]; then
+    recorded_pid=$(sed -n '1p' "${ODR_AUDIOENC_PID_FILE}" 2>/dev/null || true)
+    if [ "${recorded_pid}" = "${child_pid}" ]; then
+      rm -f -- "${ODR_AUDIOENC_PID_FILE}"
+    fi
+  fi
+}
+
+forward_signal()
+{
+  signal=$1
+  if [ -n "${child_pid}" ]; then
+    kill "-${signal}" "${child_pid}" 2>/dev/null || true
+  fi
+}
+
+trap cleanup EXIT
+trap 'forward_signal TERM' TERM
+trap 'forward_signal INT' INT
+trap 'forward_signal HUP' HUP
+
+pid_dir=${ODR_AUDIOENC_PID_FILE%/*}
+if [ "${pid_dir}" = "${ODR_AUDIOENC_PID_FILE}" ]; then
+  pid_dir=.
+fi
+
+umask 077
+mkdir -p -- "${pid_dir}"
+
+exec 3<&0
+"${ODR_AUDIOENC_BIN}" "$@" <&3 &
+child_pid=$!
+exec 3<&-
+
+pid_tmp="${ODR_AUDIOENC_PID_FILE}.${$}"
+printf '%s\n' "${child_pid}" > "${pid_tmp}"
+mv -f -- "${pid_tmp}" "${ODR_AUDIOENC_PID_FILE}"
+pid_tmp=""
+
+if wait "${child_pid}"; then
+  exit_status=0
+else
+  exit_status=$?
+fi
+
+exit "${exit_status}"
