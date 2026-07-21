@@ -113,7 +113,7 @@ Copy the applicable example file to `.env`. Then change the values for your stat
 
 ## Environment Variables Reference
 
-This table shows all environment variables in the system. You must set each variable that shows _(required)_. If one of these variables is not set, Liquidsoap does not start. The DME variables are necessary only for Rucphen and BredaNu. A variable that shows _(none)_ is optional. Set it only if you use the related function.
+This table shows all environment variables in the system. You must set each variable that shows _(required)_. If you do not set one of these variables, Liquidsoap does not start. The DME variables are necessary only for Rucphen and BredaNu. A variable that shows _(none)_ is optional. Set it only if you use the related function.
 
 | Variable                          | Description                                            | Default                           | Example                                                         | Used In                                | Station         |
 | --------------------------------- | ------------------------------------------------------ | --------------------------------- | --------------------------------------------------------------- | -------------------------------------- | --------------- |
@@ -185,7 +185,7 @@ This table shows all environment variables in the system. You must set each vari
 
 ### Notes
 
-- **Required variables**: set each variable that shows _(required)_ in the `.env` file. If one is not set, Liquidsoap does not start. The DME variables apply only to Rucphen and BredaNu.
+- **Required variables**: set each variable that shows _(required)_ in the `.env` file. If you do not set one of them, Liquidsoap does not start. The DME variables apply only to Rucphen and BredaNu.
 - **Optional outputs**: DAB+ output is off until you set `DAB_BITRATE` and `DAB_EDI_DESTINATIONS`. HLS output is off until you set `HLS_BUNNY_STORAGE_ZONE` and `HLS_BUNNY_ACCESS_KEY`. PAD metadata is off until you set `DAB_METADATA_SOCKET`.
 - **More than one EDI output**: `DAB_EDI_DESTINATIONS` accepts a comma-separated list. The system then sends DAB+ to all destinations at the same time.
 - **Station column**: "All" applies to all stations. "Rucphen/BredaNu" applies only to the stations with DME.
@@ -553,7 +553,7 @@ docker run --rm -v "$PWD:/app" -w /app savonet/liquidsoap:v2.4.5 liquidsoap -c c
 git clone https://github.com/oszuidwest/zwfm-liquidsoap.git
 cd zwfm-liquidsoap
 
-# Build the image for your platform and load it into the local image store
+# Build the image for your platform. The --load option puts it in the local image store.
 docker buildx build --load -t zwfm-liquidsoap:local .
 ```
 
