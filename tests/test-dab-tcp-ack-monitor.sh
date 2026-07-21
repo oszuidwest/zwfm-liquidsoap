@@ -67,8 +67,9 @@ write_socket()
   port=$1
   sent=$2
   acked=$3
+  source_port=${4:-41000}
   cat > "${FAKE_SS_DIR}/${port}" <<EOF
-ESTAB 0 0 10.0.0.2:41000 192.0.2.10:${port} users:(("odr-audioenc",pid=4242,fd=5)) cubic bytes_sent:${sent} bytes_acked:${acked} unacked:0 retrans:0/0
+ESTAB 0 0 10.0.0.2:${source_port} 192.0.2.10:${port} users:(("odr-audioenc",pid=4242,fd=5)) cubic bytes_sent:${sent} bytes_acked:${acked} unacked:0 retrans:0/0
 EOF
 }
 
@@ -101,6 +102,16 @@ write_socket 9171 100 1
 output=$(monitor 200 "${DESTINATION}" 5 15 2)
 assert_status starting "${output}"
 output=$(monitor 203 "${DESTINATION}" 5 15 2)
+assert_status degraded "${output}"
+
+rm -rf -- "${STATE_DIR}"
+write_socket 9171 100 101 41000
+output=$(monitor 300 "${DESTINATION}")
+assert_status ok "${output}"
+write_socket 9171 0 1 42000
+output=$(monitor 400 "${DESTINATION}")
+assert_status starting "${output}"
+output=$(monitor 411 "${DESTINATION}")
 assert_status degraded "${output}"
 
 rm -rf -- "${STATE_DIR}"

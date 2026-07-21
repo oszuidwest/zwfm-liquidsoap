@@ -29,7 +29,7 @@ Options:
   --destinations URLS          Comma-separated EDI destination URLs
   --ack-warn-seconds SECONDS   Seconds without ACK progress before degraded
   --ack-down-seconds SECONDS   Seconds without ACK progress before down
-  --startup-grace-seconds SEC  Initial grace period for the TCP session
+  --startup-grace-seconds SEC  Grace period for each new TCP session
 EOF
 }
 
@@ -261,6 +261,7 @@ for destination in ${DESTINATIONS}; do
       if [ "${connection}" != "${previous_connection}" ]; then
         previous_acked=0
         last_progress=0
+        first_seen=${now}
       fi
 
       if [ "${bytes_sent}" -gt 0 ] \
