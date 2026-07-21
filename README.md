@@ -155,6 +155,11 @@ This table shows all environment variables in the system. You must set each vari
 | `DAB_EDI_DESTINATIONS`            | DAB+ EDI destination(s)                                | _(none)_                          | `tcp://dab-mux.local:9001` or `tcp://dab1:9001,tcp://dab2:9002` | `conf/lib/00_settings.liq`             | All             |
 | `DAB_METADATA_SIZE`               | PAD size in bytes (0-196)                              | `8` when socket is set            | `16`                                                            | `conf/lib/00_settings.liq`             | All             |
 | `DAB_METADATA_SOCKET`             | PAD metadata socket path                               | _(none)_                          | `padenc.sock`                                                   | `conf/lib/00_settings.liq`             | All             |
+| `DAB_ACK_MONITOR_ENABLED`         | Monitors TCP acknowledgement progress                  | `true`                            | `false`                                                         | `conf/lib/00_settings.liq`             | All             |
+| `DAB_ACK_POLL_SECONDS`            | Positive interval between TCP ACK checks               | `1.0`                             | `2.0`                                                           | `conf/lib/00_settings.liq`             | All             |
+| `DAB_ACK_WARN_SECONDS`            | No-ACK interval before a destination becomes degraded  | `5`                               | `10`                                                            | `conf/lib/00_settings.liq`             | All             |
+| `DAB_ACK_DOWN_SECONDS`            | No-ACK interval before a destination becomes down      | `15`                              | `30`                                                            | `conf/lib/00_settings.liq`             | All             |
+| `DAB_ACK_STARTUP_GRACE_SECONDS`   | Grace period for AudioEnc and each new TCP session     | `10`                              | `20`                                                            | `conf/lib/00_settings.liq`             | All             |
 | **HLS Configuration (Optional)**  | | | | | |
 | `HLS_BUNNY_STORAGE_ZONE`          | Bunny Edge Storage zone name                           | _(none)_                          | `zwfm-hls`                                                      | `conf/lib/00_settings.liq`             | All             |
 | `HLS_BUNNY_ACCESS_KEY`            | Bunny Edge Storage read/write password                 | _(none)_                          | `secret-storage-password`                                       | `conf/lib/00_settings.liq`             | All             |
@@ -245,6 +250,7 @@ socat - UNIX-CONNECT:/opt/liquidsoap/socket/liquidsoap.sock
 | `silence.enable`            | Sets silence detection to on                                       |
 | `silence.disable`           | Sets silence detection to off                                      |
 | `silence.status`            | Shows the silence detection state                                  |
+| `dab.status`                | Shows acknowledgement progress for each DAB+ TCP destination       |
 | `hls.status`                | Shows the HLS output health (`ok`, `degraded: <reason>`, or `disabled`) |
 
 All commands have an immediate effect.
@@ -331,6 +337,10 @@ DAB_EDI_DESTINATIONS=tcp://dab-mux.example.com:9001   # EDI output destination(s
 # Optional PAD metadata
 DAB_METADATA_SOCKET=padenc.sock                   # Socket for the PAD encoder
 DAB_METADATA_SIZE=8                               # PAD size (default: 8)
+
+# Optional TCP acknowledgement thresholds
+DAB_ACK_WARN_SECONDS=5                            # Degraded after no ACK progress
+DAB_ACK_DOWN_SECONDS=15                           # Down after no ACK progress
 ```
 
 ### More Than One EDI Destination
@@ -340,6 +350,48 @@ To send the DAB+ stream to more than one destination, write a comma-separated li
 ```bash
 DAB_EDI_DESTINATIONS=tcp://primary.example.com:9001,tcp://backup.example.com:9002
 ```
+
+### TCP Acknowledgement Monitoring
+
+TCP acknowledgement monitoring is on by default. It reads the Linux TCP state
+for each AudioEnc destination. It checks that `bytes_acked` continues to increase
+while AudioEnc sends data. It also reports the TCP state, send queue, unacknowledged
+segments, and retransmissions.
+
+Use the Liquidsoap server socket to see the current state:
+
+```text
+dab.status
+```
+
+A healthy response resembles:
+
+```text
+ok
+tcp://primary.example.com:9001 ok (TCP ESTAB, ack_age=0s, bytes_sent=123456, bytes_acked=123457, send_queue=0, unacked=0, retrans=0)
+```
+
+On Linux, `bytes_acked` can be exactly one greater than `bytes_sent` because the
+ACK counter follows TCP sequence-space progress, including the SYN, while the
+sent counter contains data bytes only.
+
+Possible overall states are:
+
+- `disabled`: DAB+ output is not configured.
+- `starting`: all configured TCP destinations are within the startup grace
+  period and have not produced acknowledgement progress yet.
+- `ok`: every TCP destination has recent acknowledgement progress.
+- `degraded`: the TCP destinations have mixed health, including when one is down
+  while another remains healthy, or at least one has exceeded
+  `DAB_ACK_WARN_SECONDS` without acknowledgement progress.
+- `down`: all configured TCP destinations are down, which includes the case
+  where AudioEnc is not running. A single destination exceeding
+  `DAB_ACK_DOWN_SECONDS` while another remains healthy produces `degraded`.
+- `unmonitored`: monitoring is disabled or no TCP EDI destination is configured.
+
+TCP acknowledgements confirm that the remote TCP stack accepted the byte stream.
+They do not confirm that the remote DabMux application processed the audio. UDP
+destinations cannot provide this signal and are listed as unmonitored.
 
 ### PAD (Programme Associated Data)
 

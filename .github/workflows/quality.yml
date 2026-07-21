@@ -27,6 +27,9 @@ jobs:
           check_together: "yes"
           severity: warning
 
+      - name: Test DAB TCP ACK monitor
+        run: ./tests/test-dab-tcp-ack-monitor.sh
+
       # Dockerfile linting
       - name: Hadolint
         uses: hadolint/hadolint-action@v3.3.0
@@ -62,22 +65,36 @@ jobs:
         id: version
         run: |
           LIQUIDSOAP_VERSION=$(grep "^ARG LIQUIDSOAP_VERSION" Dockerfile | cut -d'=' -f2)
-          echo "version=v${LIQUIDSOAP_VERSION}" >> $GITHUB_OUTPUT
+          if [[ ! "${LIQUIDSOAP_VERSION}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Invalid Liquidsoap version: ${LIQUIDSOAP_VERSION}" >&2
+            exit 1
+          fi
+          echo "version=v${LIQUIDSOAP_VERSION}" >> "$GITHUB_OUTPUT"
           echo "Using Liquidsoap version from Dockerfile: v${LIQUIDSOAP_VERSION}"
 
       - name: Check Liquidsoap Syntax
+        env:
+          LIQUIDSOAP_VERSION: ${{ steps.version.outputs.version }}
         run: |
-          echo "Checking Liquidsoap files with ${{ steps.version.outputs.version }}..."
+          echo "Checking Liquidsoap files with ${LIQUIDSOAP_VERSION}..."
 
           # Check all .liq files in conf directory
           for file in conf/*.liq; do
             if [ -f "$file" ]; then
               echo "Checking ${file}..."
               docker run --rm -v "$PWD:/app" -w /app \
-                savonet/liquidsoap:${{ steps.version.outputs.version }} \
+                "savonet/liquidsoap:${LIQUIDSOAP_VERSION}" \
                 liquidsoap -c "${file}"
             fi
           done
+
+      - name: Test DAB output helpers
+        env:
+          LIQUIDSOAP_VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          docker run --rm -v "$PWD:/app" -w /app \
+            "savonet/liquidsoap:${LIQUIDSOAP_VERSION}" \
+            liquidsoap tests/test-dab-output.liq
 
       - name: Set Lint Success
         id: lint_result

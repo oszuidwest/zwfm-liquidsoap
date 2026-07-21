@@ -1,0 +1,321 @@
+#!/bin/sh
+
+# Reports EDI destination health from TCP ACK progress in ss output. The
+# AudioEnc sockets are matched by process name in the users field; a dead
+# encoder is reported separately by Liquidsoap's reopen_on_error handler.
+
+set -eu
+set -f
+
+SS_BIN=${SS_BIN:-ss}
+STATE_DIR=/dev/shm/dab-ack-monitor/state
+DESTINATIONS=""
+ACK_WARN_SECONDS=5
+ACK_DOWN_SECONDS=15
+STARTUP_GRACE_SECONDS=10
+
+# wsp is a literal space plus tab; nl is a literal newline.
+wsp=' 	'
+nl='
+'
+
+usage()
+{
+  cat <<'EOF'
+Usage: dab-tcp-ack-monitor [options]
+
+Options:
+  --state-dir PATH             Persistent monitor state directory
+  --destinations URLS          Comma-separated EDI destination URLs
+  --ack-warn-seconds SECONDS   Seconds without ACK progress before degraded
+  --ack-down-seconds SECONDS   Seconds without ACK progress before down
+  --startup-grace-seconds SEC  Grace period for each new TCP session
+EOF
+}
+
+is_uint()
+{
+  case $1 in
+    ""|*[!0-9]*) return 1 ;;
+    *) return 0 ;;
+  esac
+}
+
+debug()
+{
+  if [ "${DAB_ACK_MONITOR_DEBUG:-false}" = true ]; then
+    printf 'dab-tcp-ack-monitor: %s\n' "$1" >&2
+  fi
+}
+
+append_detail()
+{
+  details="${details}${details:+${nl}}$1"
+}
+
+reset_destination_state()
+{
+  previous_connection=-
+  previous_acked=0
+  last_progress=0
+  first_seen=${now}
+}
+
+# down once the endpoint has connected before or the grace period is over.
+disconnected_status()
+{
+  if
+    [ "${previous_connection}" = - ] \
+      && [ $((now - first_seen)) -le "${STARTUP_GRACE_SECONDS}" ]
+  then
+    endpoint_status=starting
+  else
+    endpoint_status=down
+  fi
+}
+
+write_state()
+{
+  state_tmp="${state_file}.${$}"
+  printf '%s %s %s %s\n' \
+    "${previous_connection}" \
+    "${previous_acked}" \
+    "${last_progress}" \
+    "${first_seen}" > "${state_tmp}"
+  mv -f -- "${state_tmp}" "${state_file}"
+}
+
+while [ "$#" -gt 0 ]; do
+  case $1 in
+    --state-dir)
+      STATE_DIR=$2
+      shift 2
+      ;;
+    --destinations)
+      DESTINATIONS=$2
+      shift 2
+      ;;
+    --ack-warn-seconds)
+      ACK_WARN_SECONDS=$2
+      shift 2
+      ;;
+    --ack-down-seconds)
+      ACK_DOWN_SECONDS=$2
+      shift 2
+      ;;
+    --startup-grace-seconds)
+      STARTUP_GRACE_SECONDS=$2
+      shift 2
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    *)
+      printf 'down\nmonitor error: unknown argument %s\n' "$1"
+      exit 0
+      ;;
+  esac
+done
+
+if ! is_uint "${ACK_WARN_SECONDS}" \
+  || ! is_uint "${ACK_DOWN_SECONDS}" \
+  || ! is_uint "${STARTUP_GRACE_SECONDS}" \
+  || [ "${ACK_WARN_SECONDS}" -ge "${ACK_DOWN_SECONDS}" ]; then
+  printf '%s\n' 'down' 'monitor error: invalid ACK thresholds'
+  exit 0
+fi
+
+if ! command -v "${SS_BIN}" >/dev/null 2>&1; then
+  printf '%s\n' 'down' "monitor error: ${SS_BIN} is not available"
+  exit 0
+fi
+
+umask 077
+[ -d "${STATE_DIR}" ] || mkdir -p -- "${STATE_DIR}"
+
+now=${DAB_ACK_MONITOR_NOW:-$(date +%s)}
+if ! is_uint "${now}"; then
+  printf '%s\n' 'down' 'monitor error: invalid current time'
+  exit 0
+fi
+
+tcp_total=0
+ok_count=0
+down_count=0
+starting_count=0
+details=""
+
+old_ifs=${IFS}
+IFS=",${wsp}"
+for destination in ${DESTINATIONS}; do
+  case ${destination} in
+    tcp://*)
+      ;;
+    "")
+      continue
+      ;;
+    *)
+      append_detail "${destination} unmonitored (not TCP)"
+      continue
+      ;;
+  esac
+
+  authority=${destination#tcp://}
+  host=${authority%:*}
+  port=${authority##*:}
+  host=${host#\[}
+  host=${host%\]}
+
+  tcp_total=$((tcp_total + 1))
+
+  if [ -z "${host}" ] || ! is_uint "${port}" || [ "${port}" -gt 65535 ]; then
+    down_count=$((down_count + 1))
+    append_detail "${destination} down (invalid TCP destination)"
+    continue
+  fi
+
+  state_file="${STATE_DIR}/destination-${tcp_total}.state"
+
+  reset_destination_state
+  if [ -r "${state_file}" ]; then
+    IFS="${wsp}" read -r previous_connection previous_acked \
+      last_progress first_seen < "${state_file}" || true
+  fi
+
+  for numeric_state in "${previous_acked}" "${last_progress}" \
+    "${first_seen}"; do
+    if ! is_uint "${numeric_state}"; then
+      reset_destination_state
+      break
+    fi
+  done
+
+  if [ "${last_progress}" -gt "${now}" ] \
+    || [ "${first_seen}" -gt "${now}" ]; then
+    reset_destination_state
+  fi
+
+  debug "${destination}: previous connection=${previous_connection} acked=${previous_acked} progress=${last_progress} first=${first_seen}"
+
+  socket_line=$(
+    "${SS_BIN}" -tinpHO dst "${host}" dport = ":${port}" 2>/dev/null \
+      | awk -v needle='"odr-audioenc",' '
+          index($0, needle) {
+            if ($1 == "ESTAB") {
+              print
+              found = 1
+              exit
+            }
+            if (first == "") {
+              first = $0
+            }
+          }
+          END {
+            if (!found && first != "") {
+              print first
+            }
+          }
+        '
+  )
+
+  if [ -z "${socket_line}" ]; then
+    disconnected_status
+    append_detail "${destination} ${endpoint_status} (no AudioEnc TCP socket)"
+  else
+    IFS="${wsp}"
+    # shellcheck disable=SC2086
+    set -- ${socket_line}
+    IFS=",${wsp}"
+
+    tcp_state=${1:-}
+    send_queue=${3:-0}
+    connection="${4:-?}>${5:-?}"
+    bytes_sent=0
+    bytes_acked=0
+    unacked=0
+    retrans=0
+    for field; do
+      case ${field} in
+        bytes_sent:*) bytes_sent=${field#*:} ;;
+        bytes_acked:*) bytes_acked=${field#*:} ;;
+        unacked:*) unacked=${field#*:} ;;
+        retrans:*)
+          retrans=${field##*:}
+          retrans=${retrans##*/}
+          ;;
+      esac
+    done
+    is_uint "${send_queue}" || send_queue=0
+    is_uint "${bytes_sent}" || bytes_sent=0
+    is_uint "${bytes_acked}" || bytes_acked=0
+    is_uint "${unacked}" || unacked=0
+    is_uint "${retrans}" || retrans=0
+
+    if [ "${tcp_state}" != "ESTAB" ]; then
+      disconnected_status
+      append_detail "${destination} ${endpoint_status} (TCP ${tcp_state})"
+    else
+      debug "${destination}: current connection=${connection} sent=${bytes_sent} acked=${bytes_acked}"
+
+      if [ "${connection}" != "${previous_connection}" ]; then
+        previous_acked=0
+        last_progress=0
+        first_seen=${now}
+      fi
+
+      if [ "${bytes_sent}" -gt 0 ] \
+        && [ "${bytes_acked}" -gt 1 ] \
+        && [ "${bytes_acked}" -gt "${previous_acked}" ]; then
+        last_progress=${now}
+      fi
+
+      if [ "${last_progress}" -gt 0 ]; then
+        ack_age=$((now - last_progress))
+      else
+        ack_age=$((now - first_seen))
+      fi
+
+      if [ "${last_progress}" -eq 0 ] \
+        && [ "${ack_age}" -le "${STARTUP_GRACE_SECONDS}" ]; then
+        endpoint_status=starting
+      elif [ "${last_progress}" -gt 0 ] \
+        && [ "${ack_age}" -le "${ACK_WARN_SECONDS}" ]; then
+        endpoint_status=ok
+      elif [ "${ack_age}" -le "${ACK_DOWN_SECONDS}" ]; then
+        endpoint_status=degraded
+      else
+        endpoint_status=down
+      fi
+
+      append_detail "${destination} ${endpoint_status} (TCP ${tcp_state}, ack_age=${ack_age}s, bytes_sent=${bytes_sent}, bytes_acked=${bytes_acked}, send_queue=${send_queue}, unacked=${unacked}, retrans=${retrans})"
+      previous_connection=${connection}
+      previous_acked=${bytes_acked}
+    fi
+  fi
+
+  write_state
+
+  case ${endpoint_status} in
+    ok) ok_count=$((ok_count + 1)) ;;
+    down) down_count=$((down_count + 1)) ;;
+    starting) starting_count=$((starting_count + 1)) ;;
+  esac
+done
+IFS=${old_ifs}
+
+if [ "${tcp_total}" -eq 0 ]; then
+  overall_status=unmonitored
+  append_detail 'No TCP EDI destinations configured'
+elif [ "${ok_count}" -eq "${tcp_total}" ]; then
+  overall_status=ok
+elif [ "${down_count}" -eq "${tcp_total}" ]; then
+  overall_status=down
+elif [ "${starting_count}" -eq "${tcp_total}" ]; then
+  overall_status=starting
+else
+  overall_status=degraded
+fi
+
+printf '%s\n' "${overall_status}"
+printf '%s\n' "${details}"
