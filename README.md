@@ -573,7 +573,7 @@ docker compose up -d
 
 ## License
 
-Copyright 2026 Omroepstichting ZuidWest & Stichting BredaNu. The license of this project is the MIT License. See the [LICENSE](LICENSE) file for the full text.
+Copyright 2026 Omroepstichting ZuidWest & Stichting Streekomroep voor de Baronie. The license of this project is the MIT License. See the [LICENSE](LICENSE) file for the full text.
 
 ## Acknowledgments
 
