@@ -14,9 +14,6 @@ def output_icecast_stream(
   ~icecast_password=null,
   ~stream_name=null
 ) =
-  # Buffer provides clock isolation - each creates a new clock domain
-  let clocked_source = mksafe(buffer(audio_source))
-
   # Use provided parameters or fall back to defaults
   let actual_host = icecast_host ?? ICECAST_HOST
   let actual_port = icecast_port ?? ICECAST_PORT
@@ -24,7 +21,17 @@ def output_icecast_stream(
   let actual_password = icecast_password ?? ICECAST_SOURCE_PASSWORD
   let actual_name = stream_name ?? STATION_NAME
 
+  # Unique id so clock warnings name the stream (host disambiguates shared mounts)
+  def slug(s) =
+    string.replace(pattern="[^A-Za-z0-9]+", (fun (_) -> "_"), s)
+  end
+  let stream_id = "icecast_#{slug(mount)}_#{slug(actual_host)}"
+
+  # Buffer provides clock isolation - each creates a new clock domain
+  let clocked_source = mksafe(buffer(id="buf_#{stream_id}", audio_source))
+
   output.icecast(
+    id=stream_id,
     format,
     host=actual_host,
     port=actual_port,
