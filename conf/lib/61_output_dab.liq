@@ -26,6 +26,12 @@ let dab_ack_status =
     "disabled\nDAB+ output is disabled"
   )
 
+# Stop recurring monitor work before Liquidsoap tears down its internal
+# scheduler. Otherwise a tick racing with shutdown cannot enforce the
+# process.read timeout and emits a misleading startup warning.
+let dab_ack_monitor_running = ref(false)
+on_shutdown(fun () -> dab_ack_monitor_running := false)
+
 def dab_ack_snapshot_state(snapshot) =
   let (state, _) = string.split.first(separator="\n", snapshot)
   string.trim(state)
@@ -99,14 +105,18 @@ def dab_edi_args(destinations) =
 end
 
 def dab_ack_monitor_tick() =
-  try
-    let snapshot =
-      process.read(timeout=5.0, log_errors=false, dab_ack_monitor_command)
-    dab_set_ack_status(snapshot)
-  catch err do
-    dab_set_ack_status(
-      "down\nTCP ACK monitor error: #{err.kind}: #{err.message}"
-    )
+  if
+    dab_ack_monitor_running()
+  then
+    try
+      let snapshot =
+        process.read(timeout=5.0, log_errors=false, dab_ack_monitor_command)
+      dab_set_ack_status(snapshot)
+    catch err do
+      dab_set_ack_status(
+        "down\nTCP ACK monitor error: #{err.kind}: #{err.message}"
+      )
+    end
   end
 end
 
@@ -148,6 +158,7 @@ def output_dab_stream(audio_source) =
     if
       DAB_ACK_MONITOR_ENABLED
     then
+      dab_ack_monitor_running := true
       dab_set_ack_status(
         "starting\nWaiting for AudioEnc TCP acknowledgements"
       )
