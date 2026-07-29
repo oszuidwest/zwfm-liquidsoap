@@ -2,7 +2,7 @@
 # Creates SRT inputs with silence detection and connection handling
 
 # Factory function to create a studio SRT input
-# Returns a fallible source - output factories handle buffering and mksafe()
+# Returns a fallible, buffered source; output factories add their own mksafe()
 def create_studio_input(~id, ~port) =
   # Create SRT input with encryption
   let studio =
@@ -48,12 +48,16 @@ def create_studio_input(~id, ~port) =
   # Return source based on silence detection state
   # When enabled: use stripped version (triggers fallback on silence)
   # When disabled: use raw studio (only disconnection triggers fallback)
-  switch(
-    id="#{id}_output",
-    track_sensitive=false,
-    [
-      ({is_silence_detection_enabled()}, stripped),
-      ({not is_silence_detection_enabled()}, studio)
-    ]
-  )
+  let switched =
+    switch(
+      id="#{id}_output",
+      track_sensitive=false,
+      [
+        ({is_silence_detection_enabled()}, stripped),
+        ({not is_silence_detection_enabled()}, studio)
+      ]
+    )
+
+  # Buffer to prevent connection/disconnection latency impact downstream
+  buffer(id="buffered_#{id}", fallible=true, switched)
 end
