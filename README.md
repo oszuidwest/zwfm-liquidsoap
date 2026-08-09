@@ -165,7 +165,6 @@ This table shows all environment variables in the system. You must set each vari
 | `HLS_BUNNY_ACCESS_KEY`            | Bunny Edge Storage read/write password                 | _(none)_                          | `secret-storage-password`                                       | `conf/lib/00_settings.liq`             | All             |
 | `HLS_BUNNY_ENDPOINT`              | Bunny Edge Storage API endpoint                        | `storage.bunnycdn.com`            | `storage.bunnycdn.com`                                          | `conf/lib/00_settings.liq`             | All             |
 | `HLS_DIR`                         | Local HLS output directory (tmpfs mount)               | `/hls`                            | `/hls`                                                          | `conf/lib/00_settings.liq`             | All             |
-| `HLS_BITRATE_LOW`                 | Low HLS AAC bitrate in kbps                            | `48`                              | `48`                                                            | `conf/lib/00_settings.liq`             | All             |
 | `HLS_BITRATE_MID`                 | Mid HLS AAC bitrate in kbps                            | `96`                              | `96`                                                            | `conf/lib/00_settings.liq`             | All             |
 | `HLS_BITRATE_HIGH`                | High HLS AAC bitrate in kbps                           | `192`                             | `192`                                                           | `conf/lib/00_settings.liq`             | All             |
 | `HLS_SEGMENT_DURATION`            | HLS segment duration in seconds                        | `4.0`                             | `4.0`                                                           | `conf/lib/00_settings.liq`             | All             |
@@ -450,11 +449,10 @@ The system has an optional audio-only HLS output. Liquidsoap writes a local HLS 
 
 The default HLS ladder is:
 
-- 48 kbps HE-AACv1 in MPEG-TS segments (`aac_48.m3u8`)
 - 96 kbps AAC-LC in MPEG-TS segments (`aac_96.m3u8`)
 - 192 kbps AAC-LC in MPEG-TS segments (`aac_192.m3u8`)
 
-The variables `HLS_BITRATE_LOW`, `HLS_BITRATE_MID`, and `HLS_BITRATE_HIGH` set these bitrates.
+The variables `HLS_BITRATE_MID` and `HLS_BITRATE_HIGH` set these bitrates. The 48 kbps HE-AAC variant is temporarily disabled because [Liquidsoap issue #5319](https://github.com/savonet/liquidsoap/issues/5319) causes mixed HE-AAC and AAC-LC HLS timelines to diverge.
 
 The main playlist is `live.m3u8`. The default configuration has segments of 4 seconds and playlists of 10 segments. The usual listener latency is approximately 15 to 30 seconds with standard HLS client buffers.
 
@@ -499,7 +497,7 @@ ffprobe https://hls.example.com/zuidwest/live.m3u8
 curl -sI https://hls.example.com/zuidwest/live.m3u8
 ```
 
-The correct results are: three variants, the AAC codec strings (`mp4a.40.5` and `mp4a.40.2`), a playlist refresh after the edge-rule TTL, and `.ts` segments with a long cache lifetime.
+The correct results are: two AAC-LC variants with the `mp4a.40.2` codec string, a playlist refresh after the edge-rule TTL, and `.ts` segments with a long cache lifetime.
 
 ### Failure Isolation
 
