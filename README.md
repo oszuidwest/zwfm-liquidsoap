@@ -139,9 +139,9 @@ This table shows all environment variables in the system. You must set each vari
 | `SRT_PORT_PRIMARY`                | Port for the primary SRT input                         | `8888`                            | `8888`                                                          | Liquidsoap and Compose                 | All             |
 | `SRT_PORT_SECONDARY`              | Port for the secondary SRT input                       | `9999`                            | `9999`                                                          | Liquidsoap and Compose                 | All             |
 | **Audio Processing**              | | | | | |
-| `STEREOTOOL_LICENSE`              | StereoTool license key                                 | _(none)_                          | `ABC123DEF456...`                                               | `conf/lib/00_settings.liq`             | All             |
-| `STEREOTOOL_WEB_BIND`             | Host address for the StereoTool web interface          | `0.0.0.0`                         | `127.0.0.1`                                                     | `docker-compose.yml`                   | All             |
-| `STEREOTOOL_WEB_PORT`             | Host port for the StereoTool web interface             | `8080`                            | `8080`                                                          | `docker-compose.yml`                   | All             |
+| `STEREOTOOL_LICENSE`              | StereoTool license key                                 | _(none)_                          | `ABC123DEF456...`                                               | `conf/lib/50_processing.liq`           | ZuidWest/BredaNu |
+| `STEREOTOOL_WEB_BIND`             | Host address for the StereoTool web interface          | `0.0.0.0`                         | `127.0.0.1`                                                     | `docker-compose.yml`                   | ZuidWest/BredaNu |
+| `STEREOTOOL_WEB_PORT`             | Host port for the StereoTool web interface             | `8080`                            | `8080`                                                          | `docker-compose.yml`                   | ZuidWest/BredaNu |
 | **Fallback & Control**            | | | | | |
 | `SERVER_SOCKET_ENABLED`           | Unix socket for runtime control (on/off)               | `true`                            | `true`                                                          | `conf/lib/80_server.liq`               | All             |
 | `SERVER_SOCKET_PATH`              | Unix socket file path                                  | `/tmp/liquidsoap/liquidsoap.sock` | `/tmp/liquidsoap/liquidsoap.sock`                               | `conf/lib/80_server.liq`               | All             |
@@ -215,16 +215,18 @@ docker compose down
 
 ### StereoTool GUI
 
-If `STEREOTOOL_LICENSE` is set in the `.env` file, StereoTool is on. Open the web interface at `http://localhost:8080`.
+For ZuidWest and BredaNu, StereoTool is on if `STEREOTOOL_LICENSE` is set in the `.env` file. Radio Rucphen does not use StereoTool because, as with ZuidWest, its studio signal is already processed before it reaches this system. Open the web interface at `http://localhost:8080`.
 
 Set `STEREOTOOL_WEB_BIND=127.0.0.1` to limit the interface to the local host. You can also set a different host address. The default is `0.0.0.0` for backward compatibility.
 
 ### Audio Processing with StereoTool
 
-The installation always includes StereoTool. If `STEREOTOOL_LICENSE` is set, the system makes two audio paths:
+The installation always includes StereoTool. In station configurations that use StereoTool, setting `STEREOTOOL_LICENSE` makes two audio paths:
 
-1. **Unprocessed audio (`radio`)**: the raw audio from the studios or the fallback
+1. **Direct audio (`radio`)**: the incoming studio or fallback audio without local StereoTool processing
 2. **Processed audio (`radio_processed`)**: the audio after StereoTool processing (AGC, compression, limiter, and EQ). StereoTool also encodes MicroMPX for the FM transmitters through its own output.
+
+As with ZuidWest, Radio Rucphen receives a studio signal that has already been processed. It therefore bypasses StereoTool and sends the incoming `radio` source directly to all Icecast, DME, DAB+, and HLS outputs.
 
 ## Runtime Control
 

@@ -1,5 +1,6 @@
 # Radio Rucphen - Station configuration
-# Uses processed audio for all outputs, includes DME integration
+# The studio signal is already processed, as it is for ZuidWest
+# Uses the incoming audio directly for all outputs, includes DME integration
 
 # Load libraries in order
 %include "lib/00_settings.liq"
@@ -9,7 +10,6 @@
 %include "lib/40_source_fallback.liq"
 %include "lib/41_source_studio.liq"
 %include "lib/42_metadata.liq"
-%include "lib/50_processing.liq"
 %include "lib/60_output_icecast.liq"
 %include "lib/61_output_dab.liq"
 %include "lib/62_output_hls.liq"
@@ -43,10 +43,7 @@ let radio =
     ]
   )
 
-# Create processed audio source
-let radio_processed = create_processed_audio(radio)
-
-# Output streams - Rucphen uses processed audio
+# Output streams - Rucphen uses the already processed incoming audio directly
 output_icecast_stream(
   format=%ffmpeg(
     format = "mp3",
@@ -59,7 +56,7 @@ output_icecast_stream(
   ),
   description="Hoge Kwaliteit Stream (192kbit MP3)",
   mount=ICECAST_MOUNT_MP3,
-  audio_source=radio_processed
+  audio_source=radio
 )
 
 output_icecast_stream(
@@ -74,7 +71,7 @@ output_icecast_stream(
   ),
   description="Mobile Stream (96kbit AAC)",
   mount=ICECAST_MOUNT_AAC_LOW,
-  audio_source=radio_processed
+  audio_source=radio
 )
 
 output_icecast_stream(
@@ -89,7 +86,7 @@ output_icecast_stream(
   ),
   description="Transport Stream (576kbit AAC)",
   mount=ICECAST_MOUNT_AAC_HIGH,
-  audio_source=radio_processed
+  audio_source=radio
 )
 
 # Dutch Media Exchange outputs (dual ingestion points)
@@ -105,7 +102,7 @@ output_icecast_stream(
   ),
   description="",
   mount=DME_MOUNT_POINT,
-  audio_source=radio_processed,
+  audio_source=radio,
   icecast_host=DME_PRIMARY_HOST,
   icecast_port=DME_PRIMARY_PORT,
   icecast_user=DME_PRIMARY_USER,
@@ -125,7 +122,7 @@ output_icecast_stream(
   ),
   description="",
   mount=DME_MOUNT_POINT,
-  audio_source=radio_processed,
+  audio_source=radio,
   icecast_host=DME_SECONDARY_HOST,
   icecast_port=DME_SECONDARY_PORT,
   icecast_user=DME_SECONDARY_USER,
@@ -134,7 +131,7 @@ output_icecast_stream(
 )
 
 # DAB+ output
-output_dab_stream(radio_processed)
+output_dab_stream(radio)
 
 # HLS output
-output_hls_stream(radio_processed)
+output_hls_stream(radio)

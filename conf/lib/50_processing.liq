@@ -1,6 +1,9 @@
 # Audio processing configuration
 # StereoTool integration for broadcast-quality audio
 
+# StereoTool configuration (optional)
+let STEREOTOOL_LICENSE = environment.get("STEREOTOOL_LICENSE", default="")
+
 # Check if StereoTool is enabled via license key
 let stereotool_enabled = STEREOTOOL_LICENSE != ""
 

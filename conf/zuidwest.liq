@@ -1,5 +1,6 @@
 # ZuidWest FM - Station configuration
-# Uses unprocessed audio for all outputs
+# The studio signal is already processed before it reaches this system
+# Uses the incoming audio directly for all outputs
 
 # Load libraries in order
 %include "lib/00_settings.liq"
@@ -33,7 +34,7 @@ let radio =
 # Start StereoTool for MicroMPX transport (not used in Liquidsoap audio chain)
 let _ = create_processed_audio(radio)
 
-# Output streams - ZuidWest uses unprocessed audio
+# Output streams - ZuidWest uses the already processed incoming audio directly
 output_icecast_stream(
   format=%ffmpeg(
     format = "mp3",

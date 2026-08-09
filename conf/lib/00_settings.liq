@@ -99,6 +99,3 @@ let STREAM_METADATA_PORT =
   int_of_string(environment.get("STREAM_METADATA_PORT", default="7000"))
 let STREAM_METADATA_BEARER_TOKEN =
   environment.get("STREAM_METADATA_BEARER_TOKEN", default="")
-
-# StereoTool configuration (optional)
-let STEREOTOOL_LICENSE = environment.get("STEREOTOOL_LICENSE", default="")
