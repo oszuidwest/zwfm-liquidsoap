@@ -84,8 +84,6 @@ let HLS_BUNNY_ACCESS_KEY = environment.get("HLS_BUNNY_ACCESS_KEY", default="")
 let HLS_BUNNY_ENDPOINT =
   environment.get("HLS_BUNNY_ENDPOINT", default="storage.bunnycdn.com")
 let HLS_DIR = environment.get("HLS_DIR", default="/hls")
-let HLS_BITRATE_LOW =
-  int_of_string(environment.get("HLS_BITRATE_LOW", default="48"))
 let HLS_BITRATE_MID =
   int_of_string(environment.get("HLS_BITRATE_MID", default="96"))
 let HLS_BITRATE_HIGH =

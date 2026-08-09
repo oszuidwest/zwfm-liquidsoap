@@ -554,22 +554,8 @@ def output_hls_stream(audio_source) =
 
       # Source metadata is emitted as timed ID3 (v2.3, replayed per segment)
       # in the MPEG-TS variants by default; no per-stream id3 settings needed.
-      let aac_low =
-        %ffmpeg(
-          format = "mpegts",
-          %audio(
-            codec = "libfdk_aac",
-            b = "#{HLS_BITRATE_LOW}k",
-            ar = 48000,
-            ac = 2,
-            profile = "aac_he"
-          )
-        ).{
-          bandwidth = HLS_BITRATE_LOW * 1000 + 8000,
-          codecs = "mp4a.40.5",
-          extname = "ts"
-        }
-
+      # The 48 kbps HE-AAC variant is disabled until Liquidsoap keeps mixed
+      # AAC profile timelines aligned: https://github.com/savonet/liquidsoap/issues/5319
       let aac_mid =
         %ffmpeg(
           format = "mpegts",
@@ -620,7 +606,7 @@ def output_hls_stream(audio_source) =
               segments_overhead=HLS_SEGMENTS_OVERHEAD,
               segment_name=hls_segment_name,
               HLS_DIR,
-              [("aac_48", aac_low), ("aac_96", aac_mid), ("aac_192", aac_high)],
+              [("aac_96", aac_mid), ("aac_192", aac_high)],
               hls_source
             )
           )
