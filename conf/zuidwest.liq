@@ -1,6 +1,7 @@
 # ZuidWest FM - Station configuration
 # The studio signal is already processed before it reaches this system
-# Uses the incoming audio directly for all outputs
+# Uses the incoming audio directly for all Liquidsoap outputs
+# StereoTool is used separately to generate the MicroMPX transport
 
 # Load libraries in order
 %include "lib/00_settings.liq"

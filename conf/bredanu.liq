@@ -1,5 +1,6 @@
 # BredaNu - Station configuration
-# Uses processed audio for all outputs, includes DME integration
+# Uses StereoTool-processed audio for all outputs, includes DME integration
+# StereoTool also generates the MicroMPX transport
 
 # Load libraries in order
 %include "lib/00_settings.liq"
@@ -43,7 +44,7 @@ let radio =
     ]
   )
 
-# Create processed audio source
+# Process the audio and start the MicroMPX transport
 let radio_processed = create_processed_audio(radio)
 
 # Output streams - BredaNu uses processed audio

@@ -139,7 +139,7 @@ This table shows all environment variables in the system. You must set each vari
 | `SRT_PORT_PRIMARY`                | Port for the primary SRT input                         | `8888`                            | `8888`                                                          | Liquidsoap and Compose                 | All             |
 | `SRT_PORT_SECONDARY`              | Port for the secondary SRT input                       | `9999`                            | `9999`                                                          | Liquidsoap and Compose                 | All             |
 | **Audio Processing**              | | | | | |
-| `STEREOTOOL_LICENSE`              | StereoTool license key                                 | _(none)_                          | `ABC123DEF456...`                                               | `conf/lib/50_processing.liq`           | ZuidWest/BredaNu |
+| `STEREOTOOL_LICENSE`              | StereoTool license key (MicroMPX for ZuidWest and BredaNu; also audio processing for BredaNu) | _(none)_ | `ABC123DEF456...`                                               | `conf/lib/50_processing.liq`           | ZuidWest/BredaNu |
 | `STEREOTOOL_WEB_BIND`             | Host address for the StereoTool web interface          | `0.0.0.0`                         | `127.0.0.1`                                                     | `docker-compose.yml`                   | ZuidWest/BredaNu |
 | `STEREOTOOL_WEB_PORT`             | Host port for the StereoTool web interface             | `8080`                            | `8080`                                                          | `docker-compose.yml`                   | ZuidWest/BredaNu |
 | **Fallback & Control**            | | | | | |
@@ -215,7 +215,7 @@ docker compose down
 
 ### StereoTool GUI
 
-For ZuidWest and BredaNu, StereoTool is on if `STEREOTOOL_LICENSE` is set in the `.env` file. Radio Rucphen does not use StereoTool because, as with ZuidWest, its studio signal is already processed before it reaches this system. Open the web interface at `http://localhost:8080`.
+For ZuidWest and BredaNu, StereoTool is on if `STEREOTOOL_LICENSE` is set in the `.env` file. Both stations use StereoTool to generate the MicroMPX transport for their FM transmitters. ZuidWest's Liquidsoap stream outputs use the already processed incoming studio signal directly, while BredaNu uses the StereoTool-processed signal for its outputs. Radio Rucphen also receives an already processed studio signal, but does not use StereoTool or MicroMPX. Open the web interface at `http://localhost:8080`.
 
 Set `STEREOTOOL_WEB_BIND=127.0.0.1` to limit the interface to the local host. You can also set a different host address. The default is `0.0.0.0` for backward compatibility.
 
@@ -226,7 +226,11 @@ The installation always includes StereoTool. In station configurations that use 
 1. **Direct audio (`radio`)**: the incoming studio or fallback audio without local StereoTool processing
 2. **Processed audio (`radio_processed`)**: the audio after StereoTool processing (AGC, compression, limiter, and EQ). StereoTool also encodes MicroMPX for the FM transmitters through its own output.
 
-As with ZuidWest, Radio Rucphen receives a studio signal that has already been processed. It therefore bypasses StereoTool and sends the incoming `radio` source directly to all Icecast, DME, DAB+, and HLS outputs.
+| Station | Liquidsoap outputs | StereoTool purpose |
+| ------- | ------------------ | ------------------ |
+| ZuidWest | Direct `radio` source | Generates the MicroMPX transport separately; it is not part of the Liquidsoap output chain |
+| Radio Rucphen | Direct `radio` source | Not used; the incoming studio signal is already processed |
+| BredaNu | StereoTool `radio_processed` source | Processes the audio used by Icecast, DME, DAB+, and HLS, and generates MicroMPX |
 
 ## Runtime Control
 
