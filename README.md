@@ -51,6 +51,8 @@ flowchart LR
     ODR <--> PADENC
     PADAPI --> PADENC
     ZWFM --> PADAPI
+    ZWFM --> ICECAST
+    ZWFM --> MICROMPX
 
     classDef blue fill:#2196F3,stroke:#1565C0,color:#fff
     classDef gray fill:#757575,stroke:#424242,color:#fff
