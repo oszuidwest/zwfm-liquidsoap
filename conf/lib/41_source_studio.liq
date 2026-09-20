@@ -58,8 +58,9 @@ def create_studio_input(~id, ~port) =
       ]
     )
 
-  # Bridge the SRT input to the shared radio clock. Continuous draining keeps
-  # standby audio current and makes disconnected inputs unavailable.
+  # Bridge the SRT input to the shared radio clock. Continuously consume the
+  # producer side so buffered audio from a disconnected standby input expires
+  # and fallback no longer considers that input ready.
   let buffered =
     buffer(
       id="buffered_#{id}",
