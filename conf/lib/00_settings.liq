@@ -48,6 +48,16 @@ let STUDIO_BUFFER_SECONDS =
 let STUDIO_BUFFER_MAX_SECONDS =
   float_of_string(environment.get("STUDIO_BUFFER_MAX_SECONDS", default="1.25"))
 
+if
+  STUDIO_BUFFER_SECONDS <= 0.0
+  or STUDIO_BUFFER_MAX_SECONDS < STUDIO_BUFFER_SECONDS * 1.1
+then
+  failwith(
+    "Invalid studio buffer durations: require STUDIO_BUFFER_SECONDS > 0 and \
+     STUDIO_BUFFER_MAX_SECONDS >= STUDIO_BUFFER_SECONDS * 1.1"
+  )
+end
+
 # Silence detection configuration
 let SILENCE_SWITCH_SECONDS =
   float_of_string(environment.get("SILENCE_SWITCH_SECONDS", default="15.0"))
