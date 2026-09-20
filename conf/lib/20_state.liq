@@ -44,6 +44,31 @@ def should_use_source(name) =
   forced_source_name() == name
 end
 
+# Name of the source currently on air, given the priority-ordered source list
+def radio_active_source(~sources) =
+  if
+    not is_auto_mode()
+  then
+    get_forced_source()
+  else
+    # In auto mode, the first ready source in priority order is active
+    let active = ref("unknown")
+    list.iter(
+      fun (item) ->
+        begin
+          let (name, src) = item
+          if
+            active() == "unknown" and source.is_ready(src)
+          then
+            active := name
+          end
+        end,
+      sources
+    )
+    active()
+  end
+end
+
 # Set forced source (or empty string for auto mode)
 def set_forced_source(name) =
   forced_source_name := name

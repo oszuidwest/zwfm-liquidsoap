@@ -25,34 +25,10 @@ def read_stream_metadata_body(req) =
   read_stream_metadata_chunks("")
 end
 
-def radio_active_source(~sources) =
-  if
-    not is_auto_mode()
-  then
-    get_forced_source()
-  else
-    # In auto mode, the first ready source in priority order is active.
-    let active = ref("unknown")
-    list.iter(
-      fun (item) ->
-        begin
-          let (name, src) = item
-          if
-            active() == "unknown" and source.is_ready(src)
-          then
-            active := name
-          end
-        end,
-      sources
-    )
-    active()
-  end
-end
-
 def status_snapshot(radio_source, ~sources) =
   let timestamp = time()
   let active_source = radio_active_source(sources=sources)
-  let radio_ready = source.is_ready(radio_source)
+  let radio_ready = radio_source.is_ready()
   let mode = if is_auto_mode() then "auto" else "forced" end
   let source_states =
     list.map(
@@ -63,17 +39,9 @@ def status_snapshot(radio_source, ~sources) =
         end,
       sources
     )
-  let dab_snapshot = dab_ack_status()
-  let dab_state = dab_ack_snapshot_state(dab_snapshot)
-  let dab_detail =
-    string.residual(prefix="#{dab_state}\n", dab_snapshot) ?? ""
-  let hls_snapshot = hls_status_snapshot()
-  let hls_degraded_detail =
-    string.residual(prefix="degraded: ", hls_snapshot)
-  let hls_state =
-    if null.defined(hls_degraded_detail) then "degraded" else hls_snapshot end
-  let hls_detail = hls_degraded_detail ?? ""
-  let hls_retry = hls_retry_snapshot()
+  let (dab_state, dab_detail) =
+    string.split.first(separator="\n", dab_ack_status())
+  let hls_state = hls_health()
   let status =
     if
       not radio_ready
@@ -82,7 +50,7 @@ def status_snapshot(radio_source, ~sources) =
     elsif
       active_source == "fallback"
       or list.mem(dab_state, ["degraded", "down"])
-      or hls_state == "degraded"
+      or hls_state.status == "degraded"
     then
       "degraded"
     else
@@ -93,32 +61,27 @@ def status_snapshot(radio_source, ~sources) =
     status = status,
     station_id = STATION_ID,
     timestamp = timestamp,
-    radio = {
-      ready = radio_ready,
-      mode = mode,
-      active_source = active_source
-    },
+    radio = {ready = radio_ready, mode = mode, active_source = active_source},
     silence_detection = {enabled = is_silence_detection_enabled()},
     sources = source_states,
-    outputs = {
-      dab = {status = dab_state, detail = string.trim(dab_detail)},
-      hls = {
-        status = hls_state,
-        detail = string.trim(hls_detail),
-        degraded_since = hls_retry.degraded_since,
-        retry_at = hls_retry.retry_at,
-        retry_delay = hls_retry.retry_delay,
-        retry_in = max(0.0, hls_retry.retry_at - timestamp)
+    outputs =
+      {
+        dab =
+          {status = string.trim(dab_state), detail = string.trim(dab_detail)},
+        hls =
+          {
+            status = hls_state.status,
+            detail = hls_state.detail,
+            degraded_since = hls_state.degraded_since,
+            retry_at = hls_state.retry_at,
+            retry_delay = hls_state.retry_delay,
+            retry_in = max(0.0, hls_state.retry_at - timestamp)
+          }
       }
-    }
   }
 end
 
 def register_http_endpoints(radio_source, ~sources) =
-  # Capture the source method before passing the source to generic status
-  # helpers, which intentionally only require the base source type.
-  let insert_stream_metadata = radio_source.insert_metadata
-
   # Out-of-range ports would silently bind port mod 65536.
   if
     STREAM_METADATA_PORT < 1 or STREAM_METADATA_PORT > 65535
@@ -131,16 +94,15 @@ def register_http_endpoints(radio_source, ~sources) =
     )
   end
 
-  def stream_status_handler(_, res) =
-    res.header("Cache-Control", "no-store")
-    res.json(compact=true, status_snapshot(radio_source, sources=sources))
-  end
-
   harbor.http.register(
     port=STREAM_METADATA_PORT,
     method="GET",
     "/status",
-    stream_status_handler
+    fun (_, res) ->
+      begin
+        res.header("Cache-Control", "no-store")
+        res.json(compact=true, status_snapshot(radio_source, sources=sources))
+      end
   )
   log(
     label="status",
@@ -233,7 +195,7 @@ def register_http_endpoints(radio_source, ~sources) =
                   [("artist", artist), ("title", title)]
                 end
 
-              insert_stream_metadata(new_metadata)
+              radio_source.insert_metadata(new_metadata)
               res.status_code(204)
               log(
                 label="metadata",

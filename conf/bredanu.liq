@@ -13,7 +13,7 @@
 %include "lib/60_output_icecast.liq"
 %include "lib/61_output_dab.liq"
 %include "lib/62_output_hls.liq"
-%include "lib/42_metadata.liq"
+%include "lib/70_http.liq"
 %include "lib/80_server.liq"
 %include "lib/90_radio.liq"
 
