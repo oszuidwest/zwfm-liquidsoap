@@ -41,8 +41,7 @@ let radio =
       ("studio_a", studio_a),
       ("studio_b", studio_b),
       ("fallback", emergency_fallback)
-    ],
-    hot_sources=[("studio_a", studio_a), ("studio_b", studio_b)]
+    ]
   )
 
 # Process the audio and start the MicroMPX transport

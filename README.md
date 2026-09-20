@@ -140,8 +140,6 @@ This table shows all environment variables in the system. You must set each vari
 | `SRT_BIND`                        | Host address for the two SRT inputs                    | `0.0.0.0`                         | `192.0.2.10`                                                    | `docker-compose.yml`                   | All             |
 | `SRT_PORT_PRIMARY`                | Port for the primary SRT input                         | `8888`                            | `8888`                                                          | Liquidsoap and Compose                 | All             |
 | `SRT_PORT_SECONDARY`              | Port for the secondary SRT input                       | `9999`                            | `9999`                                                          | Liquidsoap and Compose                 | All             |
-| `STUDIO_BUFFER_SECONDS`           | Target buffer duration for each live studio input      | `1.0`                             | `1.5`                                                           | `conf/lib/00_settings.liq`             | All             |
-| `STUDIO_BUFFER_MAX_SECONDS`       | Maximum retained studio audio                          | `1.25`                            | `1.75`                                                          | `conf/lib/00_settings.liq`             | All             |
 | **Audio Processing**              | | | | | |
 | `STEREOTOOL_LICENSE`              | StereoTool license key (MicroMPX for ZuidWest and BredaNu; also audio processing for BredaNu) | _(none)_ | `ABC123DEF456...`                                               | `conf/lib/50_processing.liq`           | ZuidWest/BredaNu |
 | `STEREOTOOL_WEB_BIND`             | Host address for the StereoTool web interface          | `0.0.0.0`                         | `127.0.0.1`                                                     | `docker-compose.yml`                   | ZuidWest/BredaNu |
@@ -256,7 +254,7 @@ socat - UNIX-CONNECT:/opt/liquidsoap/socket/liquidsoap.sock
 | `radio_prod.force fallback` | Makes the emergency fallback the active source                     |
 | `radio_prod.auto`           | Sets the system back to automatic fallback mode                    |
 | `radio_prod.skip`           | Goes to the next available source                                  |
-| `radio_prod.buffers`        | Shows readiness and buffer duration for each live studio input     |
+| `studio_a.buffer`           | Shows Studio A buffer health (`studio_b.buffer` for Studio B)       |
 | `silence.enable`            | Sets silence detection to on                                       |
 | `silence.disable`           | Sets silence detection to off                                      |
 | `silence.status`            | Shows the silence detection state                                  |
@@ -329,13 +327,10 @@ These environment variables set the SRT ports:
 - `SRT_PORT_PRIMARY`: the port for the primary studio input (default: 8888)
 - `SRT_PORT_SECONDARY`: the port for the secondary studio input (default: 9999)
 
-Each studio input crosses from its self-synchronizing SRT clock to the shared
-radio clock through a small buffer. Both studio buffers are continuously
-drained, including the standby input, so switching does not replay stale audio.
-`STUDIO_BUFFER_SECONDS` sets the normal target duration (default: 1.0 second)
-and `STUDIO_BUFFER_MAX_SECONDS` limits retained audio (default: 1.25 seconds).
-Keep the maximum at least 10% above the target. Use `radio_prod.buffers` on the
-server socket to inspect the current values.
+Each studio input uses a continuously drained 1.0-second buffer (maximum: 1.25
+seconds) between the SRT and radio clocks. This keeps standby audio current and
+makes disconnected inputs unavailable. Use `studio_a.buffer` or
+`studio_b.buffer` on the server socket to inspect buffer health.
 
 Set a specific address in `SRT_BIND` if studio traffic must enter on one host interface only. This variable controls the published host address in Docker. Liquidsoap continues to listen on the container ports.
 

@@ -3,7 +3,7 @@
 # and server commands — all derived from a single source list
 
 # Register server commands for the radio source (status, force, auto, skip)
-def register_radio_commands(s, ~sources, ~hot_sources) =
+def register_radio_commands(s, ~sources) =
   if
     SERVER_SOCKET_ENABLED
   then
@@ -92,37 +92,13 @@ def register_radio_commands(s, ~sources, ~hot_sources) =
           "Skipped to next source"
         end
     )
-
-    # Report the cross-clock buffer for each continuously drained live input.
-    server.register(
-      description="Show live input buffer status",
-      "#{source_id}.buffers",
-      fun (_) ->
-        string.concat(
-          separator="\n",
-          list.map(
-            fun (item) ->
-              begin
-                let (name, src) = item
-                let buffer_seconds = seconds_of_main(src.buffer_length())
-                "#{name}: ready=#{source.is_ready(src)}, buffer=#{
-                  buffer_seconds
-                }s"
-              end,
-            hot_sources
-          )
-        )
-    )
   end
 end
 
 # Build the main radio source from a list of named sources in priority order
 # Creates fallback chain, switch with force support, and registers server commands
 # Returns the wired radio source
-def create_radio(
-  ~sources,
-  ~(hot_sources:[(string * source.{ buffer_length: ()->int })])=[]
-) =
+def create_radio(~sources) =
   # Build auto fallback chain from source priority order
   let source_list = list.map(fun (item) -> snd(item), sources)
   let auto_fallback =
@@ -145,28 +121,8 @@ def create_radio(
       list.append(forced_entries, [({is_auto_mode()}, auto_fallback)])
     )
 
-  # The switch only consumes its selected child. Drain every live standby on
-  # the shared radio clock as well, so its cross-clock buffer stays current.
-  # Liquidsoap's per-tick source cache lets the selected branch and this dummy
-  # output consume the same frame without advancing the source twice.
-  list.iter(
-    fun (item) ->
-      begin
-        let (name, src) = item
-        ignore(
-          output.dummy(
-            id="hot_#{name}",
-            fallible=true,
-            register_telnet=false,
-            src
-          )
-        )
-      end,
-    hot_sources
-  )
-
   # Register server commands for source control
-  register_radio_commands(radio, sources=sources, hot_sources=hot_sources)
+  register_radio_commands(radio, sources=sources)
 
   # Accept external now-playing updates (no-op unless a bearer token is set)
   register_stream_metadata_endpoint(radio)

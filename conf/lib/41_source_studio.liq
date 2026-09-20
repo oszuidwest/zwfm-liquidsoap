@@ -58,16 +58,28 @@ def create_studio_input(~id, ~port) =
       ]
     )
 
-  # Isolate the self-synchronizing SRT clock from the shared radio clock.
-  # Keep the maximum close to the prebuffer so a standby input cannot retain
-  # many seconds of stale audio before it is selected.
-  buffer(
-    id="buffered_#{id}",
-    buffer=STUDIO_BUFFER_SECONDS,
-    max=STUDIO_BUFFER_MAX_SECONDS,
-    fallible=true,
-    replay_metadata=false,
-    add_track_mark=false,
-    switched
+  # Bridge the SRT input to the shared radio clock. Continuous draining keeps
+  # standby audio current and makes disconnected inputs unavailable.
+  let buffered =
+    buffer(
+      id="buffered_#{id}",
+      buffer=1.0,
+      max=1.25,
+      fallible=true,
+      replay_metadata=false,
+      add_track_mark=false,
+      switched
+    )
+  output.dummy(id="drain_#{id}", fallible=true, register_telnet=false, buffered)
+
+  # Expose buffer health for diagnosing clock drift.
+  server.register(
+    description="Show readiness and buffered seconds for #{id}",
+    "#{id}.buffer",
+    fun (_) ->
+      "ready=#{source.is_ready(buffered)}, buffer=#{
+        seconds_of_main(buffered.buffer_length())
+      }s"
   )
+  buffered
 end
