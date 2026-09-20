@@ -577,6 +577,8 @@ For now-playing information and metadata routes, see the [zwfm-metadata](https:/
 **StereoTool does not process the audio**
 
 - Make sure that `STEREOTOOL_LICENSE` is correct.
+- For ZuidWest, run `stereotool_driver.status` through the runtime-control
+  socket and verify that it reports `on`.
 - Examine the web interface on port 8080.
 - Examine the Docker logs for license validation errors.
 

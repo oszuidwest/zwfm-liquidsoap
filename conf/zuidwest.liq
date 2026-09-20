@@ -32,8 +32,10 @@ let radio =
     ]
   )
 
-# Start StereoTool for MicroMPX transport (not used in Liquidsoap audio chain)
-let _ = create_processed_audio(radio)
+# Start StereoTool for MicroMPX transport (not used in Liquidsoap audio chain).
+# Keep an output attached so the processing branch is continuously consumed.
+let radio_processed = create_processed_audio(radio)
+ignore(output.dummy(id="stereotool_driver", radio_processed))
 
 # Output streams - ZuidWest uses the already processed incoming audio directly
 output_icecast_stream(
