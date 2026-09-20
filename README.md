@@ -327,10 +327,7 @@ These environment variables set the SRT ports:
 - `SRT_PORT_PRIMARY`: the port for the primary studio input (default: 8888)
 - `SRT_PORT_SECONDARY`: the port for the secondary studio input (default: 9999)
 
-Each studio input uses a continuously drained 1.0-second buffer (maximum: 1.25
-seconds) between the SRT and radio clocks. This keeps standby audio current and
-makes disconnected inputs unavailable. Use `studio_a.buffer` or
-`studio_b.buffer` on the server socket to inspect buffer health.
+Each studio input uses a continuously drained 1.0-second buffer (maximum: 1.25 seconds) between the SRT and radio clocks. This keeps standby audio current and makes disconnected inputs unavailable. Use `studio_a.buffer` or `studio_b.buffer` on the server socket to inspect buffer health.
 
 Set a specific address in `SRT_BIND` if studio traffic must enter on one host interface only. This variable controls the published host address in Docker. Liquidsoap continues to listen on the container ports.
 
@@ -366,10 +363,7 @@ DAB_EDI_DESTINATIONS=tcp://primary.example.com:9001,tcp://backup.example.com:900
 
 ### TCP Acknowledgement Monitoring
 
-TCP acknowledgement monitoring is on by default. It reads the Linux TCP state
-for each AudioEnc destination. It checks that `bytes_acked` continues to increase
-while AudioEnc sends data. It also reports the TCP state, send queue, unacknowledged
-segments, and retransmissions.
+TCP acknowledgement monitoring is on by default. It reads the Linux TCP state for each AudioEnc destination. It checks that `bytes_acked` continues to increase while AudioEnc sends data. It also reports the TCP state, send queue, unacknowledged segments, and retransmissions.
 
 Use the Liquidsoap server socket to see the current state:
 
@@ -384,27 +378,18 @@ ok
 tcp://primary.example.com:9001 ok (TCP ESTAB, ack_age=0s, bytes_sent=123456, bytes_acked=123457, send_queue=0, unacked=0, retrans=0)
 ```
 
-On Linux, `bytes_acked` can be exactly one greater than `bytes_sent` because the
-ACK counter follows TCP sequence-space progress, including the SYN, while the
-sent counter contains data bytes only.
+On Linux, `bytes_acked` can be exactly one greater than `bytes_sent` because the ACK counter follows TCP sequence-space progress, including the SYN, while the sent counter contains data bytes only.
 
 Possible overall states are:
 
 - `disabled`: DAB+ output is not configured.
-- `starting`: all configured TCP destinations are within the startup grace
-  period and have not produced acknowledgement progress yet.
+- `starting`: all configured TCP destinations are within the startup grace period and have not produced acknowledgement progress yet.
 - `ok`: every TCP destination has recent acknowledgement progress.
-- `degraded`: the TCP destinations have mixed health, including when one is down
-  while another remains healthy, or at least one has exceeded
-  `DAB_ACK_WARN_SECONDS` without acknowledgement progress.
-- `down`: all configured TCP destinations are down, which includes the case
-  where AudioEnc is not running. A single destination exceeding
-  `DAB_ACK_DOWN_SECONDS` while another remains healthy produces `degraded`.
+- `degraded`: the TCP destinations have mixed health, including when one is down while another remains healthy, or at least one has exceeded `DAB_ACK_WARN_SECONDS` without acknowledgement progress.
+- `down`: all configured TCP destinations are down, which includes the case where AudioEnc is not running. A single destination exceeding `DAB_ACK_DOWN_SECONDS` while another remains healthy produces `degraded`.
 - `unmonitored`: monitoring is disabled or no TCP EDI destination is configured.
 
-TCP acknowledgements confirm that the remote TCP stack accepted the byte stream.
-They do not confirm that the remote DabMux application processed the audio. UDP
-destinations cannot provide this signal and are listed as unmonitored.
+TCP acknowledgements confirm that the remote TCP stack accepted the byte stream. They do not confirm that the remote DabMux application processed the audio. UDP destinations cannot provide this signal and are listed as unmonitored.
 
 ### PAD (Programme Associated Data)
 
