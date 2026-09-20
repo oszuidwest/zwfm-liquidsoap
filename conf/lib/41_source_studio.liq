@@ -58,6 +58,29 @@ def create_studio_input(~id, ~port) =
       ]
     )
 
-  # Buffer to prevent connection/disconnection latency impact downstream
-  buffer(id="buffered_#{id}", fallible=true, switched)
+  # Bridge the SRT input to the shared radio clock. Continuously consume the
+  # producer side so buffered audio from a disconnected standby input expires
+  # and fallback no longer considers that input ready.
+  let buffered =
+    buffer(
+      id="buffered_#{id}",
+      buffer=1.0,
+      max=1.25,
+      fallible=true,
+      replay_metadata=false,
+      add_track_mark=false,
+      switched
+    )
+  output.dummy(id="drain_#{id}", fallible=true, register_telnet=false, buffered)
+
+  # Expose buffer health for diagnosing clock drift.
+  server.register(
+    description="Show readiness and buffered seconds for #{id}",
+    "#{id}.buffer",
+    fun (_) ->
+      "ready=#{source.is_ready(buffered)}, buffer=#{
+        seconds_of_main(buffered.buffer_length())
+      }s"
+  )
+  buffered
 end
