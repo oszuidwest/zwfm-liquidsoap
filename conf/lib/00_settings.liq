@@ -43,6 +43,10 @@ let SRT_PORT_PRIMARY =
   int_of_string(environment.get("SRT_PORT_PRIMARY", default="8888"))
 let SRT_PORT_SECONDARY =
   int_of_string(environment.get("SRT_PORT_SECONDARY", default="9999"))
+let STUDIO_BUFFER_SECONDS =
+  float_of_string(environment.get("STUDIO_BUFFER_SECONDS", default="1.0"))
+let STUDIO_BUFFER_MAX_SECONDS =
+  float_of_string(environment.get("STUDIO_BUFFER_MAX_SECONDS", default="1.25"))
 
 # Silence detection configuration
 let SILENCE_SWITCH_SECONDS =

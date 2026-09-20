@@ -58,6 +58,16 @@ def create_studio_input(~id, ~port) =
       ]
     )
 
-  # Buffer to prevent connection/disconnection latency impact downstream
-  buffer(id="buffered_#{id}", fallible=true, switched)
+  # Isolate the self-synchronizing SRT clock from the shared radio clock.
+  # Keep the maximum close to the prebuffer so a standby input cannot retain
+  # many seconds of stale audio before it is selected.
+  buffer(
+    id="buffered_#{id}",
+    buffer=STUDIO_BUFFER_SECONDS,
+    max=STUDIO_BUFFER_MAX_SECONDS,
+    fallible=true,
+    replay_metadata=false,
+    add_track_mark=false,
+    switched
+  )
 end
