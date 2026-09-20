@@ -104,8 +104,10 @@ def register_radio_commands(s, ~sources, ~hot_sources) =
             fun (item) ->
               begin
                 let (name, src) = item
-                let duration = seconds_of_main(src.buffer_length())
-                "#{name}: ready=#{source.is_ready(src)}, buffer=#{duration}s"
+                let buffer_seconds = seconds_of_main(src.buffer_length())
+                "#{name}: ready=#{source.is_ready(src)}, buffer=#{
+                  buffer_seconds
+                }s"
               end,
             hot_sources
           )
@@ -117,7 +119,10 @@ end
 # Build the main radio source from a list of named sources in priority order
 # Creates fallback chain, switch with force support, and registers server commands
 # Returns the wired radio source
-def create_radio(~sources, ~hot_sources=[]) =
+def create_radio(
+  ~sources,
+  ~(hot_sources:[(string * source.{ buffer_length: ()->int })])=[]
+) =
   # Build auto fallback chain from source priority order
   let source_list = list.map(fun (item) -> snd(item), sources)
   let auto_fallback =
