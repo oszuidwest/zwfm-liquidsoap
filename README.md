@@ -255,6 +255,7 @@ socat - UNIX-CONNECT:/opt/liquidsoap/socket/liquidsoap.sock
 | `radio_prod.auto`           | Sets the system back to automatic fallback mode                    |
 | `radio_prod.skip`           | Goes to the next available source                                  |
 | `studio_a.buffer`           | Shows Studio A buffer health (`studio_b.buffer` for Studio B)       |
+| `studio_a.srt`              | Shows Studio A SRT latency and health (`studio_b.srt` for Studio B) |
 | `silence.enable`            | Sets silence detection to on                                       |
 | `silence.disable`           | Sets silence detection to off                                      |
 | `silence.status`            | Shows the silence detection state                                  |
