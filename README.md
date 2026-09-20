@@ -172,9 +172,9 @@ This table shows all environment variables in the system. You must set each vari
 | `HLS_SEGMENT_DURATION`            | HLS segment duration in seconds                        | `4.0`                             | `4.0`                                                           | `conf/lib/00_settings.liq`             | All             |
 | `HLS_SEGMENTS`                    | Segments per live playlist                             | `10`                              | `10`                                                            | `conf/lib/00_settings.liq`             | All             |
 | `HLS_SEGMENTS_OVERHEAD`           | Extra old segments kept locally                        | `5`                               | `5`                                                             | `conf/lib/00_settings.liq`             | All             |
-| **Stream Metadata (Optional)**    | | | | | |
-| `STREAM_METADATA_BIND`            | Host address for the metadata API                      | `127.0.0.1`                       | `0.0.0.0`                                                       | `docker-compose.yml`                   | All             |
-| `STREAM_METADATA_PORT`            | Port for the shared metadata API                       | `7000`                            | `7000`                                                          | Liquidsoap and Compose                 | All             |
+| **Status and Stream Metadata**    | | | | | |
+| `STREAM_METADATA_BIND`            | Host address for the status and metadata API           | `127.0.0.1`                       | `0.0.0.0`                                                       | `docker-compose.yml`                   | All             |
+| `STREAM_METADATA_PORT`            | Port for the shared status and metadata API            | `7000`                            | `7000`                                                          | Liquidsoap and Compose                 | All             |
 | `STREAM_METADATA_BEARER_TOKEN`    | Bearer token that sets the metadata API to on          | _(none)_                          | `long-random-token`                                             | `conf/lib/00_settings.liq`             | All             |
 | **DME Configuration**             | | | | | |
 | `DME_PRIMARY_HOST`                | Primary DME server                                     | _(required)_                      | `ingest1.dme.nl`                                                | `conf/rucphen.liq`, `conf/bredanu.liq` | Rucphen/BredaNu |
@@ -262,6 +262,25 @@ socat - UNIX-CONNECT:/opt/liquidsoap/socket/liquidsoap.sock
 | `hls.status`                | Shows the HLS output health (`ok`, `degraded: <reason>`, or `disabled`) |
 
 All commands have an immediate effect.
+
+### JSON Status Endpoint
+
+For monitoring systems, `GET /status` exposes the runtime state as JSON on
+`STREAM_METADATA_PORT`. It is always registered and does not require the
+metadata bearer token. Compose binds this port to `127.0.0.1` by default.
+
+```bash
+curl -s http://127.0.0.1:7000/status | jq
+```
+
+The response contains the overall state (`ok`, `degraded`, or `down`), the
+active source and mode, readiness for every source, the silence-detection
+state, and the DAB+ and HLS output states. Use the top-level `status` field for
+alerting. A switch to the emergency fallback or a degraded enabled output makes
+the overall state `degraded`; an unavailable radio source makes it `down`. A
+degraded HLS response also contains `degraded_since`, `retry_at`, `retry_delay`,
+and `retry_in` as Unix timestamps or seconds, so an alert does not need to parse
+the human-readable error text.
 
 ## Silence Detection
 
@@ -417,7 +436,7 @@ curl http://127.0.0.1:7000/metadata \
 
 The rules are: a `title` that is not empty, an optional `artist`, and the correct bearer token.
 
-The endpoint returns `204 No Content` if the update is correct. It returns `400 Bad Request` if the JSON body is invalid or `title` is missing. It returns `401 Unauthorized` if the bearer token is missing or wrong. The `401` response includes the `WWW-Authenticate: Bearer realm="metadata"` header. It returns `413 Payload Too Large` if the body is larger than 16 KiB or has a `Transfer-Encoding` header. Chunked bodies are not supported. If you do not send `artist`, the update contains only the title. If no bearer token is set, the endpoint is not registered; connection failures are then normal. If the endpoint does not respond, do a check of the container health, the bind address, the port, and the firewall rules.
+The endpoint returns `204 No Content` if the update is correct. It returns `400 Bad Request` if the JSON body is invalid or `title` is missing. It returns `401 Unauthorized` if the bearer token is missing or wrong. The `401` response includes the `WWW-Authenticate: Bearer realm="metadata"` header. It returns `413 Payload Too Large` if the body is larger than 16 KiB or has a `Transfer-Encoding` header. Chunked bodies are not supported. If you do not send `artist`, the update contains only the title. If no bearer token is set, the metadata endpoint is not registered, but `GET /status` remains available. If the API does not respond, do a check of the container health, the bind address, the port, and the firewall rules.
 
 As an option, configure one URL output in [zwfm-metadata](https://github.com/oszuidwest/zwfm-metadata). Set the input priority, the filters, and the delay:
 

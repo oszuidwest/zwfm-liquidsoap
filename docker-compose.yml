@@ -34,7 +34,7 @@ services:
         published: ${STEREOTOOL_WEB_PORT:-8080}
         host_ip: ${STEREOTOOL_WEB_BIND:-0.0.0.0}
         protocol: tcp
-      # Stream metadata API
+      # Status and stream metadata API
       - target: ${STREAM_METADATA_PORT:-7000}
         published: ${STREAM_METADATA_PORT:-7000}
         host_ip: ${STREAM_METADATA_BIND:-127.0.0.1}

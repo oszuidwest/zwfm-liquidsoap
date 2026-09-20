@@ -11,6 +11,23 @@
 
 let hls_bunny_headers = [("AccessKey", HLS_BUNNY_ACCESS_KEY), ("Expect", "")]
 let hls_main_playlist_name = "live.m3u8"
+let hls_health_status = ref("disabled")
+let hls_health_degraded_since = ref(0.0)
+let hls_health_retry_at = ref(0.0)
+let hls_health_retry_delay = ref(0.0)
+
+def hls_status_snapshot() =
+  hls_health_status()
+end
+
+def hls_retry_snapshot() =
+  {
+    degraded_since = hls_health_degraded_since(),
+    retry_at = hls_health_retry_at(),
+    retry_delay = hls_health_retry_delay()
+  }
+end
+
 let hls_endpoint_trimmed = string.trim(HLS_BUNNY_ENDPOINT)
 let hls_endpoint_without_https =
   string.residual(prefix="https://", hls_endpoint_trimmed)
@@ -505,10 +522,13 @@ def hls_guard_task(what, task) =
 end
 
 def output_hls_stream(audio_source) =
-  let hls_status =
-    if
-      HLS_BUNNY_STORAGE_ZONE != "" and HLS_BUNNY_ACCESS_KEY != ""
-    then
+  if
+    HLS_BUNNY_STORAGE_ZONE != "" and HLS_BUNNY_ACCESS_KEY != ""
+  then
+      hls_health_status := "starting"
+      hls_health_degraded_since := 0.0
+      hls_health_retry_at := 0.0
+      hls_health_retry_delay := 0.0
       log(
         label="hls",
         "HLS output enabled - writing #{HLS_SEGMENTS}x#{HLS_SEGMENT_DURATION}s \
@@ -532,8 +552,12 @@ def output_hls_stream(audio_source) =
       # Record the failure, log it, and arm the next recreation attempt.
       def hls_mark_degraded(reason) =
         let retry_in = hls_retry_delay()
+        if hls_last_error() == "" then hls_health_degraded_since := time() end
         hls_last_error := reason
+        hls_health_status := "degraded: #{reason}"
         hls_retry_at := time() + retry_in
+        hls_health_retry_at := hls_retry_at()
+        hls_health_retry_delay := retry_in
         hls_retry_delay := min(retry_in * 2.0, hls_retry_delay_max)
         log(
           label="hls",
@@ -611,6 +635,10 @@ def output_hls_stream(audio_source) =
             )
           )
           hls_last_error := ""
+          hls_health_status := "ok"
+          hls_health_degraded_since := 0.0
+          hls_health_retry_at := 0.0
+          hls_health_retry_delay := 0.0
           log(
             label="hls",
             "HLS output started",
@@ -682,27 +710,22 @@ def output_hls_stream(audio_source) =
         )
       )
 
-      fun () ->
-        if
-          hls_degraded()
-        then
-          "degraded: #{hls_last_error()}"
-        else
-          "ok"
-        end
-    else
+  else
+      hls_health_status := "disabled"
+      hls_health_degraded_since := 0.0
+      hls_health_retry_at := 0.0
+      hls_health_retry_delay := 0.0
       log(
         label="hls",
         "HLS output disabled - HLS_BUNNY_STORAGE_ZONE and/or \
          HLS_BUNNY_ACCESS_KEY not configured",
         level=3
       )
-      fun () -> "disabled"
-    end
+  end
 
   server.register(
     description="Show HLS output health",
     "hls.status",
-    fun (_) -> hls_status()
+    fun (_) -> hls_status_snapshot()
   )
 end

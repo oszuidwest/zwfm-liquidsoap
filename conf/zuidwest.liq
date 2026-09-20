@@ -10,11 +10,11 @@
 %include "lib/30_silence.liq"
 %include "lib/40_source_fallback.liq"
 %include "lib/41_source_studio.liq"
-%include "lib/42_metadata.liq"
 %include "lib/50_processing.liq"
 %include "lib/60_output_icecast.liq"
 %include "lib/61_output_dab.liq"
 %include "lib/62_output_hls.liq"
+%include "lib/42_metadata.liq"
 %include "lib/80_server.liq"
 %include "lib/90_radio.liq"
 

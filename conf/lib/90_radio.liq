@@ -9,31 +9,6 @@ def register_radio_commands(s, ~sources) =
   then
     let source_id = source.id(s)
 
-    # Determine which source is currently active
-    def get_active_source() =
-      if
-        not is_auto_mode()
-      then
-        get_forced_source()
-      else
-        # In auto mode, the first ready source in priority order is active
-        let active = ref("unknown")
-        list.iter(
-          fun (item) ->
-            begin
-              let (name, src) = item
-              if
-                active() == "unknown" and source.is_ready(src)
-              then
-                active := name
-              end
-            end,
-          sources
-        )
-        active()
-      end
-    end
-
     # Get status command
     server.register(
       description="Show current mode and active source",
@@ -41,7 +16,7 @@ def register_radio_commands(s, ~sources) =
       fun (_) ->
         begin
           let mode = if is_auto_mode() then "auto" else "forced" end
-          let active = get_active_source()
+          let active = radio_active_source(sources=sources)
           "Mode: #{mode}, Active: #{active}"
         end
     )
@@ -124,8 +99,8 @@ def create_radio(~sources) =
   # Register server commands for source control
   register_radio_commands(radio, sources=sources)
 
-  # Accept external now-playing updates (no-op unless a bearer token is set)
-  register_stream_metadata_endpoint(radio)
+  # Expose runtime status and accept optional external now-playing updates.
+  register_http_endpoints(radio, sources=sources)
 
   radio
 end
