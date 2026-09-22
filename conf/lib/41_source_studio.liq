@@ -2,7 +2,8 @@
 # Creates SRT inputs with silence detection and connection handling
 
 # Factory function to create a studio SRT input
-# Returns a fallible, buffered source; output factories add their own mksafe()
+# Returns the fallible buffered source and a function for runtime health data;
+# output factories add their own mksafe()
 def create_studio_input(~id, ~port) =
   # Create SRT input with encryption
   let studio =
@@ -73,14 +74,50 @@ def create_studio_input(~id, ~port) =
     )
   output.dummy(id="drain_#{id}", fallible=true, register_telnet=false, buffered)
 
+  # Take one structured snapshot so the server commands and HTTP endpoint
+  # expose the same values and field meanings.
+  def status() =
+    let connections =
+      list.filter_map(
+        fun (connection) ->
+          try
+            let (peer, raw_socket) = connection
+            let stats = srt.socket(raw_socket).bistats()
+            {
+              peer = peer,
+              latency_ms = stats.msRcvTsbPdDelay,
+              receive_buffer_ms = stats.msRcvBuf,
+              rtt_ms = stats.msRTT,
+              dropped_packets_total = stats.pktRcvDropTotal
+            }
+          catch err do
+            log(
+              label="status",
+              "Unable to read SRT statistics for #{id}: #{error.message(err)}",
+              level=2
+            )
+            null
+          end,
+        studio.sockets()
+      )
+
+    {
+      ready = source.is_ready(buffered),
+      buffer_seconds = seconds_of_main(buffered.buffer_length()),
+      srt =
+        {connected = not list.is_empty(connections), connections = connections}
+    }
+  end
+
   # Expose buffer health for diagnosing clock drift.
   server.register(
     description="Show readiness and buffered seconds for #{id}",
     "#{id}.buffer",
     fun (_) ->
-      "ready=#{source.is_ready(buffered)}, buffer=#{
-        seconds_of_main(buffered.buffer_length())
-      }s"
+      begin
+        let snapshot = status()
+        "ready=#{snapshot.ready}, buffer=#{snapshot.buffer_seconds}s"
+      end
   )
 
   server.register(
@@ -88,34 +125,28 @@ def create_studio_input(~id, ~port) =
     "#{id}.srt",
     fun (_) ->
       begin
-        let connections =
-          list.map(
-            fun (connection) ->
-              begin
-                let (peer, raw_socket) = connection
-                let stats = srt.socket(raw_socket).bistats()
-                "peer=#{peer}, latency=#{stats.msRcvTsbPdDelay}ms, buffer=#{
-                  stats.msRcvBuf
-                }ms, rtt=#{stats.msRTT}ms, dropped_total=#{
-                  stats.pktRcvDropTotal
-                }"
-              end,
-            studio.sockets()
-          )
+        let snapshot = status()
         let details =
           string.concat(
             separator="; ",
-            connections
+            list.map(
+              fun (connection) ->
+                "peer=#{connection.peer}, latency=#{connection.latency_ms}ms, \
+                 buffer=#{connection.receive_buffer_ms}ms, rtt=#{
+                  connection.rtt_ms
+                }ms, dropped_total=#{connection.dropped_packets_total}",
+              snapshot.srt.connections
+            )
           )
 
         if
-          list.is_empty(connections)
+          snapshot.srt.connected
         then
-          "connected=false"
-        else
           "connected=true, #{details}"
+        else
+          "connected=false"
         end
       end
   )
-  buffered
+  {source = buffered, status = status}
 end

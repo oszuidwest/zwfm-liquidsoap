@@ -25,9 +25,10 @@ def read_stream_metadata_body(req) =
   read_stream_metadata_chunks("")
 end
 
-def status_snapshot(radio_source, active_source, ~sources) =
+def status_snapshot(radio_source, active_source, ~sources, ~studio_inputs) =
   let radio_ready = radio_source.is_ready()
   let active_source = active_source()
+  let icecast_state = icecast_health()
   let dab_state = dab_ack_status()
   let hls_state = hls_health()
   let status =
@@ -37,6 +38,7 @@ def status_snapshot(radio_source, active_source, ~sources) =
       "down"
     elsif
       active_source == "fallback"
+      or not icecast_healthy(icecast_state)
       or not dab_ack_healthy(dab_state.status)
       or hls_state.status == "degraded"
     then
@@ -57,11 +59,30 @@ def status_snapshot(radio_source, active_source, ~sources) =
         fun ((name, src)) -> {name = name, ready = source.is_ready(src)},
         sources
       ),
-    outputs = {dab = dab_state, hls = hls_state}
+    studio_inputs =
+      list.map(
+        fun ((name, get_status)) ->
+          begin
+            let input_status = get_status()
+            {
+              name = name,
+              ready = input_status.ready,
+              buffer_seconds = input_status.buffer_seconds,
+              srt = input_status.srt
+            }
+          end,
+        studio_inputs
+      ),
+    outputs = {icecast = icecast_state, dab = dab_state, hls = hls_state}
   }
 end
 
-def register_http_endpoints(radio_source, active_source, ~sources) =
+def register_http_endpoints(
+  radio_source,
+  active_source,
+  ~sources,
+  ~studio_inputs
+) =
   # Out-of-range ports would silently bind port mod 65536.
   if
     STREAM_METADATA_PORT < 1 or STREAM_METADATA_PORT > 65535
@@ -78,7 +99,13 @@ def register_http_endpoints(radio_source, active_source, ~sources) =
   # radio source is down, 200 otherwise (degraded is still on air). HEAD is
   # registered too because some monitors probe with it by default.
   def status_handler(_, res) =
-    let snapshot = status_snapshot(radio_source, active_source, sources=sources)
+    let snapshot =
+      status_snapshot(
+        radio_source,
+        active_source,
+        sources=sources,
+        studio_inputs=studio_inputs
+      )
     res.header("Cache-Control", "no-store")
     if snapshot.status == "down" then res.status_code(503) end
     res.json(compact=true, snapshot)

@@ -291,14 +291,20 @@ curl -s http://127.0.0.1:7000/status | jq
 ```
 
 The response contains the overall state (`ok`, `degraded`, or `down`), the
-active source and mode, readiness for every source, the silence-detection
-state, and a `status` plus `detail` for the DAB+ and HLS outputs. Use the
-top-level `status` field for alerting. A switch to the emergency fallback or a
-degraded enabled output makes the overall state `degraded`; an unavailable
-radio source makes it `down`. The HTTP status code follows the overall state:
-`200 OK` for `ok` and `degraded`, `503 Service Unavailable` for `down`, so a
-monitor that only checks the status code alerts when the station is off air.
-`HEAD /status` returns the same status code without a body.
+active source and mode, readiness for every source, detailed studio-input
+health, the silence-detection state, every Icecast output, and a `status` plus
+`detail` for the DAB+ and HLS outputs. Each item in `studio_inputs` reports its
+audio buffer in seconds and an SRT object with its connection state. Every
+active SRT connection includes the peer address, negotiated receive latency,
+receive buffer, round-trip time, and total dropped packets. Each item in
+`outputs.icecast` identifies the host, port, and mount and reports whether the
+output is started, ready, and connected. Use the top-level `status` field for
+alerting. A switch to the emergency fallback, a disconnected Icecast output, or
+a degraded enabled DAB+/HLS output makes the overall state `degraded`; an
+unavailable radio source makes it `down`. The HTTP status code follows the
+overall state: `200 OK` for `ok` and `degraded`, `503 Service Unavailable` for
+`down`, so a monitor that only checks the status code alerts when the station is
+off air. `HEAD /status` returns the same status code without a body.
 
 ## Silence Detection
 
