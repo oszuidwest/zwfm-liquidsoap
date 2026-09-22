@@ -12,19 +12,8 @@
 let hls_bunny_headers = [("AccessKey", HLS_BUNNY_ACCESS_KEY), ("Expect", "")]
 let hls_main_playlist_name = "live.m3u8"
 
-# Health published by the hls.status command and GET /status.
-# status is "disabled", "ok" or "degraded"; the timestamps are only set
-# while degraded.
-let hls_health =
-  ref(
-    {
-      status = "disabled",
-      detail = "",
-      degraded_since = 0.0,
-      retry_at = 0.0,
-      retry_delay = 0.0
-    }
-  )
+# HLS health: status is disabled, ok or degraded
+let hls_health = ref({status = "disabled", detail = ""})
 
 let hls_endpoint_trimmed = string.trim(HLS_BUNNY_ENDPOINT)
 let hls_endpoint_without_https =
@@ -546,18 +535,9 @@ def output_hls_stream(audio_source) =
     # Record the failure, log it, and arm the next recreation attempt.
     def hls_mark_degraded(reason) =
       let retry_in = hls_retry_delay()
-      let now = time()
-      hls_retry_at := now + retry_in
+      hls_retry_at := time() + retry_in
       hls_retry_delay := min(retry_in * 2.0, hls_retry_delay_max)
-      hls_health :=
-        {
-          status = "degraded",
-          detail = reason,
-          degraded_since =
-            if hls_degraded() then hls_health().degraded_since else now end,
-          retry_at = hls_retry_at(),
-          retry_delay = retry_in
-        }
+      hls_health := {status = "degraded", detail = reason}
       log(
         label="hls",
         "HLS output degraded (primary outputs unaffected): #{reason}; next \
@@ -633,14 +613,7 @@ def output_hls_stream(audio_source) =
             hls_source
           )
         )
-        hls_health :=
-          {
-            status = "ok",
-            detail = "",
-            degraded_since = 0.0,
-            retry_at = 0.0,
-            retry_delay = 0.0
-          }
+        hls_health := {status = "ok", detail = ""}
         log(
           label="hls",
           "HLS output started",

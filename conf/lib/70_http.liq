@@ -26,20 +26,9 @@ def read_stream_metadata_body(req) =
 end
 
 def status_snapshot(radio_source, ~sources) =
-  let timestamp = time()
-  let active_source = radio_active_source(sources=sources)
   let radio_ready = radio_source.is_ready()
-  let mode = if is_auto_mode() then "auto" else "forced" end
-  let source_states =
-    list.map(
-      fun (item) ->
-        begin
-          let (name, src) = item
-          {name = name, ready = source.is_ready(src)}
-        end,
-      sources
-    )
-  let dab_state = dab_ack_health()
+  let active_source = radio_active_source(sources=sources)
+  let dab_state = dab_ack_status()
   let hls_state = hls_health()
   let status =
     if
@@ -48,7 +37,7 @@ def status_snapshot(radio_source, ~sources) =
       "down"
     elsif
       active_source == "fallback"
-      or list.mem(dab_state.status, ["degraded", "down"])
+      or not dab_ack_healthy(dab_state.status)
       or hls_state.status == "degraded"
     then
       "degraded"
@@ -59,23 +48,16 @@ def status_snapshot(radio_source, ~sources) =
   {
     status = status,
     station_id = STATION_ID,
-    timestamp = timestamp,
-    radio = {ready = radio_ready, mode = mode, active_source = active_source},
-    silence_detection = {enabled = is_silence_detection_enabled()},
-    sources = source_states,
-    outputs =
-      {
-        dab = dab_state,
-        hls =
-          {
-            status = hls_state.status,
-            detail = hls_state.detail,
-            degraded_since = hls_state.degraded_since,
-            retry_at = hls_state.retry_at,
-            retry_delay = hls_state.retry_delay,
-            retry_in = max(0.0, hls_state.retry_at - timestamp)
-          }
-      }
+    timestamp = time(),
+    radio =
+      {ready = radio_ready, mode = radio_mode(), active_source = active_source},
+    silence_detection_enabled = is_silence_detection_enabled(),
+    sources =
+      list.map(
+        fun ((name, src)) -> {name = name, ready = source.is_ready(src)},
+        sources
+      ),
+    outputs = {dab = dab_state, hls = hls_state}
   }
 end
 

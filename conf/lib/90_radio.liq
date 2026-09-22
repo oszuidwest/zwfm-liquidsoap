@@ -15,9 +15,9 @@ def register_radio_commands(s, ~sources) =
       "#{source_id}.status",
       fun (_) ->
         begin
-          let mode = if is_auto_mode() then "auto" else "forced" end
-          let active = radio_active_source(sources=sources)
-          "Mode: #{mode}, Active: #{active}"
+          "Mode: #{radio_mode()}, Active: #{
+            radio_active_source(sources=sources)
+          }"
         end
     )
 

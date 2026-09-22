@@ -275,18 +275,13 @@ curl -s http://127.0.0.1:7000/status | jq
 
 The response contains the overall state (`ok`, `degraded`, or `down`), the
 active source and mode, readiness for every source, the silence-detection
-state, and the DAB+ and HLS output states. Use the top-level `status` field for
-alerting. A switch to the emergency fallback or a degraded enabled output makes
-the overall state `degraded`; an unavailable radio source makes it `down`. The
-HTTP status code follows the overall state: `200 OK` for `ok` and `degraded`,
-`503 Service Unavailable` for `down`, so a monitor that only checks the status
-code alerts when the station is off air. `HEAD /status` returns the same status
-code without a body.
-
-The schema is stable so monitoring systems can map every field. The HLS object
-always contains `degraded_since`, `retry_at`, `retry_delay`, and `retry_in` as
-Unix timestamps or seconds; they are `0.0` unless HLS is degraded, so an alert
-does not need to parse the human-readable error text.
+state, and a `status` plus `detail` for the DAB+ and HLS outputs. Use the
+top-level `status` field for alerting. A switch to the emergency fallback or a
+degraded enabled output makes the overall state `degraded`; an unavailable
+radio source makes it `down`. The HTTP status code follows the overall state:
+`200 OK` for `ok` and `degraded`, `503 Service Unavailable` for `down`, so a
+monitor that only checks the status code alerts when the station is off air.
+`HEAD /status` returns the same status code without a body.
 
 ## Silence Detection
 
