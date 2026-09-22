@@ -255,6 +255,7 @@ socat - UNIX-CONNECT:/opt/liquidsoap/socket/liquidsoap.sock
 | `radio_prod.auto`           | Sets the system back to automatic fallback mode                    |
 | `radio_prod.skip`           | Goes to the next available source                                  |
 | `studio_a.buffer`           | Shows Studio A buffer health (`studio_b.buffer` for Studio B)       |
+| `studio_a.srt`              | Shows Studio A SRT latency and health (`studio_b.srt` for Studio B) |
 | `silence.enable`            | Sets silence detection to on                                       |
 | `silence.disable`           | Sets silence detection to off                                      |
 | `silence.status`            | Shows the silence detection state                                  |
@@ -327,7 +328,7 @@ These environment variables set the SRT ports:
 - `SRT_PORT_PRIMARY`: the port for the primary studio input (default: 8888)
 - `SRT_PORT_SECONDARY`: the port for the secondary studio input (default: 9999)
 
-Each studio input uses a continuously drained 1.0-second buffer (maximum: 1.25 seconds) between the SRT and radio clocks. This keeps standby audio current and makes disconnected inputs unavailable. Use `studio_a.buffer` or `studio_b.buffer` on the server socket to inspect buffer health.
+Each studio input uses a continuously drained 1.0-second buffer (maximum: 1.25 seconds) between the SRT and radio clocks. This keeps standby audio current and makes disconnected inputs unavailable. Use `studio_a.buffer` or `studio_b.buffer` on the server socket to inspect buffer health. Use `studio_a.srt` or `studio_b.srt` to see the negotiated latency, receive buffer, round-trip time, and total dropped packets of the connected encoder.
 
 Set a specific address in `SRT_BIND` if studio traffic must enter on one host interface only. This variable controls the published host address in Docker. Liquidsoap continues to listen on the container ports.
 
@@ -551,7 +552,7 @@ For now-playing information and metadata routes, see the [zwfm-metadata](https:/
 **The stream changes sources again and again**
 
 - Increase `SILENCE_SWITCH_SECONDS` if the connection is not stable.
-- Do a check of the network between the encoder and the server.
+- Do a check of the network between the encoder and the server. `studio_a.srt` and `studio_b.srt` on the server socket show the SRT latency, round-trip time, and total dropped packets. A growing dropped-packet count between two calls points to the network.
 - Make sure that the encoder sends continuous audio.
 
 **Icecast connection failed**

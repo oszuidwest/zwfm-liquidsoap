@@ -82,5 +82,40 @@ def create_studio_input(~id, ~port) =
         seconds_of_main(buffered.buffer_length())
       }s"
   )
+
+  server.register(
+    description="Show SRT latency and receive health for #{id}",
+    "#{id}.srt",
+    fun (_) ->
+      begin
+        let connections =
+          list.map(
+            fun (connection) ->
+              begin
+                let (peer, raw_socket) = connection
+                let stats = srt.socket(raw_socket).bistats()
+                "peer=#{peer}, latency=#{stats.msRcvTsbPdDelay}ms, buffer=#{
+                  stats.msRcvBuf
+                }ms, rtt=#{stats.msRTT}ms, dropped_total=#{
+                  stats.pktRcvDropTotal
+                }"
+              end,
+            studio.sockets()
+          )
+        let details =
+          string.concat(
+            separator="; ",
+            connections
+          )
+
+        if
+          list.is_empty(connections)
+        then
+          "connected=false"
+        else
+          "connected=true, #{details}"
+        end
+      end
+  )
   buffered
 end
