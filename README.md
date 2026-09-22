@@ -113,6 +113,22 @@ After the installation, edit the environment file `/opt/liquidsoap/.env`. This f
 
 Copy the applicable example file to `.env`. Then change the values for your station. The file `conf/lib/00_settings.liq` reads almost all variables. The station files contain only the DME configuration (for Rucphen and BredaNu).
 
+## Host Tuning
+
+The installer changes these settings on the host, outside Docker:
+
+- Timezone `Europe/Amsterdam` and time synchronization
+- Size limits for the systemd journal
+- CPU performance (optional, the installer asks)
+
+### Real-time CPU performance
+
+Real-time audio deadlines can be missed while a CPU core changes from an idle frequency to its working frequency, even when the average CPU load is low. On a dedicated audio host, answer `y` when the installer asks to keep the CPU at maximum performance. This setting applies to the whole host and increases power use and heat. The installer skips it on hosts without CPU frequency scaling, such as most virtual machines.
+
+The installer writes a [tmpfiles.d](https://www.freedesktop.org/software/systemd/man/latest/tmpfiles.d.html) file to `/etc/tmpfiles.d/cpu-performance.conf` that sets the `performance` governor on every CPU at every boot. On Intel and AMD P-state drivers this governor also sets the energy preference to performance and raises the minimum frequency: to the maximum on Intel, and on AMD to the maximum on kernels before 6.13 and to the nominal (base) frequency from 6.13 on. Two things do not change. Idle cores still enter sleep states; the setting only affects the frequency of a core that has work, so a core that wakes up starts at its base frequency or higher instead of climbing from a few hundred MHz. Power and thermal limits still apply; the governor requests the frequency, the firmware decides.
+
+Verify with `cat /sys/devices/system/cpu/cpufreq/policy*/scaling_governor`; every line must show `performance`. After a reboot, `scaling_min_freq` of every policy equals `cpuinfo_max_freq` on Intel and `amd_pstate_nominal_freq` on AMD kernels 6.13 and newer. To undo it, remove the file and reboot.
+
 ## Environment Variables Reference
 
 This table shows all environment variables in the system. You must set each variable that shows _(required)_. If you do not set one of these variables, Liquidsoap does not start. The DME variables are necessary only for Rucphen and BredaNu. A variable that shows _(none)_ is optional. Set it only if you use the related function.

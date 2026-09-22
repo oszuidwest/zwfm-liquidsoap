@@ -33,6 +33,9 @@ GITHUB_BASE="https://raw.githubusercontent.com/oszuidwest/zwfm-liquidsoap/${GITH
 DOCKER_COMPOSE_URL="${GITHUB_BASE}/docker-compose.yml"
 DOCKER_COMPOSE_PATH="${INSTALL_DIR}/docker-compose.yml"
 
+# Host CPU performance (tmpfiles.d, applied at every boot)
+CPU_PERFORMANCE_CONF_PATH="/etc/tmpfiles.d/cpu-performance.conf"
+
 # Liquidsoap configuration
 LIQUIDSOAP_CONFIG_URL_ZUIDWEST="${GITHUB_BASE}/conf/zuidwest.liq"
 LIQUIDSOAP_CONFIG_URL_RUCPHEN="${GITHUB_BASE}/conf/rucphen.liq"
@@ -120,9 +123,26 @@ if [[ ! "$STATION_CONFIG" =~ ^(zuidwest|rucphen|bredanu)$ ]]; then
   exit 1
 fi
 prompt_user "DO_UPDATES" "y" "Would you like to perform all OS updates? (y/n)" "y/n"
+prompt_user "SET_CPU_PERFORMANCE" "y" "Keep the CPU at maximum performance for real-time audio? (y/n)" "y/n"
 
 if [ "${DO_UPDATES}" == "y" ]; then
   apt_update --silent
+fi
+
+# The performance governor also sets the energy preference and raises the
+# minimum frequency on Intel and AMD P-state drivers (AMD 6.13+ pins it to
+# the nominal frequency, not the boost maximum), so one sysfs write is enough.
+if [ "${SET_CPU_PERFORMANCE}" == "y" ]; then
+  echo -e "${BLUE}►► Configuring CPU performance...${NC}"
+  if ! _has_systemd || [ ! -d /sys/devices/system/cpu/cpufreq/policy0 ]; then
+    echo -e "${YELLOW}Skipping CPU performance: needs systemd and CPU frequency scaling (virtual machine?).${NC}"
+  else
+    cat << EOL > "${CPU_PERFORMANCE_CONF_PATH}"
+# Keep every CPU core at maximum performance for real-time audio (written by zwfm-liquidsoap install.sh)
+w /sys/devices/system/cpu/cpufreq/policy*/scaling_governor - - - - performance
+EOL
+    systemd-tmpfiles --create "${CPU_PERFORMANCE_CONF_PATH}" || echo -e "${YELLOW}Could not apply the CPU performance configuration now; it is retried at boot.${NC}"
+  fi
 fi
 
 # Create required directories
