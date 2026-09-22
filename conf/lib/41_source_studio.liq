@@ -93,8 +93,7 @@ def create_studio_input(~id, ~port) =
             fun (connection) ->
               begin
                 let (peer, raw_socket) = connection
-                let srt_connection = srt.socket(raw_socket)
-                let stats = srt_connection.bistats()
+                let stats = srt.socket(raw_socket).bistats()
                 "peer=#{peer}, latency=#{stats.msRcvTsbPdDelay}ms, buffer=#{
                   stats.msRcvBuf
                 }ms, rtt=#{stats.msRTT}ms"
@@ -108,7 +107,7 @@ def create_studio_input(~id, ~port) =
           )
 
         if
-          details == ""
+          list.is_empty(connections)
         then
           "connected=false"
         else
