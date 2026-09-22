@@ -296,7 +296,10 @@ health, the silence-detection state, and structured health for Icecast, DAB+,
 and HLS outputs. Each item in `studio_inputs` reports its audio buffer in
 seconds and an SRT object with its connection state. Every active SRT
 connection includes the peer address, negotiated receive latency, receive
-buffer, round-trip time, and total dropped packets.
+buffer, round-trip time, and total dropped packets. Because `/status` does not
+require authentication, peer addresses are `null` by default. Send the same
+`Authorization: Bearer <token>` header configured for `POST /metadata` to
+include them.
 
 `outputs.icecast` has an aggregate status and a `streams` array. Each stream
 identifies its host, port, and mount and reports whether it is started, ready,

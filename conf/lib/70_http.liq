@@ -25,7 +25,13 @@ def read_stream_metadata_body(req) =
   read_stream_metadata_chunks("")
 end
 
-def status_snapshot(radio_source, active_source, ~sources, ~studio_inputs) =
+def status_snapshot(
+  radio_source,
+  active_source,
+  ~sources,
+  ~studio_inputs,
+  ~include_sensitive=false
+) =
   let radio_ready = radio_source.is_ready()
   let active_source = active_source()
   let icecast_state = icecast_health()
@@ -68,7 +74,30 @@ def status_snapshot(radio_source, active_source, ~sources, ~studio_inputs) =
               name = name,
               ready = input_status.ready,
               buffer_seconds = input_status.buffer_seconds,
-              srt = input_status.srt
+              srt =
+                {
+                  connected = input_status.srt.connected,
+                  connections =
+                    list.map(
+                      fun (connection) ->
+                        {
+                          peer =
+                            if
+                              include_sensitive
+                            then
+                              connection.peer
+                            else
+                              null
+                            end,
+                          latency_ms = connection.latency_ms,
+                          receive_buffer_ms = connection.receive_buffer_ms,
+                          rtt_ms = connection.rtt_ms,
+                          dropped_packets_total =
+                            connection.dropped_packets_total
+                        },
+                      input_status.srt.connections
+                    )
+                }
             }
           end,
         studio_inputs
@@ -98,13 +127,18 @@ def register_http_endpoints(
   # HTTP monitors and healthchecks alert on the status code: 503 when the
   # radio source is down, 200 otherwise (degraded is still on air). HEAD is
   # registered too because some monitors probe with it by default.
-  def status_handler(_, res) =
+  def status_handler(req, res) =
+    let include_sensitive =
+      STREAM_METADATA_BEARER_TOKEN != ""
+      and req.headers["authorization"] ==
+        "Bearer #{STREAM_METADATA_BEARER_TOKEN}"
     let snapshot =
       status_snapshot(
         radio_source,
         active_source,
         sources=sources,
-        studio_inputs=studio_inputs
+        studio_inputs=studio_inputs,
+        include_sensitive=include_sensitive
       )
     res.header("Cache-Control", "no-store")
     if snapshot.status == "down" then res.status_code(503) end
