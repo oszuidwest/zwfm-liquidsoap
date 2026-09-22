@@ -3,47 +3,18 @@
 # and server commands — all derived from a single source list
 
 # Register server commands for the radio source (status, force, auto, skip)
-def register_radio_commands(s, ~sources) =
+def register_radio_commands(s, active_source, ~sources) =
   if
     SERVER_SOCKET_ENABLED
   then
     let source_id = source.id(s)
-
-    # Determine which source is currently active
-    def get_active_source() =
-      if
-        not is_auto_mode()
-      then
-        get_forced_source()
-      else
-        # In auto mode, the first ready source in priority order is active
-        let active = ref("unknown")
-        list.iter(
-          fun (item) ->
-            begin
-              let (name, src) = item
-              if
-                active() == "unknown" and source.is_ready(src)
-              then
-                active := name
-              end
-            end,
-          sources
-        )
-        active()
-      end
-    end
 
     # Get status command
     server.register(
       description="Show current mode and active source",
       "#{source_id}.status",
       fun (_) ->
-        begin
-          let mode = if is_auto_mode() then "auto" else "forced" end
-          let active = get_active_source()
-          "Mode: #{mode}, Active: #{active}"
-        end
+        "Mode: #{radio_mode()}, Active: #{active_source()}"
     )
 
     # Derive valid source names from the sources list
@@ -121,11 +92,33 @@ def create_radio(~sources) =
       list.append(forced_entries, [({is_auto_mode()}, auto_fallback)])
     )
 
-  # Register server commands for source control
-  register_radio_commands(radio, sources=sources)
+  # Ask the native switch/fallback operators which branch they selected. This
+  # remains accurate when a requested forced source is unavailable.
+  let names_by_id =
+    list.map(fun ((name, src)) -> (source.id(src), name), sources)
+  def active_source() =
+    let selected = radio.selected()
+    let selected =
+      if
+        null.defined(selected)
+        and source.id(null.get(selected)) == source.id(auto_fallback)
+      then
+        auto_fallback.selected()
+      else
+        selected
+      end
+    null.case(
+      selected,
+      {"unknown"},
+      fun (s) -> list.assoc(default="unknown", source.id(s), names_by_id)
+    )
+  end
 
-  # Accept external now-playing updates (no-op unless a bearer token is set)
-  register_stream_metadata_endpoint(radio)
+  # Register server commands for source control
+  register_radio_commands(radio, active_source, sources=sources)
+
+  # Expose runtime status and accept optional external now-playing updates.
+  register_http_endpoints(radio, active_source, sources=sources)
 
   radio
 end

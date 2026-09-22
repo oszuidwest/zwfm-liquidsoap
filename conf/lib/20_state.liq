@@ -44,6 +44,11 @@ def should_use_source(name) =
   forced_source_name() == name
 end
 
+# "auto" or "forced", as reported by the status command and GET /status
+def radio_mode() =
+  if is_auto_mode() then "auto" else "forced" end
+end
+
 # Set forced source (or empty string for auto mode)
 def set_forced_source(name) =
   forced_source_name := name

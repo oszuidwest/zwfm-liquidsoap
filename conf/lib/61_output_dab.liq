@@ -20,11 +20,19 @@ then
   )
 end
 
-# Two-line status snapshot: first line is the state, the rest is detail.
+# DAB+ health: status is disabled, unmonitored, starting, ok, degraded or down
 let dab_ack_status =
   ref(
-    "disabled\nDAB+ output is disabled"
+    {
+      status = "disabled",
+      detail =
+        "DAB+ output is disabled"
+    }
   )
+
+def dab_ack_healthy(status) =
+  list.mem(status, ["ok", "starting", "unmonitored", "disabled"])
+end
 
 # Stop recurring monitor work before Liquidsoap tears down its internal
 # scheduler. Otherwise a tick racing with shutdown cannot enforce the
@@ -32,43 +40,18 @@ let dab_ack_status =
 let dab_ack_monitor_running = ref(false)
 on_shutdown(fun () -> dab_ack_monitor_running := false)
 
-def dab_ack_snapshot_state(snapshot) =
-  let (state, _) = string.split.first(separator="\n", snapshot)
-  string.trim(state)
-end
-
-def dab_set_ack_status(snapshot) =
-  let snapshot = string.trim(snapshot)
-  let snapshot =
-    if
-      snapshot == ""
-    then
-      "down\nTCP ACK monitor returned no status"
-    else
-      snapshot
-    end
-  let previous_state = dab_ack_snapshot_state(dab_ack_status())
-  let next_state = dab_ack_snapshot_state(snapshot)
-
+def dab_set_ack_status(status, detail) =
+  let previous = dab_ack_status().status
   if
-    next_state != previous_state
+    status != previous
   then
-    let log_level =
-      if
-        list.mem(next_state, ["ok", "starting", "unmonitored", "disabled"])
-      then
-        3
-      else
-        2
-      end
     log(
       label="dab",
-      "TCP ACK monitor: #{previous_state} -> #{next_state}",
-      level=log_level
+      "TCP ACK monitor: #{previous} -> #{status}",
+      level=if dab_ack_healthy(status) then 3 else 2 end
     )
   end
-
-  dab_ack_status := snapshot
+  dab_ack_status := {status = status, detail = detail}
 end
 
 # The monitor identifies AudioEnc's EDI sockets in ss output by process
@@ -104,17 +87,37 @@ def dab_edi_args(destinations) =
   list.map(fun (destination) -> "--edi=#{destination}", destinations)
 end
 
+# The monitor prints its state on the first line and detail on the rest
 def dab_ack_monitor_tick() =
   if
     dab_ack_monitor_running()
   then
     try
-      let snapshot =
-        process.read(timeout=5.0, log_errors=false, dab_ack_monitor_command)
-      dab_set_ack_status(snapshot)
+      let lines =
+        string.split(
+          separator="\n",
+          string.trim(
+            process.read(timeout=5.0, log_errors=false, dab_ack_monitor_command)
+          )
+        )
+      let status = string.trim(list.hd(default="", lines))
+      if
+        status == ""
+      then
+        dab_set_ack_status(
+          "down",
+          "TCP ACK monitor returned no status"
+        )
+      else
+        dab_set_ack_status(
+          status,
+          string.trim(string.concat(separator="\n", list.tl(lines)))
+        )
+      end
     catch err do
       dab_set_ack_status(
-        "down\nTCP ACK monitor error: #{err.kind}: #{err.message}"
+        "down",
+        "TCP ACK monitor error: #{err.kind}: #{err.message}"
       )
     end
   end
@@ -160,7 +163,8 @@ def output_dab_stream(audio_source) =
     then
       dab_ack_monitor_running := true
       dab_set_ack_status(
-        "starting\nWaiting for AudioEnc TCP acknowledgements"
+        "starting",
+        "Waiting for AudioEnc TCP acknowledgements"
       )
       thread.run(
         fast=false,
@@ -170,7 +174,8 @@ def output_dab_stream(audio_source) =
       )
     else
       dab_set_ack_status(
-        "unmonitored\nTCP ACK monitoring is disabled"
+        "unmonitored",
+        "TCP ACK monitoring is disabled"
       )
     end
 
@@ -183,7 +188,8 @@ def output_dab_stream(audio_source) =
         reopen_on_error=fun (err) ->
           begin
             dab_set_ack_status(
-              "down\nDAB+ encoder error: #{err}"
+              "down",
+              "DAB+ encoder error: #{err}"
             )
             log(
               "DAB+ encoder error: #{err} - restarting ODR-AudioEnc in 5s",
@@ -206,6 +212,10 @@ def output_dab_stream(audio_source) =
   server.register(
     description="Show DAB+ TCP acknowledgement health",
     "dab.status",
-    fun (_) -> dab_ack_status()
+    fun (_) ->
+      begin
+        let s = dab_ack_status()
+        "#{s.status}\n#{s.detail}"
+      end
   )
 end

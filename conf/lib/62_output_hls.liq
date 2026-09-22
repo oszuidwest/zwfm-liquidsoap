@@ -11,6 +11,46 @@
 
 let hls_bunny_headers = [("AccessKey", HLS_BUNNY_ACCESS_KEY), ("Expect", "")]
 let hls_main_playlist_name = "live.m3u8"
+
+let hls_enabled = HLS_BUNNY_STORAGE_ZONE != "" and HLS_BUNNY_ACCESS_KEY != ""
+
+# Local output and Bunny mirroring fail independently, so each keeps its own
+# error ("" means healthy) and recovering one cannot hide a failure in the other.
+let hls_local_error = ref("")
+let hls_mirror_error = ref("")
+
+# Set by any failed mirror call; the tick clears hls_mirror_error only after a
+# full pass with content had no failure.
+let hls_mirror_tick_failed = ref(false)
+
+def hls_mark_mirror_degraded(reason) =
+  hls_mirror_tick_failed := true
+  hls_mirror_error := reason
+  log(label="hls", reason, level=2)
+end
+
+def hls_health() =
+  let reason =
+    if
+      hls_local_error() != ""
+    then
+      hls_local_error()
+    else
+      hls_mirror_error()
+    end
+  if
+    reason != ""
+  then
+    {status = "degraded", detail = reason}
+  elsif
+    hls_enabled
+  then
+    {status = "ok", detail = ""}
+  else
+    {status = "disabled", detail = ""}
+  end
+end
+
 let hls_endpoint_trimmed = string.trim(HLS_BUNNY_ENDPOINT)
 let hls_endpoint_without_https =
   string.residual(prefix="https://", hls_endpoint_trimmed)
@@ -71,20 +111,18 @@ def hls_put_data(remote_name, data) =
     then
       true
     else
-      log(
-        label="hls",
-        "HLS upload failed for #{remote_name}: HTTP #{response.status_code} #{
-          response.status_message
-        }",
-        level=2
+      hls_mark_mirror_degraded(
+        "HLS mirror upload failed for #{remote_name}: HTTP #{
+          response.status_code
+        } #{response.status_message}"
       )
       false
     end
   catch err do
-    log(
-      label="hls",
-      "HLS upload exception for #{remote_name}: #{err.kind}: #{err.message}",
-      level=2
+    hls_mark_mirror_degraded(
+      "HLS mirror upload exception for #{remote_name}: #{err.kind}: #{
+        err.message
+      }"
     )
     false
   end
@@ -131,20 +169,18 @@ def hls_delete_file(remote_name) =
     then
       true
     else
-      log(
-        label="hls",
-        "HLS delete failed for #{remote_name}: HTTP #{response.status_code} #{
-          response.status_message
-        }",
-        level=2
+      hls_mark_mirror_degraded(
+        "HLS mirror delete failed for #{remote_name}: HTTP #{
+          response.status_code
+        } #{response.status_message}"
       )
       false
     end
   catch err do
-    log(
-      label="hls",
-      "HLS delete exception for #{remote_name}: #{err.kind}: #{err.message}",
-      level=2
+    hls_mark_mirror_degraded(
+      "HLS mirror delete exception for #{remote_name}: #{err.kind}: #{
+        err.message
+      }"
     )
     false
   end
@@ -240,20 +276,16 @@ def hls_remote_listing() =
       )
       {ok = true, names = []}
     else
-      log(
-        label="hls",
+      hls_mark_mirror_degraded(
         "HLS mirror listing failed: HTTP #{response.status_code} #{
           response.status_message
-        }",
-        level=2
+        }"
       )
       {ok = false, names = []}
     end
   catch err do
-    log(
-      label="hls",
-      "HLS mirror listing exception: #{err.kind}: #{err.message}",
-      level=2
+    hls_mark_mirror_degraded(
+      "HLS mirror listing exception: #{err.kind}: #{err.message}"
     )
     {ok = false, names = []}
   end
@@ -414,6 +446,7 @@ def hls_mirror_tick(
   (synced_segments:ref),
   (synced_playlists:ref)
 ) =
+  hls_mirror_tick_failed := false
   hls_seed_remote_segments(seeded, synced_segments)
 
   # Snapshot playlists before listing segments, then upload that exact content
@@ -436,6 +469,12 @@ def hls_mirror_tick(
     playlists_ok
   then
     hls_delete_stale_segments(synced_segments, protected_segment_names)
+  end
+
+  if
+    not hls_mirror_tick_failed() and playlists_ok
+  then
+    hls_mirror_error := ""
   end
 end
 
@@ -505,204 +544,203 @@ def hls_guard_task(what, task) =
 end
 
 def output_hls_stream(audio_source) =
-  let hls_status =
-    if
-      HLS_BUNNY_STORAGE_ZONE != "" and HLS_BUNNY_ACCESS_KEY != ""
-    then
+  if
+    hls_enabled
+  then
+    log(
+      label="hls",
+      "HLS output enabled - writing #{HLS_SEGMENTS}x#{HLS_SEGMENT_DURATION}s to #{
+        HLS_DIR
+      }, uploading to #{HLS_BUNNY_STORAGE_ZONE}/#{STATION_ID}/",
+      level=3
+    )
+
+    # Buffer decouples the HLS chain from the live program chain; the
+    # dedicated clock's on_error handler below contains streaming errors so
+    # a failing HLS output is detached instead of stopping the process.
+    let hls_source = mksafe(buffer(audio_source))
+
+    let hls_retry_at = ref(0.0)
+    let hls_retry_delay = ref(hls_retry_delay_initial)
+
+    def hls_degraded() =
+      hls_local_error() != ""
+    end
+
+    # Record the failure, log it, and arm the next recreation attempt.
+    def hls_mark_degraded(reason) =
+      let retry_in = hls_retry_delay()
+      hls_retry_at := time() + retry_in
+      hls_retry_delay := min(retry_in * 2.0, hls_retry_delay_max)
+      hls_local_error := reason
       log(
         label="hls",
-        "HLS output enabled - writing #{HLS_SEGMENTS}x#{HLS_SEGMENT_DURATION}s \
-         to #{HLS_DIR}, uploading to #{HLS_BUNNY_STORAGE_ZONE}/#{STATION_ID}/",
-        level=3
+        "HLS output degraded (primary outputs unaffected): #{reason}; next \
+         attempt in #{retry_in}s",
+        level=2
       )
+    end
 
-      # Buffer decouples the HLS chain from the live program chain; the
-      # dedicated clock's on_error handler below contains streaming errors so
-      # a failing HLS output is detached instead of stopping the process.
-      let hls_source = mksafe(buffer(audio_source))
+    clock.assign_new(
+      id="hls_clock",
+      on_error=fun (err) ->
+        hls_mark_degraded(
+          "#{error.kind(err)}: #{error.message(err)}"
+        ),
+      [hls_source]
+    )
 
-      let hls_last_error = ref("")
-      let hls_retry_at = ref(0.0)
-      let hls_retry_delay = ref(hls_retry_delay_initial)
+    # Source metadata is emitted as timed ID3 (v2.3, replayed per segment)
+    # in the MPEG-TS variants by default; no per-stream id3 settings needed.
+    # The 48 kbps HE-AAC variant is disabled until Liquidsoap keeps mixed
+    # AAC profile timelines aligned: https://github.com/savonet/liquidsoap/issues/5319
+    let aac_mid =
+      %ffmpeg(
+        format = "mpegts",
+        %audio(
+          codec = "libfdk_aac",
+          b = "#{HLS_BITRATE_MID}k",
+          ar = 48000,
+          ac = 2,
+          profile = "aac_low"
+        )
+      ).{
+        bandwidth = HLS_BITRATE_MID * 1000 + 8000,
+        codecs = "mp4a.40.2",
+        extname = "ts"
+      }
 
-      def hls_degraded() =
-        hls_last_error() != ""
-      end
+    let aac_high =
+      %ffmpeg(
+        format = "mpegts",
+        %audio(
+          codec = "libfdk_aac",
+          b = "#{HLS_BITRATE_HIGH}k",
+          ar = 48000,
+          ac = 2,
+          profile = "aac_low"
+        )
+      ).{
+        bandwidth = HLS_BITRATE_HIGH * 1000 + 8000,
+        codecs = "mp4a.40.2",
+        extname = "ts"
+      }
 
-      # Record the failure, log it, and arm the next recreation attempt.
-      def hls_mark_degraded(reason) =
-        let retry_in = hls_retry_delay()
-        hls_last_error := reason
-        hls_retry_at := time() + retry_in
-        hls_retry_delay := min(retry_in * 2.0, hls_retry_delay_max)
+    def try_start_hls_output() =
+      if
+        hls_dir_writable()
+      then
+        hls_remove_stale_local_files()
+
+        # No persist_at: segment names are timestamped and never reused (see
+        # hls_segment_name), and persist_at breaks the error containment
+        # above.
+        ignore(
+          output.file.hls(
+            id="hls",
+            playlist=hls_main_playlist_name,
+            segment_duration=HLS_SEGMENT_DURATION,
+            segments=HLS_SEGMENTS,
+            segments_overhead=HLS_SEGMENTS_OVERHEAD,
+            segment_name=hls_segment_name,
+            HLS_DIR,
+            [("aac_96", aac_mid), ("aac_192", aac_high)],
+            hls_source
+          )
+        )
+        hls_local_error := ""
         log(
           label="hls",
-          "HLS output degraded (primary outputs unaffected): #{reason}; next \
-           attempt in #{retry_in}s",
-          level=2
+          "HLS output started",
+          level=3
         )
+        true
+      else
+        false
       end
+    end
 
-      clock.assign_new(
-        id="hls_clock",
-        on_error=fun (err) ->
-          hls_mark_degraded(
-            "#{error.kind(err)}: #{error.message(err)}"
-          ),
-        [hls_source]
+    # Preflight: start degraded instead of crashing when HLS_DIR is not
+    # writable at startup; the watchdog below keeps retrying.
+    if
+      not try_start_hls_output()
+    then
+      hls_mark_degraded(
+        "HLS_DIR #{HLS_DIR} is not writable"
       )
+    end
 
-      # Source metadata is emitted as timed ID3 (v2.3, replayed per segment)
-      # in the MPEG-TS variants by default; no per-stream id3 settings needed.
-      # The 48 kbps HE-AAC variant is disabled until Liquidsoap keeps mixed
-      # AAC profile timelines aligned: https://github.com/savonet/liquidsoap/issues/5319
-      let aac_mid =
-        %ffmpeg(
-          format = "mpegts",
-          %audio(
-            codec = "libfdk_aac",
-            b = "#{HLS_BITRATE_MID}k",
-            ar = 48000,
-            ac = 2,
-            profile = "aac_low"
-          )
-        ).{
-          bandwidth = HLS_BITRATE_MID * 1000 + 8000,
-          codecs = "mp4a.40.2",
-          extname = "ts"
-        }
-
-      let aac_high =
-        %ffmpeg(
-          format = "mpegts",
-          %audio(
-            codec = "libfdk_aac",
-            b = "#{HLS_BITRATE_HIGH}k",
-            ar = 48000,
-            ac = 2,
-            profile = "aac_low"
-          )
-        ).{
-          bandwidth = HLS_BITRATE_HIGH * 1000 + 8000,
-          codecs = "mp4a.40.2",
-          extname = "ts"
-        }
-
-      def try_start_hls_output() =
+    def hls_watchdog() =
+      if
+        hls_degraded() and time() >= hls_retry_at()
+      then
         if
-          hls_dir_writable()
+          try_start_hls_output()
         then
-          hls_remove_stale_local_files()
-
-          # No persist_at: segment names are timestamped and never reused (see
-          # hls_segment_name), and persist_at breaks the error containment
-          # above.
-          ignore(
-            output.file.hls(
-              id="hls",
-              playlist=hls_main_playlist_name,
-              segment_duration=HLS_SEGMENT_DURATION,
-              segments=HLS_SEGMENTS,
-              segments_overhead=HLS_SEGMENTS_OVERHEAD,
-              segment_name=hls_segment_name,
-              HLS_DIR,
-              [("aac_96", aac_mid), ("aac_192", aac_high)],
-              hls_source
-            )
-          )
-          hls_last_error := ""
           log(
             label="hls",
-            "HLS output started",
-            level=3
+            "HLS output recovered",
+            level=2
           )
-          true
         else
-          false
+          hls_mark_degraded(hls_local_error())
         end
-      end
-
-      # Preflight: start degraded instead of crashing when HLS_DIR is not
-      # writable at startup; the watchdog below keeps retrying.
-      if
-        not try_start_hls_output()
+      elsif
+        not hls_degraded()
+        and hls_retry_delay() != hls_retry_delay_initial
+        and time() - hls_retry_at() > hls_backoff_reset_seconds
       then
-        hls_mark_degraded(
-          "HLS_DIR #{HLS_DIR} is not writable"
-        )
+        # Forget the backoff once the output has been stable for a while
+        hls_retry_delay := hls_retry_delay_initial
       end
-
-      def hls_watchdog() =
-        if
-          hls_degraded() and time() >= hls_retry_at()
-        then
-          if
-            try_start_hls_output()
-          then
-            log(
-              label="hls",
-              "HLS output recovered",
-              level=2
-            )
-          else
-            hls_mark_degraded(hls_last_error())
-          end
-        elsif
-          not hls_degraded()
-          and hls_retry_delay() != hls_retry_delay_initial
-          and time() - hls_retry_at() > hls_backoff_reset_seconds
-        then
-          # Forget the backoff once the output has been stable for a while
-          hls_retry_delay := hls_retry_delay_initial
-        end
-      end
-
-      thread.run(
-        fast=false,
-        every=hls_retry_delay_initial,
-        hls_guard_task("watchdog", hls_watchdog)
-      )
-
-      let hls_remote_seeded = ref(false)
-      let hls_synced_segments = ref([])
-      let hls_synced_playlists = ref([])
-
-      thread.run(
-        fast=false,
-        delay=1.0,
-        every=1.0,
-        hls_guard_task(
-          "mirror tick",
-          fun () ->
-            hls_mirror_tick(
-              hls_remote_seeded,
-              hls_synced_segments,
-              hls_synced_playlists
-            )
-        )
-      )
-
-      fun () ->
-        if
-          hls_degraded()
-        then
-          "degraded: #{hls_last_error()}"
-        else
-          "ok"
-        end
-    else
-      log(
-        label="hls",
-        "HLS output disabled - HLS_BUNNY_STORAGE_ZONE and/or \
-         HLS_BUNNY_ACCESS_KEY not configured",
-        level=3
-      )
-      fun () -> "disabled"
     end
+
+    thread.run(
+      fast=false,
+      every=hls_retry_delay_initial,
+      hls_guard_task("watchdog", hls_watchdog)
+    )
+
+    let hls_remote_seeded = ref(false)
+    let hls_synced_segments = ref([])
+    let hls_synced_playlists = ref([])
+
+    thread.run(
+      fast=false,
+      delay=1.0,
+      every=1.0,
+      hls_guard_task(
+        "mirror tick",
+        fun () ->
+          hls_mirror_tick(
+            hls_remote_seeded,
+            hls_synced_segments,
+            hls_synced_playlists
+          )
+      )
+    )
+  else
+    log(
+      label="hls",
+      "HLS output disabled - HLS_BUNNY_STORAGE_ZONE and/or HLS_BUNNY_ACCESS_KEY \
+       not configured",
+      level=3
+    )
+  end
 
   server.register(
     description="Show HLS output health",
     "hls.status",
-    fun (_) -> hls_status()
+    fun (_) ->
+      begin
+        let health = hls_health()
+        if
+          health.detail == ""
+        then
+          health.status
+        else
+          "#{health.status}: #{health.detail}"
+        end
+      end
   )
 end

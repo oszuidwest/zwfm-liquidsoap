@@ -1,5 +1,6 @@
-# Shared stream metadata endpoint
-# Inserts authenticated now-playing updates before the output fan-out.
+# Shared HTTP endpoints
+# Exposes machine-readable runtime status and accepts authenticated now-playing
+# updates before the output fan-out.
 
 let STREAM_METADATA_MAX_BODY_BYTES = 16_384
 
@@ -24,7 +25,81 @@ def read_stream_metadata_body(req) =
   read_stream_metadata_chunks("")
 end
 
-def register_stream_metadata_endpoint(radio_source) =
+def status_snapshot(radio_source, active_source, ~sources) =
+  let radio_ready = radio_source.is_ready()
+  let active_source = active_source()
+  let dab_state = dab_ack_status()
+  let hls_state = hls_health()
+  let status =
+    if
+      not radio_ready
+    then
+      "down"
+    elsif
+      active_source == "fallback"
+      or not dab_ack_healthy(dab_state.status)
+      or hls_state.status == "degraded"
+    then
+      "degraded"
+    else
+      "ok"
+    end
+
+  {
+    status = status,
+    station_id = STATION_ID,
+    timestamp = time(),
+    radio =
+      {ready = radio_ready, mode = radio_mode(), active_source = active_source},
+    silence_detection_enabled = is_silence_detection_enabled(),
+    sources =
+      list.map(
+        fun ((name, src)) -> {name = name, ready = source.is_ready(src)},
+        sources
+      ),
+    outputs = {dab = dab_state, hls = hls_state}
+  }
+end
+
+def register_http_endpoints(radio_source, active_source, ~sources) =
+  # Out-of-range ports would silently bind port mod 65536.
+  if
+    STREAM_METADATA_PORT < 1 or STREAM_METADATA_PORT > 65535
+  then
+    error.raise(
+      error.invalid,
+      "STREAM_METADATA_PORT must be between 1 and 65535, got #{
+        STREAM_METADATA_PORT
+      }"
+    )
+  end
+
+  # HTTP monitors and healthchecks alert on the status code: 503 when the
+  # radio source is down, 200 otherwise (degraded is still on air). HEAD is
+  # registered too because some monitors probe with it by default.
+  def status_handler(_, res) =
+    let snapshot = status_snapshot(radio_source, active_source, sources=sources)
+    res.header("Cache-Control", "no-store")
+    if snapshot.status == "down" then res.status_code(503) end
+    res.json(compact=true, snapshot)
+  end
+
+  list.iter(
+    fun (method) ->
+      harbor.http.register(
+        port=STREAM_METADATA_PORT,
+        method=method,
+        "/status",
+        status_handler
+      ),
+    ["GET", "HEAD"]
+  )
+  log(
+    label="status",
+    "Status endpoint enabled on port #{STREAM_METADATA_PORT}",
+    level=3
+  )
+
   if
     STREAM_METADATA_BEARER_TOKEN == ""
   then
@@ -35,18 +110,6 @@ def register_stream_metadata_endpoint(radio_source) =
       level=3
     )
   else
-    # Out-of-range ports would silently bind port mod 65536
-    if
-      STREAM_METADATA_PORT < 1 or STREAM_METADATA_PORT > 65535
-    then
-      error.raise(
-        error.invalid,
-        "STREAM_METADATA_PORT must be between 1 and 65535, got #{
-          STREAM_METADATA_PORT
-        }"
-      )
-    end
-
     def stream_metadata_handler(req, res) =
       res.header("Cache-Control", "no-store")
 
