@@ -4,10 +4,10 @@ set -euo pipefail
 BASH_FUNCTIONS_REF="main"
 FUNCTIONS_LIB_URL="https://raw.githubusercontent.com/oszuidwest/bash-functions/${BASH_FUNCTIONS_REF}/common-functions.sh"
 FUNCTIONS_LIB_PATH=$(mktemp)
-STEREO_TOOL_ZIP_PATH=$(mktemp)
-STEREO_TOOL_PLUGIN_TMP=$(mktemp)
+STEREOTOOL_ZIP_PATH=$(mktemp)
+STEREOTOOL_PLUGIN_TMP=$(mktemp)
 
-trap 'rm -f "${FUNCTIONS_LIB_PATH}" "${STEREO_TOOL_ZIP_PATH}" "${STEREO_TOOL_PLUGIN_TMP}"' EXIT
+trap 'rm -f "${FUNCTIONS_LIB_PATH}" "${STEREOTOOL_ZIP_PATH}" "${STEREOTOOL_PLUGIN_TMP}"' EXIT
 
 clear || true
 
@@ -70,10 +70,10 @@ AUDIO_FALLBACK_URL="https://upload.wikimedia.org/wikipedia/commons/6/66/Aaron_Du
 AUDIO_FALLBACK_PATH="${INSTALL_DIR}/audio/fallback.ogg"
 
 # StereoTool configuration
-STEREO_TOOL_VERSION="1105"
-STEREO_TOOL_BASE_URL="https://download.thimeo.com"
-STEREO_TOOL_ZIP_URL="${STEREO_TOOL_BASE_URL}/Stereo_Tool_Generic_plugin_${STEREO_TOOL_VERSION}.zip"
-STEREO_TOOL_INSTALL_DIR="${INSTALL_DIR}/stereotool"
+STEREOTOOL_VERSION="1105"
+STEREOTOOL_BASE_URL="https://download.thimeo.com"
+STEREOTOOL_ZIP_URL="${STEREOTOOL_BASE_URL}/Stereo_Tool_Generic_plugin_${STEREOTOOL_VERSION}.zip"
+STEREOTOOL_INSTALL_DIR="${INSTALL_DIR}/stereotool"
 
 # General configuration
 TIMEZONE="Europe/Amsterdam"
@@ -196,10 +196,10 @@ echo -e "${BLUE}►► Installing dependencies...${NC}"
 apt_install --silent unzip socat
 
 # Create installation directory
-mkdir -p "${STEREO_TOOL_INSTALL_DIR}"
+mkdir -p "${STEREOTOOL_INSTALL_DIR}"
 
 # Download and install StereoTool
-if ! file_download "${STEREO_TOOL_ZIP_URL}" "${STEREO_TOOL_ZIP_PATH}" "StereoTool"; then
+if ! file_download "${STEREOTOOL_ZIP_URL}" "${STEREOTOOL_ZIP_PATH}" "StereoTool"; then
   exit 1
 fi
 
@@ -207,10 +207,10 @@ fi
 # uses backslashes in member names, so ? is used as the path separator pattern.
 case "${OS_ARCH}" in
   amd64)
-    STEREO_TOOL_ARCHIVE_MEMBER="libStereoTool_${STEREO_TOOL_VERSION}?lib?Linux?IntelAMD?64?libStereoTool_intel64.so"
+    STEREOTOOL_ARCHIVE_MEMBER="libStereoTool_${STEREOTOOL_VERSION}?lib?Linux?IntelAMD?64?libStereoTool_intel64.so"
     ;;
   arm64)
-    STEREO_TOOL_ARCHIVE_MEMBER="libStereoTool_${STEREO_TOOL_VERSION}?lib?Linux?ARM?64?libStereoTool_noX11_arm64.so"
+    STEREOTOOL_ARCHIVE_MEMBER="libStereoTool_${STEREOTOOL_VERSION}?lib?Linux?ARM?64?libStereoTool_noX11_arm64.so"
     ;;
   *)
     echo -e "${RED}Unsupported architecture: ${OS_ARCH}${NC}"
@@ -218,24 +218,24 @@ case "${OS_ARCH}" in
     ;;
 esac
 
-if ! unzip -p "${STEREO_TOOL_ZIP_PATH}" "${STEREO_TOOL_ARCHIVE_MEMBER}" > "${STEREO_TOOL_PLUGIN_TMP}"; then
+if ! unzip -p "${STEREOTOOL_ZIP_PATH}" "${STEREOTOOL_ARCHIVE_MEMBER}" > "${STEREOTOOL_PLUGIN_TMP}"; then
   echo -e "${RED}Error: Unable to extract StereoTool library for ${OS_ARCH}.${NC}"
   exit 1
 fi
 
-if [[ ! -s "${STEREO_TOOL_PLUGIN_TMP}" ]]; then
+if [[ ! -s "${STEREOTOOL_PLUGIN_TMP}" ]]; then
   echo -e "${RED}Error: Extracted StereoTool library for ${OS_ARCH} is empty.${NC}"
   exit 1
 fi
 
-install -m 644 "${STEREO_TOOL_PLUGIN_TMP}" "${STEREO_TOOL_INSTALL_DIR}/st_plugin.so"
+install -m 644 "${STEREOTOOL_PLUGIN_TMP}" "${STEREOTOOL_INSTALL_DIR}/st_plugin.so"
 
 # Write StereoTool configuration
-STEREO_TOOL_RC_PATH="${STEREO_TOOL_INSTALL_DIR}/.st_plugin.so.rc"
-if [[ -f "${STEREO_TOOL_RC_PATH}" ]] && ! file_backup "${STEREO_TOOL_RC_PATH}"; then
+STEREOTOOL_RC_PATH="${STEREOTOOL_INSTALL_DIR}/.st_plugin.so.rc"
+if [[ -f "${STEREOTOOL_RC_PATH}" ]] && ! file_backup "${STEREOTOOL_RC_PATH}"; then
   exit 1
 fi
-cat > "${STEREO_TOOL_RC_PATH}" <<'EOF'
+cat > "${STEREOTOOL_RC_PATH}" <<'EOF'
 [Stereo Tool Configuration]
 Enable web interface=1
 Whitelist=/0
@@ -243,7 +243,7 @@ EOF
 
 # Adjust ownership for the directories (the liquidsoap container runs as UID 100 and GID 101)
 echo -e "${BLUE}►► Setting ownership...${NC}"
-chown -R 100:101 "${STEREO_TOOL_INSTALL_DIR}"
+chown -R 100:101 "${STEREOTOOL_INSTALL_DIR}"
 chown -R 100:101 "${INSTALL_DIR}/socket"
 
 echo -e "${BLUE}►► Validating Docker Compose configuration...${NC}"
