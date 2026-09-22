@@ -14,8 +14,9 @@ ACK_WARN_SECONDS=5
 ACK_DOWN_SECONDS=15
 STARTUP_GRACE_SECONDS=10
 
-# wsp is a literal space plus tab; nl is a literal newline.
+# wsp is a literal space plus tab; tab is a literal tab; nl is a newline.
 wsp=' 	'
+tab='	'
 nl='
 '
 
@@ -48,9 +49,10 @@ debug()
   fi
 }
 
-append_detail()
+append_record()
 {
-  details="${details}${details:+${nl}}$1"
+  record="$1${tab}$2${tab}$3${tab}$4${tab}$5${tab}$6${tab}$7${tab}$8${tab}$9${tab}${10}"
+  records="${records}${records:+${nl}}${record}"
 }
 
 reset_destination_state()
@@ -144,7 +146,7 @@ tcp_total=0
 ok_count=0
 down_count=0
 starting_count=0
-details=""
+records=""
 
 old_ifs=${IFS}
 IFS=",${wsp}"
@@ -156,7 +158,8 @@ for destination in ${DESTINATIONS}; do
       continue
       ;;
     *)
-      append_detail "${destination} unmonitored (not TCP)"
+      append_record \
+        "${destination}" unmonitored "" "" "" "" "" "" "" "not TCP"
       continue
       ;;
   esac
@@ -171,7 +174,9 @@ for destination in ${DESTINATIONS}; do
 
   if [ -z "${host}" ] || ! is_uint "${port}" || [ "${port}" -gt 65535 ]; then
     down_count=$((down_count + 1))
-    append_detail "${destination} down (invalid TCP destination)"
+    append_record \
+      "${destination}" down "" "" "" "" "" "" "" \
+      "invalid TCP destination"
     continue
   fi
 
@@ -221,7 +226,9 @@ for destination in ${DESTINATIONS}; do
 
   if [ -z "${socket_line}" ]; then
     disconnected_status
-    append_detail "${destination} ${endpoint_status} (no AudioEnc TCP socket)"
+    append_record \
+      "${destination}" "${endpoint_status}" "" "" "" "" "" "" "" \
+      "no AudioEnc TCP socket"
   else
     IFS="${wsp}"
     # shellcheck disable=SC2086
@@ -254,7 +261,9 @@ for destination in ${DESTINATIONS}; do
 
     if [ "${tcp_state}" != "ESTAB" ]; then
       disconnected_status
-      append_detail "${destination} ${endpoint_status} (TCP ${tcp_state})"
+      append_record \
+        "${destination}" "${endpoint_status}" "${tcp_state}" \
+        "" "" "" "" "" "" "TCP ${tcp_state}"
     else
       debug "${destination}: current connection=${connection} sent=${bytes_sent} acked=${bytes_acked}"
 
@@ -288,7 +297,11 @@ for destination in ${DESTINATIONS}; do
         endpoint_status=down
       fi
 
-      append_detail "${destination} ${endpoint_status} (TCP ${tcp_state}, ack_age=${ack_age}s, bytes_sent=${bytes_sent}, bytes_acked=${bytes_acked}, send_queue=${send_queue}, unacked=${unacked}, retrans=${retrans})"
+      append_record \
+        "${destination}" "${endpoint_status}" "${tcp_state}" \
+        "${ack_age}" "${bytes_sent}" "${bytes_acked}" "${send_queue}" \
+        "${unacked}" "${retrans}" \
+        "TCP ${tcp_state}, ack_age=${ack_age}s, bytes_sent=${bytes_sent}, bytes_acked=${bytes_acked}, send_queue=${send_queue}, unacked=${unacked}, retrans=${retrans}"
       previous_connection=${connection}
       previous_acked=${bytes_acked}
     fi
@@ -306,7 +319,6 @@ IFS=${old_ifs}
 
 if [ "${tcp_total}" -eq 0 ]; then
   overall_status=unmonitored
-  append_detail 'No TCP EDI destinations configured'
 elif [ "${ok_count}" -eq "${tcp_total}" ]; then
   overall_status=ok
 elif [ "${down_count}" -eq "${tcp_total}" ]; then
@@ -318,4 +330,8 @@ else
 fi
 
 printf '%s\n' "${overall_status}"
-printf '%s\n' "${details}"
+if [ -n "${records}" ]; then
+  printf '%s\n' "${records}"
+else
+  printf '%s\n' 'No TCP EDI destinations configured'
+fi

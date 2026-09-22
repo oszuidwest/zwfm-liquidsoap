@@ -38,7 +38,7 @@ def status_snapshot(radio_source, active_source, ~sources, ~studio_inputs) =
       "down"
     elsif
       active_source == "fallback"
-      or not icecast_healthy(icecast_state)
+      or not list.mem(icecast_state.status, ["ok", "disabled"])
       or not dab_ack_healthy(dab_state.status)
       or hls_state.status == "degraded"
     then

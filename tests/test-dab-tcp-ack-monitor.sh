@@ -62,6 +62,19 @@ assert_status()
   fi
 }
 
+assert_record_field()
+{
+  expected=$1
+  field=$2
+  output=$3
+  actual=$(printf '%s\n' "${output}" | sed -n '2p' | cut -f "${field}")
+  if [ "${actual}" != "${expected}" ]; then
+    printf 'Expected record field %s to be %s, got %s:\n%s\n' \
+      "${field}" "${expected}" "${actual}" "${output}" >&2
+    exit 1
+  fi
+}
+
 write_socket()
 {
   port=$1
@@ -78,6 +91,15 @@ DESTINATION=tcp://192.0.2.10:9171
 write_socket 9171 100 101
 output=$(monitor 100 "${DESTINATION}")
 assert_status ok "${output}"
+assert_record_field "${DESTINATION}" 1 "${output}"
+assert_record_field ok 2 "${output}"
+assert_record_field ESTAB 3 "${output}"
+assert_record_field 0 4 "${output}"
+assert_record_field 100 5 "${output}"
+assert_record_field 101 6 "${output}"
+assert_record_field 0 7 "${output}"
+assert_record_field 0 8 "${output}"
+assert_record_field 0 9 "${output}"
 
 output=$(monitor 106 "${DESTINATION}")
 assert_status degraded "${output}"

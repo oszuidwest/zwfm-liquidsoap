@@ -26,7 +26,8 @@ let dab_ack_status =
     {
       status = "disabled",
       detail =
-        "DAB+ output is disabled"
+        "DAB+ output is disabled",
+      destinations = []
     }
   )
 
@@ -40,7 +41,7 @@ end
 let dab_ack_monitor_running = ref(false)
 on_shutdown(fun () -> dab_ack_monitor_running := false)
 
-def dab_set_ack_status(status, detail) =
+def dab_set_ack_status(status, detail, ~destinations=[]) =
   let previous = dab_ack_status().status
   if
     status != previous
@@ -51,7 +52,8 @@ def dab_set_ack_status(status, detail) =
       level=if dab_ack_healthy(status) then 3 else 2 end
     )
   end
-  dab_ack_status := {status = status, detail = detail}
+  dab_ack_status :=
+    {status = status, detail = detail, destinations = destinations}
 end
 
 # The monitor identifies AudioEnc's EDI sockets in ss output by process
@@ -87,22 +89,83 @@ def dab_edi_args(destinations) =
   list.map(fun (destination) -> "--edi=#{destination}", destinations)
 end
 
-# The monitor prints its state on the first line and detail on the rest
+# Parse the monitor's tab-separated destination records. Empty metric fields
+# become JSON null values; malformed records remain visible in the detail text.
+def dab_optional_int(value) =
+  if value == "" then null else int_of_string(value) end
+end
+
+def dab_parse_ack_destination(line) =
+  let fields = string.split(separator="\t", line)
+  if
+    list.length(fields) != 10
+  then
+    null
+  else
+    {
+      destination = list.nth(fields, 0),
+      status = list.nth(fields, 1),
+      tcp_state = list.nth(fields, 2),
+      ack_age_seconds = dab_optional_int(list.nth(fields, 3)),
+      bytes_sent = dab_optional_int(list.nth(fields, 4)),
+      bytes_acked = dab_optional_int(list.nth(fields, 5)),
+      send_queue_bytes = dab_optional_int(list.nth(fields, 6)),
+      unacked_segments = dab_optional_int(list.nth(fields, 7)),
+      retransmissions = dab_optional_int(list.nth(fields, 8)),
+      detail = list.nth(fields, 9)
+    }
+  end
+end
+
+def dab_parse_ack_monitor(monitor_output) =
+  let lines = string.split(separator="\n", string.trim(monitor_output))
+  let status = string.trim(list.hd(default="", lines))
+  let parsed =
+    list.map(
+      fun (line) -> (line, dab_parse_ack_destination(line)),
+      list.tl(lines)
+    )
+  let destinations =
+    list.filter_map(fun ((_, destination)) -> destination, parsed)
+  let unparsed =
+    list.filter_map(
+      fun ((line, destination)) ->
+        if null.defined(destination) then null else line end,
+      parsed
+    )
+  let destination_details =
+    list.map(
+      fun (destination) ->
+        "#{destination.destination} #{destination.status} (#{
+          destination.detail
+        })",
+      destinations
+    )
+  {
+    status = status,
+    detail =
+      string.trim(
+        string.concat(
+          separator="\n",
+          list.append(unparsed, destination_details)
+        )
+      ),
+    destinations = destinations
+  }
+end
+
+# The monitor prints its overall state followed by one record per destination.
 def dab_ack_monitor_tick() =
   if
     dab_ack_monitor_running()
   then
     try
-      let lines =
-        string.split(
-          separator="\n",
-          string.trim(
-            process.read(timeout=5.0, log_errors=false, dab_ack_monitor_command)
-          )
+      let snapshot =
+        dab_parse_ack_monitor(
+          process.read(timeout=5.0, log_errors=false, dab_ack_monitor_command)
         )
-      let status = string.trim(list.hd(default="", lines))
       if
-        status == ""
+        snapshot.status == ""
       then
         dab_set_ack_status(
           "down",
@@ -110,8 +173,9 @@ def dab_ack_monitor_tick() =
         )
       else
         dab_set_ack_status(
-          status,
-          string.trim(string.concat(separator="\n", list.tl(lines)))
+          snapshot.status,
+          snapshot.detail,
+          destinations=snapshot.destinations
         )
       end
     catch err do

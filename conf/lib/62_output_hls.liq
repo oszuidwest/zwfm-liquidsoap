@@ -30,25 +30,49 @@ def hls_mark_mirror_degraded(reason) =
 end
 
 def hls_health() =
-  let reason =
+  def component(failure) =
     if
-      hls_local_error() != ""
+      not hls_enabled
     then
-      hls_local_error()
+      {status = "disabled", detail = ""}
+    elsif
+      failure != ""
+    then
+      {status = "degraded", detail = failure}
     else
-      hls_mirror_error()
+      {status = "ok", detail = ""}
     end
-  if
-    reason != ""
-  then
-    {status = "degraded", detail = reason}
-  elsif
-    hls_enabled
-  then
-    {status = "ok", detail = ""}
-  else
-    {status = "disabled", detail = ""}
   end
+
+  let local_state = component(hls_local_error())
+  let mirror_state = component(hls_mirror_error())
+  let details =
+    list.filter(
+      fun (detail) -> detail != "",
+      [local_state.detail, mirror_state.detail]
+    )
+  let status =
+    if
+      not hls_enabled
+    then
+      "disabled"
+    elsif
+      local_state.status == "degraded" or mirror_state.status == "degraded"
+    then
+      "degraded"
+    else
+      "ok"
+    end
+  {
+    status = status,
+    detail =
+      string.concat(
+        separator="; ",
+        details
+      ),
+    local = local_state,
+    mirror = mirror_state
+  }
 end
 
 let hls_endpoint_trimmed = string.trim(HLS_BUNNY_ENDPOINT)

@@ -4,12 +4,44 @@
 # Runtime health providers registered by each Icecast output.
 let icecast_output_health_providers = ref([])
 
-def icecast_health() =
+def icecast_streams() =
   list.map(fun (get_health) -> get_health(), icecast_output_health_providers())
 end
 
-def icecast_healthy(outputs) =
-  list.for_all(fun (item) -> item.connected, outputs)
+def icecast_health() =
+  let streams =
+    list.map(
+      fun (stream) ->
+        {
+          id = stream.id,
+          status = stream.status,
+          host = stream.host,
+          port = stream.port,
+          mount = stream.mount,
+          description = stream.description,
+          started = stream.started,
+          ready = stream.ready,
+          connected = stream.connected
+        },
+      icecast_streams()
+    )
+  let status =
+    if
+      list.is_empty(streams)
+    then
+      "disabled"
+    elsif
+      list.for_all(fun (item) -> item.connected, streams)
+    then
+      "ok"
+    elsif
+      list.exists(fun (item) -> item.connected, streams)
+    then
+      "degraded"
+    else
+      "down"
+    end
+  {status = status, streams = streams}
 end
 
 # Factory function to create an Icecast output
@@ -62,8 +94,21 @@ def output_icecast_stream(
   icecast_output.on_disconnect(synchronous=true, fun () -> connected := false)
 
   def health() =
+    let output_status =
+      if
+        connected()
+      then
+        "ok"
+      elsif
+        icecast_output.is_started()
+      then
+        "down"
+      else
+        "stopped"
+      end
     {
       id = icecast_output.id(),
+      status = output_status,
       host = actual_host,
       port = actual_port,
       mount = mount,

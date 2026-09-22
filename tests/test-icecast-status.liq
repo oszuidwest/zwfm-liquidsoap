@@ -20,10 +20,12 @@ output_icecast_stream(
   audio_source=blank()
 )
 
-let outputs = icecast_health()
-assert(list.length(outputs) == 1)
-let output_status = list.hd(outputs)
+let health = icecast_health()
+assert(health.status == "down")
+assert(list.length(health.streams) == 1)
+let output_status = list.hd(health.streams)
 assert(output_status.id == "icecast__test_mp3_127_0_0_1")
+assert(output_status.status == "stopped")
 assert(output_status.host == "127.0.0.1")
 assert(output_status.port == 65534)
 assert(output_status.mount == "/test.mp3")
@@ -32,6 +34,5 @@ assert(
     "Test stream"
 )
 assert(not output_status.connected)
-assert(not icecast_healthy(outputs))
 
 shutdown()

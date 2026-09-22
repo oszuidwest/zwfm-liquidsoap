@@ -292,19 +292,27 @@ curl -s http://127.0.0.1:7000/status | jq
 
 The response contains the overall state (`ok`, `degraded`, or `down`), the
 active source and mode, readiness for every source, detailed studio-input
-health, the silence-detection state, every Icecast output, and a `status` plus
-`detail` for the DAB+ and HLS outputs. Each item in `studio_inputs` reports its
-audio buffer in seconds and an SRT object with its connection state. Every
-active SRT connection includes the peer address, negotiated receive latency,
-receive buffer, round-trip time, and total dropped packets. Each item in
-`outputs.icecast` identifies the host, port, and mount and reports whether the
-output is started, ready, and connected. Use the top-level `status` field for
-alerting. A switch to the emergency fallback, a disconnected Icecast output, or
-a degraded enabled DAB+/HLS output makes the overall state `degraded`; an
-unavailable radio source makes it `down`. The HTTP status code follows the
-overall state: `200 OK` for `ok` and `degraded`, `503 Service Unavailable` for
-`down`, so a monitor that only checks the status code alerts when the station is
-off air. `HEAD /status` returns the same status code without a body.
+health, the silence-detection state, and structured health for Icecast, DAB+,
+and HLS outputs. Each item in `studio_inputs` reports its audio buffer in
+seconds and an SRT object with its connection state. Every active SRT
+connection includes the peer address, negotiated receive latency, receive
+buffer, round-trip time, and total dropped packets.
+
+`outputs.icecast` has an aggregate status and a `streams` array. Each stream
+identifies its host, port, and mount and reports whether it is started, ready,
+and connected. `outputs.dab.destinations` contains one object per EDI
+destination with its TCP state, ACK age, byte counters, send queue, unacknowledged
+segments, and retransmissions. Unavailable metrics are `null`. `outputs.hls`
+separates the local writer and remote mirror health while retaining its combined
+`status` and `detail`.
+
+Use the top-level `status` field for alerting. A switch to the emergency
+fallback, a disconnected Icecast output, or a degraded enabled DAB+/HLS output
+makes the overall state `degraded`; an unavailable radio source makes it `down`.
+The HTTP status code follows the overall state: `200 OK` for `ok` and
+`degraded`, `503 Service Unavailable` for `down`, so a monitor that only checks
+the status code alerts when the station is off air. `HEAD /status` returns the
+same status code without a body.
 
 ## Silence Detection
 

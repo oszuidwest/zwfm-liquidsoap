@@ -10,31 +10,38 @@ def is_silence_detection_enabled() =
   true
 end
 def icecast_health() =
-  [
-    {
-      id = "icecast_test_127_0_0_1",
-      host = "127.0.0.1",
-      port = 8000,
-      mount = "/test.mp3",
-      description =
-        "Test stream",
-      started = true,
-      ready = true,
-      connected = true
-    }
-  ]
-end
-def icecast_healthy(outputs) =
-  list.for_all(fun (item) -> item.connected, outputs)
+  {
+    status = "ok",
+    streams =
+      [
+        {
+          id = "icecast_test_127_0_0_1",
+          status = "ok",
+          host = "127.0.0.1",
+          port = 8000,
+          mount = "/test.mp3",
+          description =
+            "Test stream",
+          started = true,
+          ready = true,
+          connected = true
+        }
+      ]
+  }
 end
 def dab_ack_status() =
-  {status = "disabled", detail = ""}
+  {status = "disabled", detail = "", destinations = []}
 end
 def dab_ack_healthy(_) =
   true
 end
 def hls_health() =
-  {status = "disabled", detail = ""}
+  {
+    status = "disabled",
+    detail = "",
+    local = {status = "disabled", detail = ""},
+    mirror = {status = "disabled", detail = ""}
+  }
 end
 
 %include "../conf/lib/70_http.liq"
@@ -83,14 +90,19 @@ assert(connection.latency_ms == 2000)
 assert(connection.receive_buffer_ms == 1876)
 assert(connection.rtt_ms == 20.57)
 assert(connection.dropped_packets_total == 0)
-let icecast = list.hd(snapshot.outputs.icecast)
+assert(snapshot.outputs.icecast.status == "ok")
+let icecast = list.hd(snapshot.outputs.icecast.streams)
 assert(icecast.id == "icecast_test_127_0_0_1")
+assert(icecast.status == "ok")
 assert(icecast.host == "127.0.0.1")
 assert(icecast.port == 8000)
 assert(icecast.mount == "/test.mp3")
 assert(icecast.started)
 assert(icecast.ready)
 assert(icecast.connected)
+assert(list.is_empty(snapshot.outputs.dab.destinations))
+assert(snapshot.outputs.hls.local.status == "disabled")
+assert(snapshot.outputs.hls.mirror.status == "disabled")
 
 # Ensure the complete snapshot, including SRT and Icecast health, is JSON-safe.
 let encoded_snapshot = json.stringify(compact=true, snapshot)
