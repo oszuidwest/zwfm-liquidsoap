@@ -100,7 +100,7 @@ def dab_ack_monitor_tick() =
             process.read(timeout=5.0, log_errors=false, dab_ack_monitor_command)
           )
         )
-      let status = list.hd(default="", lines)
+      let status = string.trim(list.hd(default="", lines))
       if
         status == ""
       then
