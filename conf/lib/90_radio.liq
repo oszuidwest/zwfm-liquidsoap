@@ -3,7 +3,7 @@
 # and server commands — all derived from a single source list
 
 # Register server commands for the radio source (status, force, auto, skip)
-def register_radio_commands(s, ~sources) =
+def register_radio_commands(s, active_source, ~sources) =
   if
     SERVER_SOCKET_ENABLED
   then
@@ -15,9 +15,7 @@ def register_radio_commands(s, ~sources) =
       "#{source_id}.status",
       fun (_) ->
         begin
-          "Mode: #{radio_mode()}, Active: #{
-            radio_active_source(sources=sources)
-          }"
+          "Mode: #{radio_mode()}, Active: #{active_source()}"
         end
     )
 
@@ -96,11 +94,27 @@ def create_radio(~sources) =
       list.append(forced_entries, [({is_auto_mode()}, auto_fallback)])
     )
 
+  # Ask the native switch/fallback operators which branch they selected. This
+  # remains accurate when a requested forced source is unavailable.
+  def active_source() =
+    let selected = radio.selected()
+    let selected =
+      if
+        null.defined(selected)
+        and source.id(null.get(selected)) == source.id(auto_fallback)
+      then
+        auto_fallback.selected()
+      else
+        selected
+      end
+    selected_source_name(selected, sources=sources)
+  end
+
   # Register server commands for source control
-  register_radio_commands(radio, sources=sources)
+  register_radio_commands(radio, active_source, sources=sources)
 
   # Expose runtime status and accept optional external now-playing updates.
-  register_http_endpoints(radio, sources=sources)
+  register_http_endpoints(radio, active_source, sources=sources)
 
   radio
 end

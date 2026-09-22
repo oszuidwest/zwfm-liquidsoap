@@ -25,9 +25,9 @@ def read_stream_metadata_body(req) =
   read_stream_metadata_chunks("")
 end
 
-def status_snapshot(radio_source, ~sources) =
+def status_snapshot(radio_source, active_source, ~sources) =
   let radio_ready = radio_source.is_ready()
-  let active_source = radio_active_source(sources=sources)
+  let active_source = active_source()
   let dab_state = dab_ack_status()
   let hls_state = hls_health()
   let status =
@@ -61,7 +61,7 @@ def status_snapshot(radio_source, ~sources) =
   }
 end
 
-def register_http_endpoints(radio_source, ~sources) =
+def register_http_endpoints(radio_source, active_source, ~sources) =
   # Out-of-range ports would silently bind port mod 65536.
   if
     STREAM_METADATA_PORT < 1 or STREAM_METADATA_PORT > 65535
@@ -78,7 +78,7 @@ def register_http_endpoints(radio_source, ~sources) =
   # radio source is down, 200 otherwise (degraded is still on air). HEAD is
   # registered too because some monitors probe with it by default.
   def status_handler(_, res) =
-    let snapshot = status_snapshot(radio_source, sources=sources)
+    let snapshot = status_snapshot(radio_source, active_source, sources=sources)
     res.header("Cache-Control", "no-store")
     if snapshot.status == "down" then res.status_code(503) end
     res.json(compact=true, snapshot)

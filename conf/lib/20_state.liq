@@ -49,21 +49,22 @@ def radio_mode() =
   if is_auto_mode() then "auto" else "forced" end
 end
 
-# Name of the source currently on air: the forced source, or in auto mode the
-# first ready source in priority order
-def radio_active_source(~sources) =
+# Name of a selected source from the configured source list
+def selected_source_name(selected, ~sources) =
   if
-    is_auto_mode()
+    null.defined(selected)
   then
+    let selected_id = source.id(null.get(selected))
     list.hd(
       default="unknown",
-      list.map(
-        fst,
-        list.filter(fun ((_, src)) -> source.is_ready(src), sources)
+      list.filter_map(
+        fun ((name, src)) ->
+          if source.id(src) == selected_id then name else null end,
+        sources
       )
     )
   else
-    get_forced_source()
+    "unknown"
   end
 end
 
