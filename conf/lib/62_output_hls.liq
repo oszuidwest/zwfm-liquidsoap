@@ -472,7 +472,7 @@ def hls_mirror_tick(
   end
 
   if
-    not hls_mirror_tick_failed() and not list.is_empty(playlists)
+    not hls_mirror_tick_failed() and playlists_ok
   then
     hls_mirror_error := ""
   end
