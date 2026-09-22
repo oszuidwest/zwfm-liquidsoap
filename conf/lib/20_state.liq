@@ -49,25 +49,6 @@ def radio_mode() =
   if is_auto_mode() then "auto" else "forced" end
 end
 
-# Name of a selected source from the configured source list
-def selected_source_name(selected, ~sources) =
-  if
-    null.defined(selected)
-  then
-    let selected_id = source.id(null.get(selected))
-    list.hd(
-      default="unknown",
-      list.filter_map(
-        fun ((name, src)) ->
-          if source.id(src) == selected_id then name else null end,
-        sources
-      )
-    )
-  else
-    "unknown"
-  end
-end
-
 # Set forced source (or empty string for auto mode)
 def set_forced_source(name) =
   forced_source_name := name

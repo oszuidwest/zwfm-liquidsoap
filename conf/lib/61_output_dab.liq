@@ -212,6 +212,10 @@ def output_dab_stream(audio_source) =
   server.register(
     description="Show DAB+ TCP acknowledgement health",
     "dab.status",
-    fun (_) -> "#{dab_ack_status().status}\n#{dab_ack_status().detail}"
+    fun (_) ->
+      begin
+        let s = dab_ack_status()
+        "#{s.status}\n#{s.detail}"
+      end
   )
 end

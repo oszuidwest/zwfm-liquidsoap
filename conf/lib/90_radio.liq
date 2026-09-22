@@ -14,9 +14,7 @@ def register_radio_commands(s, active_source, ~sources) =
       description="Show current mode and active source",
       "#{source_id}.status",
       fun (_) ->
-        begin
-          "Mode: #{radio_mode()}, Active: #{active_source()}"
-        end
+        "Mode: #{radio_mode()}, Active: #{active_source()}"
     )
 
     # Derive valid source names from the sources list
@@ -96,6 +94,8 @@ def create_radio(~sources) =
 
   # Ask the native switch/fallback operators which branch they selected. This
   # remains accurate when a requested forced source is unavailable.
+  let names_by_id =
+    list.map(fun ((name, src)) -> (source.id(src), name), sources)
   def active_source() =
     let selected = radio.selected()
     let selected =
@@ -107,7 +107,11 @@ def create_radio(~sources) =
       else
         selected
       end
-    selected_source_name(selected, sources=sources)
+    null.case(
+      selected,
+      {"unknown"},
+      fun (s) -> list.assoc(default="unknown", source.id(s), names_by_id)
+    )
   end
 
   # Register server commands for source control

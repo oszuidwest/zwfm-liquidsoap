@@ -12,31 +12,38 @@
 let hls_bunny_headers = [("AccessKey", HLS_BUNNY_ACCESS_KEY), ("Expect", "")]
 let hls_main_playlist_name = "live.m3u8"
 
-# Local output and Bunny mirroring fail independently. Keep their state apart so
-# recovering one cannot hide a failure in the other.
-let hls_local_health = ref({status = "disabled", detail = ""})
-let hls_mirror_health = ref({status = "disabled", detail = ""})
+let hls_enabled = HLS_BUNNY_STORAGE_ZONE != "" and HLS_BUNNY_ACCESS_KEY != ""
+
+# Local output and Bunny mirroring fail independently, so each keeps its own
+# error ("" means healthy) and recovering one cannot hide a failure in the other.
+let hls_local_error = ref("")
 let hls_mirror_error = ref("")
 
+# Set by any failed mirror call; the tick clears hls_mirror_error only after a
+# full pass with content had no failure.
+let hls_mirror_tick_failed = ref(false)
+
 def hls_mark_mirror_degraded(reason) =
+  hls_mirror_tick_failed := true
   hls_mirror_error := reason
-  hls_mirror_health := {status = "degraded", detail = reason}
+  log(label="hls", reason, level=2)
 end
 
 def hls_health() =
-  let local = hls_local_health()
-  let mirror = hls_mirror_health()
-
+  let reason =
+    if
+      hls_local_error() != ""
+    then
+      hls_local_error()
+    else
+      hls_mirror_error()
+    end
   if
-    local.status == "degraded"
+    reason != ""
   then
-    local
+    {status = "degraded", detail = reason}
   elsif
-    mirror.status == "degraded"
-  then
-    mirror
-  elsif
-    local.status == "ok" and mirror.status == "ok"
+    hls_enabled
   then
     {status = "ok", detail = ""}
   else
@@ -104,21 +111,19 @@ def hls_put_data(remote_name, data) =
     then
       true
     else
-      let reason =
+      hls_mark_mirror_degraded(
         "HLS mirror upload failed for #{remote_name}: HTTP #{
           response.status_code
         } #{response.status_message}"
-      hls_mark_mirror_degraded(reason)
-      log(label="hls", reason, level=2)
+      )
       false
     end
   catch err do
-    let reason =
+    hls_mark_mirror_degraded(
       "HLS mirror upload exception for #{remote_name}: #{err.kind}: #{
         err.message
       }"
-    hls_mark_mirror_degraded(reason)
-    log(label="hls", reason, level=2)
+    )
     false
   end
 end
@@ -164,21 +169,19 @@ def hls_delete_file(remote_name) =
     then
       true
     else
-      let reason =
+      hls_mark_mirror_degraded(
         "HLS mirror delete failed for #{remote_name}: HTTP #{
           response.status_code
         } #{response.status_message}"
-      hls_mark_mirror_degraded(reason)
-      log(label="hls", reason, level=2)
+      )
       false
     end
   catch err do
-    let reason =
+    hls_mark_mirror_degraded(
       "HLS mirror delete exception for #{remote_name}: #{err.kind}: #{
         err.message
       }"
-    hls_mark_mirror_degraded(reason)
-    log(label="hls", reason, level=2)
+    )
     false
   end
 end
@@ -273,19 +276,17 @@ def hls_remote_listing() =
       )
       {ok = true, names = []}
     else
-      let reason =
+      hls_mark_mirror_degraded(
         "HLS mirror listing failed: HTTP #{response.status_code} #{
           response.status_message
         }"
-      hls_mark_mirror_degraded(reason)
-      log(label="hls", reason, level=2)
+      )
       {ok = false, names = []}
     end
   catch err do
-    let reason =
+    hls_mark_mirror_degraded(
       "HLS mirror listing exception: #{err.kind}: #{err.message}"
-    hls_mark_mirror_degraded(reason)
-    log(label="hls", reason, level=2)
+    )
     {ok = false, names = []}
   end
 end
@@ -445,7 +446,7 @@ def hls_mirror_tick(
   (synced_segments:ref),
   (synced_playlists:ref)
 ) =
-  hls_mirror_error := ""
+  hls_mirror_tick_failed := false
   hls_seed_remote_segments(seeded, synced_segments)
 
   # Snapshot playlists before listing segments, then upload that exact content
@@ -471,9 +472,9 @@ def hls_mirror_tick(
   end
 
   if
-    hls_mirror_error() == "" and not list.is_empty(playlists)
+    not hls_mirror_tick_failed() and not list.is_empty(playlists)
   then
-    hls_mirror_health := {status = "ok", detail = ""}
+    hls_mirror_error := ""
   end
 end
 
@@ -544,7 +545,7 @@ end
 
 def output_hls_stream(audio_source) =
   if
-    HLS_BUNNY_STORAGE_ZONE != "" and HLS_BUNNY_ACCESS_KEY != ""
+    hls_enabled
   then
     log(
       label="hls",
@@ -563,7 +564,7 @@ def output_hls_stream(audio_source) =
     let hls_retry_delay = ref(hls_retry_delay_initial)
 
     def hls_degraded() =
-      hls_local_health().status == "degraded"
+      hls_local_error() != ""
     end
 
     # Record the failure, log it, and arm the next recreation attempt.
@@ -571,7 +572,7 @@ def output_hls_stream(audio_source) =
       let retry_in = hls_retry_delay()
       hls_retry_at := time() + retry_in
       hls_retry_delay := min(retry_in * 2.0, hls_retry_delay_max)
-      hls_local_health := {status = "degraded", detail = reason}
+      hls_local_error := reason
       log(
         label="hls",
         "HLS output degraded (primary outputs unaffected): #{reason}; next \
@@ -647,7 +648,7 @@ def output_hls_stream(audio_source) =
             hls_source
           )
         )
-        hls_local_health := {status = "ok", detail = ""}
+        hls_local_error := ""
         log(
           label="hls",
           "HLS output started",
@@ -682,7 +683,7 @@ def output_hls_stream(audio_source) =
             level=2
           )
         else
-          hls_mark_degraded(hls_local_health().detail)
+          hls_mark_degraded(hls_local_error())
         end
       elsif
         not hls_degraded()
@@ -703,7 +704,6 @@ def output_hls_stream(audio_source) =
     let hls_remote_seeded = ref(false)
     let hls_synced_segments = ref([])
     let hls_synced_playlists = ref([])
-    hls_mirror_health := {status = "ok", detail = ""}
 
     thread.run(
       fast=false,
