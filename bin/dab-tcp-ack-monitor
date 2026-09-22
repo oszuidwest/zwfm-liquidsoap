@@ -49,10 +49,11 @@ debug()
   fi
 }
 
+# One tab-separated record per destination from the current loop variables;
+# the argument is the human-readable detail.
 append_record()
 {
-  record="$1${tab}$2${tab}$3${tab}$4${tab}$5${tab}$6${tab}$7${tab}$8${tab}$9${tab}${10}"
-  records="${records}${records:+${nl}}${record}"
+  records="${records}${records:+${nl}}${destination}${tab}${endpoint_status}${tab}${tcp_state}${tab}${ack_age}${tab}${bytes_sent}${tab}${bytes_acked}${tab}${send_queue}${tab}${unacked}${tab}${retrans}${tab}$1"
 }
 
 reset_destination_state()
@@ -151,6 +152,8 @@ records=""
 old_ifs=${IFS}
 IFS=",${wsp}"
 for destination in ${DESTINATIONS}; do
+  endpoint_status='' tcp_state='' ack_age='' bytes_sent='' bytes_acked=''
+  send_queue='' unacked='' retrans=''
   case ${destination} in
     tcp://*)
       ;;
@@ -158,8 +161,8 @@ for destination in ${DESTINATIONS}; do
       continue
       ;;
     *)
-      append_record \
-        "${destination}" unmonitored "" "" "" "" "" "" "" "not TCP"
+      endpoint_status=unmonitored
+      append_record "not TCP"
       continue
       ;;
   esac
@@ -174,9 +177,8 @@ for destination in ${DESTINATIONS}; do
 
   if [ -z "${host}" ] || ! is_uint "${port}" || [ "${port}" -gt 65535 ]; then
     down_count=$((down_count + 1))
-    append_record \
-      "${destination}" down "" "" "" "" "" "" "" \
-      "invalid TCP destination"
+    endpoint_status=down
+    append_record "invalid TCP destination"
     continue
   fi
 
@@ -226,9 +228,7 @@ for destination in ${DESTINATIONS}; do
 
   if [ -z "${socket_line}" ]; then
     disconnected_status
-    append_record \
-      "${destination}" "${endpoint_status}" "" "" "" "" "" "" "" \
-      "no AudioEnc TCP socket"
+    append_record "no AudioEnc TCP socket"
   else
     IFS="${wsp}"
     # shellcheck disable=SC2086
@@ -236,35 +236,33 @@ for destination in ${DESTINATIONS}; do
     IFS=",${wsp}"
 
     tcp_state=${1:-}
-    send_queue=${3:-0}
-    connection="${4:-?}>${5:-?}"
-    bytes_sent=0
-    bytes_acked=0
-    unacked=0
-    retrans=0
-    for field; do
-      case ${field} in
-        bytes_sent:*) bytes_sent=${field#*:} ;;
-        bytes_acked:*) bytes_acked=${field#*:} ;;
-        unacked:*) unacked=${field#*:} ;;
-        retrans:*)
-          retrans=${field##*:}
-          retrans=${retrans##*/}
-          ;;
-      esac
-    done
-    is_uint "${send_queue}" || send_queue=0
-    is_uint "${bytes_sent}" || bytes_sent=0
-    is_uint "${bytes_acked}" || bytes_acked=0
-    is_uint "${unacked}" || unacked=0
-    is_uint "${retrans}" || retrans=0
-
     if [ "${tcp_state}" != "ESTAB" ]; then
       disconnected_status
-      append_record \
-        "${destination}" "${endpoint_status}" "${tcp_state}" \
-        "" "" "" "" "" "" "TCP ${tcp_state}"
+      append_record "TCP ${tcp_state}"
     else
+      send_queue=${3:-0}
+      connection="${4:-?}>${5:-?}"
+      bytes_sent=0
+      bytes_acked=0
+      unacked=0
+      retrans=0
+      for field; do
+        case ${field} in
+          bytes_sent:*) bytes_sent=${field#*:} ;;
+          bytes_acked:*) bytes_acked=${field#*:} ;;
+          unacked:*) unacked=${field#*:} ;;
+          retrans:*)
+            retrans=${field##*:}
+            retrans=${retrans##*/}
+            ;;
+        esac
+      done
+      is_uint "${send_queue}" || send_queue=0
+      is_uint "${bytes_sent}" || bytes_sent=0
+      is_uint "${bytes_acked}" || bytes_acked=0
+      is_uint "${unacked}" || unacked=0
+      is_uint "${retrans}" || retrans=0
+
       debug "${destination}: current connection=${connection} sent=${bytes_sent} acked=${bytes_acked}"
 
       if [ "${connection}" != "${previous_connection}" ]; then
@@ -297,11 +295,7 @@ for destination in ${DESTINATIONS}; do
         endpoint_status=down
       fi
 
-      append_record \
-        "${destination}" "${endpoint_status}" "${tcp_state}" \
-        "${ack_age}" "${bytes_sent}" "${bytes_acked}" "${send_queue}" \
-        "${unacked}" "${retrans}" \
-        "TCP ${tcp_state}, ack_age=${ack_age}s, bytes_sent=${bytes_sent}, bytes_acked=${bytes_acked}, send_queue=${send_queue}, unacked=${unacked}, retrans=${retrans}"
+      append_record "TCP ${tcp_state}, ack_age=${ack_age}s, bytes_sent=${bytes_sent}, bytes_acked=${bytes_acked}, send_queue=${send_queue}, unacked=${unacked}, retrans=${retrans}"
       previous_connection=${connection}
       previous_acked=${bytes_acked}
     fi
@@ -329,9 +323,4 @@ else
   overall_status=degraded
 fi
 
-printf '%s\n' "${overall_status}"
-if [ -n "${records}" ]; then
-  printf '%s\n' "${records}"
-else
-  printf '%s\n' 'No TCP EDI destinations configured'
-fi
+printf '%s\n' "${overall_status}" "${records:-No TCP EDI destinations configured}"

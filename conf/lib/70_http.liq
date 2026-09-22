@@ -25,11 +25,17 @@ def read_stream_metadata_body(req) =
   read_stream_metadata_chunks("")
 end
 
+# Harbor lowercases incoming header names before handlers run
+def request_authorized(req) =
+  STREAM_METADATA_BEARER_TOKEN != ""
+  and req.headers["authorization"] ==
+    "Bearer #{STREAM_METADATA_BEARER_TOKEN}"
+end
+
 def status_snapshot(
   radio_source,
   active_source,
   ~sources,
-  ~studio_inputs,
   ~include_sensitive=false
 ) =
   let radio_ready = radio_source.is_ready()
@@ -67,51 +73,14 @@ def status_snapshot(
       ),
     studio_inputs =
       list.map(
-        fun ((name, get_status)) ->
-          begin
-            let input_status = get_status()
-            {
-              name = name,
-              ready = input_status.ready,
-              buffer_seconds = input_status.buffer_seconds,
-              srt =
-                {
-                  connected = input_status.srt.connected,
-                  connections =
-                    list.map(
-                      fun (connection) ->
-                        {
-                          peer =
-                            if
-                              include_sensitive
-                            then
-                              connection.peer
-                            else
-                              null
-                            end,
-                          latency_ms = connection.latency_ms,
-                          receive_buffer_ms = connection.receive_buffer_ms,
-                          rtt_ms = connection.rtt_ms,
-                          dropped_packets_total =
-                            connection.dropped_packets_total
-                        },
-                      input_status.srt.connections
-                    )
-                }
-            }
-          end,
-        studio_inputs
+        fun (get_status) -> get_status(include_peer=include_sensitive),
+        studio_input_status_providers()
       ),
     outputs = {icecast = icecast_state, dab = dab_state, hls = hls_state}
   }
 end
 
-def register_http_endpoints(
-  radio_source,
-  active_source,
-  ~sources,
-  ~studio_inputs
-) =
+def register_http_endpoints(radio_source, active_source, ~sources) =
   # Out-of-range ports would silently bind port mod 65536.
   if
     STREAM_METADATA_PORT < 1 or STREAM_METADATA_PORT > 65535
@@ -128,17 +97,12 @@ def register_http_endpoints(
   # radio source is down, 200 otherwise (degraded is still on air). HEAD is
   # registered too because some monitors probe with it by default.
   def status_handler(req, res) =
-    let include_sensitive =
-      STREAM_METADATA_BEARER_TOKEN != ""
-      and req.headers["authorization"] ==
-        "Bearer #{STREAM_METADATA_BEARER_TOKEN}"
     let snapshot =
       status_snapshot(
         radio_source,
         active_source,
         sources=sources,
-        studio_inputs=studio_inputs,
-        include_sensitive=include_sensitive
+        include_sensitive=request_authorized(req)
       )
     res.header("Cache-Control", "no-store")
     if snapshot.status == "down" then res.status_code(503) end
@@ -184,10 +148,8 @@ def register_http_endpoints(
         res.data(body)
       end
 
-      # Harbor lowercases incoming header names before handlers run
       if
-        req.headers["authorization"] !=
-          "Bearer #{STREAM_METADATA_BEARER_TOKEN}"
+        not request_authorized(req)
       then
         res.header(
           "WWW-Authenticate",

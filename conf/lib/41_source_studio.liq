@@ -1,9 +1,11 @@
 # Studio SRT input factory
 # Creates SRT inputs with silence detection and connection handling
 
+# Runtime health providers registered by each studio input, read by GET /status.
+let studio_input_status_providers = ref([])
+
 # Factory function to create a studio SRT input
-# Returns the fallible buffered source and a function for runtime health data;
-# output factories add their own mksafe()
+# Returns a fallible, buffered source; output factories add their own mksafe()
 def create_studio_input(~id, ~port) =
   # Create SRT input with encryption
   let studio =
@@ -74,9 +76,9 @@ def create_studio_input(~id, ~port) =
     )
   output.dummy(id="drain_#{id}", fallible=true, register_telnet=false, buffered)
 
-  # Take one structured snapshot so the server commands and HTTP endpoint
-  # expose the same values and field meanings.
-  def status() =
+  # One structured snapshot feeds the server command and GET /status. Peer
+  # addresses are only included for callers allowed to see them.
+  def status(~include_peer) =
     let connections =
       list.filter_map(
         fun (connection) ->
@@ -84,7 +86,7 @@ def create_studio_input(~id, ~port) =
             let (peer, raw_socket) = connection
             let stats = srt.socket(raw_socket).bistats()
             {
-              peer = peer,
+              peer = if include_peer then peer else null end,
               latency_ms = stats.msRcvTsbPdDelay,
               receive_buffer_ms = stats.msRcvBuf,
               rtt_ms = stats.msRTT,
@@ -102,22 +104,24 @@ def create_studio_input(~id, ~port) =
       )
 
     {
+      name = id,
       ready = source.is_ready(buffered),
       buffer_seconds = seconds_of_main(buffered.buffer_length()),
       srt =
         {connected = not list.is_empty(connections), connections = connections}
     }
   end
+  studio_input_status_providers :=
+    list.append(studio_input_status_providers(), [status])
 
   # Expose buffer health for diagnosing clock drift.
   server.register(
     description="Show readiness and buffered seconds for #{id}",
     "#{id}.buffer",
     fun (_) ->
-      begin
-        let snapshot = status()
-        "ready=#{snapshot.ready}, buffer=#{snapshot.buffer_seconds}s"
-      end
+      "ready=#{source.is_ready(buffered)}, buffer=#{
+        seconds_of_main(buffered.buffer_length())
+      }s"
   )
 
   server.register(
@@ -125,7 +129,7 @@ def create_studio_input(~id, ~port) =
     "#{id}.srt",
     fun (_) ->
       begin
-        let snapshot = status()
+        let snapshot = status(include_peer=true)
         let details =
           string.concat(
             separator="; ",
@@ -148,5 +152,5 @@ def create_studio_input(~id, ~port) =
         end
       end
   )
-  {source = buffered, status = status}
+  buffered
 end

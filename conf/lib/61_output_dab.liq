@@ -90,7 +90,8 @@ def dab_edi_args(destinations) =
 end
 
 # Parse the monitor's tab-separated destination records. Empty metric fields
-# become JSON null values; malformed records remain visible in the detail text.
+# become JSON null values; lines that are not records (monitor errors) are
+# kept verbatim in the detail text.
 def dab_optional_int(value) =
   if value == "" then null else int_of_string(value) end
 end
@@ -102,55 +103,48 @@ def dab_parse_ack_destination(line) =
   then
     null
   else
+    let [
+      destination,
+      status,
+      tcp_state,
+      ack_age,
+      bytes_sent,
+      bytes_acked,
+      send_queue,
+      unacked,
+      retrans,
+      detail
+    ] = fields
     {
-      destination = list.nth(fields, 0),
-      status = list.nth(fields, 1),
-      tcp_state = list.nth(fields, 2),
-      ack_age_seconds = dab_optional_int(list.nth(fields, 3)),
-      bytes_sent = dab_optional_int(list.nth(fields, 4)),
-      bytes_acked = dab_optional_int(list.nth(fields, 5)),
-      send_queue_bytes = dab_optional_int(list.nth(fields, 6)),
-      unacked_segments = dab_optional_int(list.nth(fields, 7)),
-      retransmissions = dab_optional_int(list.nth(fields, 8)),
-      detail = list.nth(fields, 9)
+      destination = destination,
+      status = status,
+      tcp_state = tcp_state,
+      ack_age_seconds = dab_optional_int(ack_age),
+      bytes_sent = dab_optional_int(bytes_sent),
+      bytes_acked = dab_optional_int(bytes_acked),
+      send_queue_bytes = dab_optional_int(send_queue),
+      unacked_segments = dab_optional_int(unacked),
+      retransmissions = dab_optional_int(retrans),
+      detail = detail
     }
   end
 end
 
 def dab_parse_ack_monitor(monitor_output) =
   let lines = string.split(separator="\n", string.trim(monitor_output))
-  let status = string.trim(list.hd(default="", lines))
-  let parsed =
-    list.map(
-      fun (line) -> (line, dab_parse_ack_destination(line)),
-      list.tl(lines)
+  let records = list.tl(lines)
+  def describe(line) =
+    null.case(
+      dab_parse_ack_destination(line),
+      {line},
+      fun (d) ->
+        "#{d.destination} #{d.status} (#{d.detail})"
     )
-  let destinations =
-    list.filter_map(fun ((_, destination)) -> destination, parsed)
-  let unparsed =
-    list.filter_map(
-      fun ((line, destination)) ->
-        if null.defined(destination) then null else line end,
-      parsed
-    )
-  let destination_details =
-    list.map(
-      fun (destination) ->
-        "#{destination.destination} #{destination.status} (#{
-          destination.detail
-        })",
-      destinations
-    )
+  end
   {
-    status = status,
-    detail =
-      string.trim(
-        string.concat(
-          separator="\n",
-          list.append(unparsed, destination_details)
-        )
-      ),
-    destinations = destinations
+    status = string.trim(list.hd(default="", lines)),
+    detail = string.concat(separator="\n", list.map(describe, records)),
+    destinations = list.filter_map(dab_parse_ack_destination, records)
   }
 end
 

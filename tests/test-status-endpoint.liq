@@ -43,16 +43,12 @@ def hls_health() =
     mirror = {status = "disabled", detail = ""}
   }
 end
-
-%include "../conf/lib/70_http.liq"
-
-let radio = blank()
-let studio_inputs =
-  [
-    (
-      "studio_a",
-      fun () ->
+let studio_input_status_providers =
+  ref(
+    [
+      fun (~include_peer) ->
         {
+          name = "studio_a",
           ready = true,
           buffer_seconds = 1.03,
           srt =
@@ -61,7 +57,7 @@ let studio_inputs =
               connections =
                 [
                   {
-                    peer = "192.0.2.1",
+                    peer = if include_peer then "192.0.2.1" else null end,
                     latency_ms = 2000,
                     receive_buffer_ms = 1876,
                     rtt_ms = 20.57,
@@ -70,8 +66,12 @@ let studio_inputs =
                 ]
             }
         }
-    )
-  ]
+    ]
+  )
+
+%include "../conf/lib/70_http.liq"
+
+let radio = blank()
 
 let radio_sink = output.dummy(start=false, register_telnet=false, radio)
 radio_sink.on_start(
@@ -83,7 +83,6 @@ radio_sink.on_start(
           radio,
           (fun () -> "studio_a"),
           sources=[("studio_a", radio)],
-          studio_inputs=studio_inputs,
           include_sensitive=true
         )
 
@@ -119,8 +118,7 @@ radio_sink.on_start(
         status_snapshot(
           radio,
           (fun () -> "studio_a"),
-          sources=[("studio_a", radio)],
-          studio_inputs=studio_inputs
+          sources=[("studio_a", radio)]
         )
       let public_studio = list.hd(public_snapshot.studio_inputs)
       let public_connection = list.hd(public_studio.srt.connections)

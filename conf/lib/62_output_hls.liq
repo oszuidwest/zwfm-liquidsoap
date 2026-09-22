@@ -51,28 +51,12 @@ def hls_health() =
       fun (detail) -> detail != "",
       [local_state.detail, mirror_state.detail]
     )
-  let status =
-    if
-      not hls_enabled
-    then
-      "disabled"
-    elsif
-      local_state.status == "degraded" or mirror_state.status == "degraded"
-    then
-      "degraded"
-    else
-      "ok"
-    end
-  {
-    status = status,
-    detail =
-      string.concat(
-        separator="; ",
-        details
-      ),
-    local = local_state,
-    mirror = mirror_state
-  }
+  component(
+    string.concat(
+      separator="; ",
+      details
+    )
+  ).{local = local_state, mirror = mirror_state}
 end
 
 let hls_endpoint_trimmed = string.trim(HLS_BUNNY_ENDPOINT)

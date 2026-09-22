@@ -69,7 +69,7 @@ end
 # Build the main radio source from a list of named sources in priority order
 # Creates fallback chain, switch with force support, and registers server commands
 # Returns the wired radio source
-def create_radio(~sources, ~studio_inputs) =
+def create_radio(~sources) =
   # Build auto fallback chain from source priority order
   let source_list = list.map(fun (item) -> snd(item), sources)
   let auto_fallback =
@@ -118,12 +118,7 @@ def create_radio(~sources, ~studio_inputs) =
   register_radio_commands(radio, active_source, sources=sources)
 
   # Expose runtime status and accept optional external now-playing updates.
-  register_http_endpoints(
-    radio,
-    active_source,
-    sources=sources,
-    studio_inputs=studio_inputs
-  )
+  register_http_endpoints(radio, active_source, sources=sources)
 
   radio
 end

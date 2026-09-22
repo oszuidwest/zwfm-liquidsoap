@@ -26,11 +26,10 @@ let studio_b = create_studio_input(id="studio_b", port=SRT_PORT_SECONDARY)
 let radio =
   create_radio(
     sources=[
-      ("studio_a", studio_a.source),
-      ("studio_b", studio_b.source),
+      ("studio_a", studio_a),
+      ("studio_b", studio_b),
       ("fallback", emergency_fallback)
-    ],
-    studio_inputs=[("studio_a", studio_a.status), ("studio_b", studio_b.status)]
+    ]
   )
 
 # Start StereoTool for MicroMPX transport (not used in Liquidsoap audio chain).
