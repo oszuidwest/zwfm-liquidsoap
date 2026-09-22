@@ -305,7 +305,9 @@ include them.
 identifies its host, port, and mount and reports whether it is started, ready,
 and connected. `outputs.dab.destinations` contains one object per EDI
 destination with its TCP state, ACK age, byte counters, send queue, unacknowledged
-segments, and retransmissions. Unavailable metrics are `null`. `outputs.hls`
+segments, and retransmissions. DAB health uses only these structured fields;
+it does not duplicate them in human-readable `detail` fields. Unavailable
+metrics are `null`. `outputs.hls`
 separates the local writer and remote mirror health while retaining its combined
 `status` and `detail`.
 

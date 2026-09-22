@@ -64,5 +64,7 @@ assert(string.contains(substring="\"ack_age_seconds\":0", encoded_ack_snapshot))
 assert(
   string.contains(substring="\"ack_age_seconds\":null", encoded_ack_snapshot)
 )
+let encoded_destination = json.stringify(compact=true, healthy_destination)
+assert(not string.contains(substring="\"detail\"", encoded_destination))
 
 shutdown()

@@ -30,7 +30,7 @@ def icecast_health() =
   }
 end
 def dab_ack_status() =
-  {status = "disabled", detail = "", destinations = []}
+  {status = "disabled", destinations = []}
 end
 def dab_ack_healthy(_) =
   true
@@ -110,6 +110,8 @@ radio_sink.on_start(
       assert(icecast.ready)
       assert(not icecast.connected)
       assert(list.is_empty(snapshot.outputs.dab.destinations))
+      let encoded_dab = json.stringify(compact=true, snapshot.outputs.dab)
+      assert(not string.contains(substring="\"detail\"", encoded_dab))
       assert(snapshot.outputs.hls.local.status == "disabled")
       assert(snapshot.outputs.hls.mirror.status == "disabled")
 

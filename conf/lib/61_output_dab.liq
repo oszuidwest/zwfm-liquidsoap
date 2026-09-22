@@ -21,14 +21,13 @@ then
 end
 
 # DAB+ health: status is disabled, unmonitored, starting, ok, degraded or down
-let dab_ack_status =
+let dab_ack_status = ref({status = "disabled", destinations = []})
+
+# Human-readable context remains available through the dab.status server
+# command, but is omitted from the structured HTTP status response.
+let dab_ack_detail =
   ref(
-    {
-      status = "disabled",
-      detail =
-        "DAB+ output is disabled",
-      destinations = []
-    }
+    "DAB+ output is disabled"
   )
 
 def dab_ack_healthy(status) =
@@ -52,8 +51,8 @@ def dab_set_ack_status(status, detail, ~destinations=[]) =
       level=if dab_ack_healthy(status) then 3 else 2 end
     )
   end
-  dab_ack_status :=
-    {status = status, detail = detail, destinations = destinations}
+  dab_ack_detail := detail
+  dab_ack_status := {status = status, destinations = destinations}
 end
 
 # The monitor identifies AudioEnc's EDI sockets in ss output by process
@@ -90,8 +89,8 @@ def dab_edi_args(destinations) =
 end
 
 # Parse the monitor's tab-separated destination records. Empty metric fields
-# become JSON null values; lines that are not records (monitor errors) are
-# kept verbatim in the detail text.
+# become JSON null values. The monitor's final human-readable field is used by
+# the dab.status server command, but is not included in the structured record.
 def dab_optional_int(value) =
   if value == "" then null else int_of_string(value) end
 end
@@ -113,7 +112,7 @@ def dab_parse_ack_destination(line) =
       send_queue,
       unacked,
       retrans,
-      detail
+      _
     ] = fields
     {
       destination = destination,
@@ -124,8 +123,7 @@ def dab_parse_ack_destination(line) =
       bytes_acked = dab_optional_int(bytes_acked),
       send_queue_bytes = dab_optional_int(send_queue),
       unacked_segments = dab_optional_int(unacked),
-      retransmissions = dab_optional_int(retrans),
-      detail = detail
+      retransmissions = dab_optional_int(retrans)
     }
   end
 end
@@ -134,12 +132,15 @@ def dab_parse_ack_monitor(monitor_output) =
   let lines = string.split(separator="\n", string.trim(monitor_output))
   let records = list.tl(lines)
   def describe(line) =
-    null.case(
-      dab_parse_ack_destination(line),
-      {line},
-      fun (d) ->
-        "#{d.destination} #{d.status} (#{d.detail})"
-    )
+    let fields = string.split(separator="\t", line)
+    if
+      list.length(fields) == 10
+    then
+      let [destination, status, _, _, _, _, _, _, _, detail] = fields
+      "#{destination} #{status} (#{detail})"
+    else
+      line
+    end
   end
   {
     status = string.trim(list.hd(default="", lines)),
@@ -273,7 +274,7 @@ def output_dab_stream(audio_source) =
     fun (_) ->
       begin
         let s = dab_ack_status()
-        "#{s.status}\n#{s.detail}"
+        "#{s.status}\n#{dab_ack_detail()}"
       end
   )
 end
