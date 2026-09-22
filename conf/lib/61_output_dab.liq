@@ -32,9 +32,25 @@ let dab_ack_status =
 let dab_ack_monitor_running = ref(false)
 on_shutdown(fun () -> dab_ack_monitor_running := false)
 
+# Split a snapshot into its trimmed state and detail. A snapshot without a
+# newline is a bare state; string.split.first would raise not_found on it.
+def dab_ack_snapshot_parts(snapshot) =
+  let (state, detail) =
+    try
+      string.split.first(separator="\n", snapshot)
+    catch _ : [error.not_found] do
+      (snapshot, "")
+    end
+  {status = string.trim(state), detail = string.trim(detail)}
+end
+
 def dab_ack_snapshot_state(snapshot) =
-  let (state, _) = string.split.first(separator="\n", snapshot)
-  string.trim(state)
+  dab_ack_snapshot_parts(snapshot).status
+end
+
+# Current DAB+ health as a record, for GET /status
+def dab_ack_health() =
+  dab_ack_snapshot_parts(dab_ack_status())
 end
 
 def dab_set_ack_status(snapshot) =

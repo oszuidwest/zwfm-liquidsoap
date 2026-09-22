@@ -54,11 +54,11 @@ LIQUIDSOAP_LIB_FILES=(
   "30_silence.liq"
   "40_source_fallback.liq"
   "41_source_studio.liq"
-  "70_http.liq"
   "50_processing.liq"
   "60_output_icecast.liq"
   "61_output_dab.liq"
   "62_output_hls.liq"
+  "70_http.liq"
   "80_server.liq"
   "90_radio.liq"
 )

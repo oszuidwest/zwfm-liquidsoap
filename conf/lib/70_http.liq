@@ -39,8 +39,7 @@ def status_snapshot(radio_source, ~sources) =
         end,
       sources
     )
-  let (dab_state, dab_detail) =
-    string.split.first(separator="\n", dab_ack_status())
+  let dab_state = dab_ack_health()
   let hls_state = hls_health()
   let status =
     if
@@ -49,7 +48,7 @@ def status_snapshot(radio_source, ~sources) =
       "down"
     elsif
       active_source == "fallback"
-      or list.mem(dab_state, ["degraded", "down"])
+      or list.mem(dab_state.status, ["degraded", "down"])
       or hls_state.status == "degraded"
     then
       "degraded"
@@ -66,8 +65,7 @@ def status_snapshot(radio_source, ~sources) =
     sources = source_states,
     outputs =
       {
-        dab =
-          {status = string.trim(dab_state), detail = string.trim(dab_detail)},
+        dab = dab_state,
         hls =
           {
             status = hls_state.status,
@@ -94,15 +92,25 @@ def register_http_endpoints(radio_source, ~sources) =
     )
   end
 
-  harbor.http.register(
-    port=STREAM_METADATA_PORT,
-    method="GET",
-    "/status",
-    fun (_, res) ->
-      begin
-        res.header("Cache-Control", "no-store")
-        res.json(compact=true, status_snapshot(radio_source, sources=sources))
-      end
+  # HTTP monitors and healthchecks alert on the status code: 503 when the
+  # radio source is down, 200 otherwise (degraded is still on air). HEAD is
+  # registered too because some monitors probe with it by default.
+  def status_handler(_, res) =
+    let snapshot = status_snapshot(radio_source, sources=sources)
+    res.header("Cache-Control", "no-store")
+    if snapshot.status == "down" then res.status_code(503) end
+    res.json(compact=true, snapshot)
+  end
+
+  list.iter(
+    fun (method) ->
+      harbor.http.register(
+        port=STREAM_METADATA_PORT,
+        method=method,
+        "/status",
+        status_handler
+      ),
+    ["GET", "HEAD"]
   )
   log(
     label="status",
