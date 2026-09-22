@@ -96,7 +96,9 @@ def create_studio_input(~id, ~port) =
                 let stats = srt.socket(raw_socket).bistats()
                 "peer=#{peer}, latency=#{stats.msRcvTsbPdDelay}ms, buffer=#{
                   stats.msRcvBuf
-                }ms, rtt=#{stats.msRTT}ms"
+                }ms, rtt=#{stats.msRTT}ms, dropped_total=#{
+                  stats.pktRcvDropTotal
+                }"
               end,
             studio.sockets()
           )
