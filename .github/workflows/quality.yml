@@ -106,6 +106,9 @@ jobs:
           docker run --rm -v "$PWD:/app" -w /app \
             "savonet/liquidsoap:${LIQUIDSOAP_VERSION}" \
             liquidsoap tests/test-icecast-status.liq
+          docker run --rm -v "$PWD:/app" -w /app \
+            "savonet/liquidsoap:${LIQUIDSOAP_VERSION}" \
+            liquidsoap tests/test-hls-status.liq
 
       - name: Set Lint Success
         id: lint_result

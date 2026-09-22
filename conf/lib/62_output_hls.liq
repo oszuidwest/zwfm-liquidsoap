@@ -14,51 +14,6 @@ let hls_main_playlist_name = "live.m3u8"
 
 let hls_enabled = HLS_BUNNY_STORAGE_ZONE != "" and HLS_BUNNY_ACCESS_KEY != ""
 
-# Local output and Bunny mirroring fail independently, so each keeps its own
-# error ("" means healthy) and recovering one cannot hide a failure in the other.
-let hls_local_error = ref("")
-let hls_mirror_error = ref("")
-
-# Set by any failed mirror call; the tick clears hls_mirror_error only after a
-# full pass with content had no failure.
-let hls_mirror_tick_failed = ref(false)
-
-def hls_mark_mirror_degraded(reason) =
-  hls_mirror_tick_failed := true
-  hls_mirror_error := reason
-  log(label="hls", reason, level=2)
-end
-
-def hls_health() =
-  def component(failure) =
-    if
-      not hls_enabled
-    then
-      {status = "disabled", detail = ""}
-    elsif
-      failure != ""
-    then
-      {status = "degraded", detail = failure}
-    else
-      {status = "ok", detail = ""}
-    end
-  end
-
-  let local_state = component(hls_local_error())
-  let mirror_state = component(hls_mirror_error())
-  let details =
-    list.filter(
-      fun (detail) -> detail != "",
-      [local_state.detail, mirror_state.detail]
-    )
-  component(
-    string.concat(
-      separator="; ",
-      details
-    )
-  ).{local = local_state, mirror = mirror_state}
-end
-
 let hls_endpoint_trimmed = string.trim(HLS_BUNNY_ENDPOINT)
 let hls_endpoint_without_https =
   string.residual(prefix="https://", hls_endpoint_trimmed)
@@ -71,6 +26,150 @@ let hls_endpoint_host =
 
 let hls_remote_dir_url =
   "https://#{hls_endpoint_host}/#{HLS_BUNNY_STORAGE_ZONE}/#{STATION_ID}/"
+
+# Local output and Bunny mirroring fail independently, so each keeps its own
+# error ("" means healthy) and recovering one cannot hide a failure in the other.
+let hls_local_error = ref("")
+let hls_mirror_error = ref("")
+
+# Runtime progress is observed by the mirror tick. Playlist content changes
+# prove that the local writer advances; a complete successful mirror pass proves
+# that the remote copy is current.
+let hls_local_playlist_count = ref(0)
+let hls_local_segment_count = ref(0)
+let hls_local_last_update_at = ref(0.0)
+let hls_local_playlist_fingerprint = ref("")
+let hls_mirror_last_sync_at = ref(0.0)
+let hls_mirror_synced_segments = ref(0)
+let hls_mirror_pending_segments = ref(0)
+let hls_mirror_synced_playlists = ref(0)
+let hls_mirror_pending_playlists = ref(0)
+
+# Allow several segment intervals for scheduler and upload jitter before a
+# writer or mirror that stopped making progress becomes degraded.
+let hls_stale_after_seconds = max(15.0, HLS_SEGMENT_DURATION * 4.0)
+
+# Set by any failed mirror call; the tick clears hls_mirror_error only after a
+# full pass with content had no failure.
+let hls_mirror_tick_failed = ref(false)
+
+def hls_mark_mirror_degraded(reason) =
+  hls_mirror_tick_failed := true
+  hls_mirror_error := reason
+  log(label="hls", reason, level=2)
+end
+
+def hls_progress_age(last_progress_at) =
+  if
+    last_progress_at <= 0.0
+  then
+    null
+  else
+    max(0.0, time() - last_progress_at)
+  end
+end
+
+def hls_progress_timestamp(last_progress_at) =
+  if last_progress_at <= 0.0 then null else last_progress_at end
+end
+
+def hls_progress_failure(label, explicit_failure, last_progress_at) =
+  let age = hls_progress_age(last_progress_at)
+  if
+    explicit_failure != ""
+  then
+    explicit_failure
+  elsif
+    null.defined(age) and null.get(age) > hls_stale_after_seconds
+  then
+    "#{label} has not advanced for #{int_of_float(null.get(age))}s"
+  else
+    ""
+  end
+end
+
+def hls_component_status(failure, last_progress_at) =
+  if
+    not hls_enabled
+  then
+    "disabled"
+  elsif
+    failure != ""
+  then
+    "degraded"
+  elsif
+    last_progress_at <= 0.0
+  then
+    "starting"
+  else
+    "ok"
+  end
+end
+
+def hls_optional_error(failure) =
+  if failure == "" then null else failure end
+end
+
+def hls_health() =
+  let local_last_update_at = hls_local_last_update_at()
+  let mirror_last_sync_at = hls_mirror_last_sync_at()
+  let local_failure =
+    hls_progress_failure(
+      "HLS local playlists",
+      hls_local_error(),
+      local_last_update_at
+    )
+  let mirror_failure =
+    hls_progress_failure(
+      "HLS mirror",
+      hls_mirror_error(),
+      mirror_last_sync_at
+    )
+  let local_status = hls_component_status(local_failure, local_last_update_at)
+  let mirror_status = hls_component_status(mirror_failure, mirror_last_sync_at)
+  let status =
+    if
+      not hls_enabled
+    then
+      "disabled"
+    elsif
+      local_status == "degraded" or mirror_status == "degraded"
+    then
+      "degraded"
+    elsif
+      local_status == "starting" or mirror_status == "starting"
+    then
+      "starting"
+    else
+      "ok"
+    end
+
+  {
+    status = status,
+    local =
+      {
+        status = local_status,
+        error = hls_optional_error(local_failure),
+        playlist_count = hls_local_playlist_count(),
+        segment_count = hls_local_segment_count(),
+        last_update_at = hls_progress_timestamp(local_last_update_at),
+        update_age_seconds = hls_progress_age(local_last_update_at)
+      },
+    mirror =
+      {
+        status = mirror_status,
+        error = hls_optional_error(mirror_failure),
+        host = hls_endpoint_host,
+        storage_zone = HLS_BUNNY_STORAGE_ZONE,
+        last_sync_at = hls_progress_timestamp(mirror_last_sync_at),
+        sync_age_seconds = hls_progress_age(mirror_last_sync_at),
+        synced_segments = hls_mirror_synced_segments(),
+        pending_segments = hls_mirror_pending_segments(),
+        synced_playlists = hls_mirror_synced_playlists(),
+        pending_playlists = hls_mirror_pending_playlists()
+      }
+  }
+end
 
 def hls_remote_url(remote_name) =
   "#{hls_remote_dir_url}#{remote_name}"
@@ -449,6 +548,57 @@ def hls_delete_stale_segments((synced_segments:ref), protected_segment_names) =
   )
 end
 
+def hls_update_local_progress(playlists, segment_files) =
+  let fingerprint =
+    string.concat(
+      separator="\n",
+      list.map(
+        fun (snapshot) -> "#{snapshot.name}\n#{snapshot.content}",
+        playlists
+      )
+    )
+  hls_local_playlist_count := list.length(playlists)
+  hls_local_segment_count := list.length(segment_files)
+  if
+    fingerprint != "" and fingerprint != hls_local_playlist_fingerprint()
+  then
+    hls_local_last_update_at := time()
+  end
+  hls_local_playlist_fingerprint := fingerprint
+end
+
+def hls_playlist_is_synced(snapshot, synced_playlists) =
+  let previous = list.assoc.nullable(snapshot.name, synced_playlists)
+  null.defined(previous) and null.get(previous) == snapshot.content
+end
+
+def hls_update_mirror_progress(
+  playlists,
+  local_segment_names,
+  (synced_segments:ref),
+  (synced_playlists:ref),
+  sync_ok
+) =
+  hls_mirror_synced_segments := list.length(synced_segments())
+  hls_mirror_pending_segments :=
+    list.length(
+      list.filter(
+        fun (name) -> not list.mem(name, synced_segments()),
+        local_segment_names
+      )
+    )
+  hls_mirror_synced_playlists := list.length(synced_playlists())
+  hls_mirror_pending_playlists :=
+    list.length(
+      list.filter(
+        fun (snapshot) ->
+          not hls_playlist_is_synced(snapshot, synced_playlists()),
+        playlists
+      )
+    )
+  if sync_ok then hls_mirror_last_sync_at := time() end
+end
+
 def hls_mirror_tick(
   (seeded:ref),
   (synced_segments:ref),
@@ -467,6 +617,8 @@ def hls_mirror_tick(
   let protected_segment_names =
     hls_union(local_segment_names, hls_snapshot_segment_names(playlists))
 
+  hls_update_local_progress(playlists, segment_files)
+
   hls_upload_segments(synced_segments, segment_files)
 
   let playlists_ok =
@@ -479,11 +631,16 @@ def hls_mirror_tick(
     hls_delete_stale_segments(synced_segments, protected_segment_names)
   end
 
-  if
-    not hls_mirror_tick_failed() and playlists_ok
-  then
-    hls_mirror_error := ""
-  end
+  let sync_ok = not hls_mirror_tick_failed() and playlists_ok
+  hls_update_mirror_progress(
+    playlists,
+    local_segment_names,
+    synced_segments,
+    synced_playlists,
+    sync_ok
+  )
+
+  if sync_ok then hls_mirror_error := "" end
 end
 
 # Timestamped segment names are never reused across restarts, so Bunny CDN
@@ -742,12 +899,22 @@ def output_hls_stream(audio_source) =
     fun (_) ->
       begin
         let health = hls_health()
+        let errors =
+          list.filter_map(
+            fun (reason) -> reason,
+            [health.local.error, health.mirror.error]
+          )
         if
-          health.detail == ""
+          list.is_empty(errors)
         then
           health.status
         else
-          "#{health.status}: #{health.detail}"
+          let reasons =
+            string.concat(
+              separator="; ",
+              errors
+            )
+          "#{health.status}: #{reasons}"
         end
       end
   )

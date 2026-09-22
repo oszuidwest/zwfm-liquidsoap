@@ -308,8 +308,13 @@ destination with its TCP state, ACK age, byte counters, send queue, unacknowledg
 segments, and retransmissions. DAB health uses only these structured fields;
 it does not duplicate them in human-readable `detail` fields. Unavailable
 metrics are `null`. `outputs.hls`
-separates the local writer and remote mirror health while retaining its combined
-`status` and `detail`.
+separates the local writer and remote mirror health. The local state reports
+playlist and segment counts plus the timestamp and age of the latest playlist
+update. The mirror state identifies the storage host and zone, reports its most
+recent successful sync, and counts synced and pending playlists and segments.
+The component becomes `degraded` when progress stops for several segment
+intervals. Its nullable `error` explains an active failure; there are no
+duplicated `detail` fields.
 
 Use the top-level `status` field for alerting. A switch to the emergency
 fallback, a disconnected Icecast output, or a degraded enabled DAB+/HLS output

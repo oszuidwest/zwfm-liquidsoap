@@ -38,9 +38,28 @@ end
 def hls_health() =
   {
     status = "disabled",
-    detail = "",
-    local = {status = "disabled", detail = ""},
-    mirror = {status = "disabled", detail = ""}
+    local =
+      {
+        status = "disabled",
+        error = null,
+        playlist_count = 0,
+        segment_count = 0,
+        last_update_at = null,
+        update_age_seconds = null
+      },
+    mirror =
+      {
+        status = "disabled",
+        error = null,
+        host = "storage.example.test",
+        storage_zone = "",
+        last_sync_at = null,
+        sync_age_seconds = null,
+        synced_segments = 0,
+        pending_segments = 0,
+        synced_playlists = 0,
+        pending_playlists = 0
+      }
   }
 end
 let studio_input_status_providers =
