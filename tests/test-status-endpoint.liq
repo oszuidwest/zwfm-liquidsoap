@@ -70,6 +70,12 @@ let studio_input_status_providers =
           name = "studio_a",
           ready = true,
           buffer_seconds = 1.03,
+          audio =
+            {
+              window_seconds = 0.5,
+              rms_dbfs = {left = -18.4, right = -17.9},
+              peak_dbfs = {left = -6.2, right = -5.8}
+            },
           srt =
             {
               connected = true,
@@ -111,6 +117,11 @@ radio_sink.on_start(
       assert(studio.name == "studio_a")
       assert(studio.ready)
       assert(studio.buffer_seconds == 1.03)
+      assert(studio.audio.window_seconds == 0.5)
+      assert(studio.audio.rms_dbfs.left == -18.4)
+      assert(studio.audio.rms_dbfs.right == -17.9)
+      assert(studio.audio.peak_dbfs.left == -6.2)
+      assert(studio.audio.peak_dbfs.right == -5.8)
       assert(studio.srt.connected)
       let connection = list.hd(studio.srt.connections)
       assert(null.get(connection.peer) == "192.0.2.1")
@@ -154,6 +165,8 @@ radio_sink.on_start(
           encoded_snapshot
         )
       )
+      assert(string.contains(substring="\"rms_dbfs\"", encoded_snapshot))
+      assert(string.contains(substring="\"peak_dbfs\"", encoded_snapshot))
       assert(string.contains(substring="\"icecast\"", encoded_snapshot))
       let encoded_public = json.stringify(compact=true, public_snapshot)
       assert(string.contains(substring="\"peer\":null", encoded_public))

@@ -4,6 +4,26 @@
 # Runtime health providers registered by each studio input, read by GET /status.
 let studio_input_status_providers = ref([])
 
+# Stereo RMS and peak meters use the same short window. Digital silence is
+# clamped to a practical floor so the JSON never contains negative infinity.
+let studio_level_window_seconds = 0.5
+let studio_level_floor_dbfs = -120.0
+
+def studio_amplitude_to_dbfs(amplitude) =
+  if
+    amplitude <= 0.000001
+  then
+    studio_level_floor_dbfs
+  else
+    let dbfs = 20.0 * log10(amplitude)
+    round(max(studio_level_floor_dbfs, min(0.0, dbfs)) * 10.0) / 10.0
+  end
+end
+
+def studio_level_or_null(connected, amplitude) =
+  if connected then studio_amplitude_to_dbfs(amplitude) else null end
+end
+
 # Factory function to create a studio SRT input
 # Returns a fallible, buffered source; output factories add their own mksafe()
 def create_studio_input(~id, ~port) =
@@ -26,8 +46,19 @@ def create_studio_input(~id, ~port) =
     fun () -> log_event(id, "disconnected")
   )
 
+  # Pass-through analyzers expose independent left/right levels without
+  # altering the audio sent to silence detection and the radio chain.
+  let rms_meter =
+    rms.stereo(id="rms_#{id}", duration=studio_level_window_seconds, studio)
+  let peak_meter =
+    peak.stereo(
+      id="peak_#{id}",
+      duration=studio_level_window_seconds,
+      rms_meter
+    )
+
   # Add silence detection with logging
-  let detected = with_silence_detection(id="detect_#{id}", studio)
+  let detected = with_silence_detection(id="detect_#{id}", peak_meter)
   detected.on_blank(
     synchronous=true,
     fun () ->
@@ -57,7 +88,7 @@ def create_studio_input(~id, ~port) =
       track_sensitive=false,
       [
         ({is_silence_detection_enabled()}, stripped),
-        ({not is_silence_detection_enabled()}, studio)
+        ({not is_silence_detection_enabled()}, peak_meter)
       ]
     )
 
@@ -102,13 +133,29 @@ def create_studio_input(~id, ~port) =
           end,
         studio.sockets()
       )
+    let connected = not list.is_empty(connections)
+    let (rms_left, rms_right) = rms_meter.rms()
+    let (peak_left, peak_right) = peak_meter.peak()
 
     {
       name = id,
       ready = source.is_ready(buffered),
       buffer_seconds = seconds_of_main(buffered.buffer_length()),
-      srt =
-        {connected = not list.is_empty(connections), connections = connections}
+      audio =
+        {
+          window_seconds = studio_level_window_seconds,
+          rms_dbfs =
+            {
+              left = studio_level_or_null(connected, rms_left),
+              right = studio_level_or_null(connected, rms_right)
+            },
+          peak_dbfs =
+            {
+              left = studio_level_or_null(connected, peak_left),
+              right = studio_level_or_null(connected, peak_right)
+            }
+        },
+      srt = {connected = connected, connections = connections}
     }
   end
   studio_input_status_providers :=
