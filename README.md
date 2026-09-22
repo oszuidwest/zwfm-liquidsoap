@@ -113,6 +113,22 @@ After the installation, edit the environment file `/opt/liquidsoap/.env`. This f
 
 Copy the applicable example file to `.env`. Then change the values for your station. The file `conf/lib/00_settings.liq` reads almost all variables. The station files contain only the DME configuration (for Rucphen and BredaNu).
 
+## Host Settings
+
+The installer configures these host settings:
+
+- Timezone and time synchronization
+- systemd journal size
+- CPU performance (optional)
+
+### CPU performance
+
+On a dedicated audio server, answer `y` when the installer asks about CPU performance. This sets the CPU governor to `performance` and reduces delays when a CPU leaves its low-power state. It also increases power use and heat.
+
+The installer writes `/etc/tmpfiles.d/cpu-performance.conf` to apply this setting after every reboot. It skips this step when CPU frequency scaling is not available, which is common on virtual machines.
+
+To check the setting, run `cat /sys/devices/system/cpu/cpufreq/policy*/scaling_governor`. Every line must show `performance`. To disable it, remove `/etc/tmpfiles.d/cpu-performance.conf` and reboot.
+
 ## Environment Variables Reference
 
 This table shows all environment variables in the system. You must set each variable that shows _(required)_. If you do not set one of these variables, Liquidsoap does not start. The DME variables are necessary only for Rucphen and BredaNu. A variable that shows _(none)_ is optional. Set it only if you use the related function.

@@ -4,10 +4,10 @@ set -euo pipefail
 BASH_FUNCTIONS_REF="main"
 FUNCTIONS_LIB_URL="https://raw.githubusercontent.com/oszuidwest/bash-functions/${BASH_FUNCTIONS_REF}/common-functions.sh"
 FUNCTIONS_LIB_PATH=$(mktemp)
-STEREO_TOOL_ZIP_PATH=$(mktemp)
-STEREO_TOOL_PLUGIN_TMP=$(mktemp)
+STEREOTOOL_ZIP_PATH=$(mktemp)
+STEREOTOOL_PLUGIN_TMP=$(mktemp)
 
-trap 'rm -f "${FUNCTIONS_LIB_PATH}" "${STEREO_TOOL_ZIP_PATH}" "${STEREO_TOOL_PLUGIN_TMP}"' EXIT
+trap 'rm -f "${FUNCTIONS_LIB_PATH}" "${STEREOTOOL_ZIP_PATH}" "${STEREOTOOL_PLUGIN_TMP}"' EXIT
 
 clear || true
 
@@ -32,6 +32,9 @@ GITHUB_BASE="https://raw.githubusercontent.com/oszuidwest/zwfm-liquidsoap/${GITH
 # Docker files
 DOCKER_COMPOSE_URL="${GITHUB_BASE}/docker-compose.yml"
 DOCKER_COMPOSE_PATH="${INSTALL_DIR}/docker-compose.yml"
+
+# Host CPU performance (tmpfiles.d, applied at every boot)
+CPU_PERFORMANCE_CONF_PATH="/etc/tmpfiles.d/cpu-performance.conf"
 
 # Liquidsoap configuration
 LIQUIDSOAP_CONFIG_URL_ZUIDWEST="${GITHUB_BASE}/conf/zuidwest.liq"
@@ -67,11 +70,10 @@ AUDIO_FALLBACK_URL="https://upload.wikimedia.org/wikipedia/commons/6/66/Aaron_Du
 AUDIO_FALLBACK_PATH="${INSTALL_DIR}/audio/fallback.ogg"
 
 # StereoTool configuration
-STEREO_TOOL_VERSION="1105"
-STEREO_TOOL_BASE_URL="https://download.thimeo.com"
-STEREO_TOOL_ZIP_URL="${STEREO_TOOL_BASE_URL}/Stereo_Tool_Generic_plugin_${STEREO_TOOL_VERSION}.zip"
-STEREO_TOOL_INSTALL_DIR="${INSTALL_DIR}/stereotool"
-
+STEREOTOOL_VERSION="1105"
+STEREOTOOL_BASE_URL="https://download.thimeo.com"
+STEREOTOOL_ZIP_URL="${STEREOTOOL_BASE_URL}/Stereo_Tool_Generic_plugin_${STEREOTOOL_VERSION}.zip"
+STEREOTOOL_INSTALL_DIR="${INSTALL_DIR}/stereotool"
 
 # General configuration
 TIMEZONE="Europe/Amsterdam"
@@ -98,7 +100,7 @@ set_time_sync
 set_journald_limits
 
 # Display a welcome banner
-cat << "EOF"
+cat <<'EOF'
  ______     _     ___          __       _     ______ __  __
 |___  /    (_)   | \ \        / /      | |   |  ____|  \/  |
    / /_   _ _  __| |\ \  /\  / /__  ___| |_  | |__  | \  / |
@@ -108,21 +110,38 @@ cat << "EOF"
 EOF
 echo -e "${GREEN}⎎ Liquidsoap and StereoTool Installation${NC}\n"
 
-if [ -f "${LIQUIDSOAP_ENV_PATH}" ] || [ -f "${DOCKER_COMPOSE_PATH}" ]; then
+if [[ -f "${LIQUIDSOAP_ENV_PATH}" || -f "${DOCKER_COMPOSE_PATH}" ]]; then
   echo -e "${YELLOW}Existing installation detected in ${INSTALL_DIR}. Managed files will be backed up before replacement.${NC}\n"
 fi
 
 prompt_user "STATION_CONFIG" "zuidwest" "Which station configuration would you like to use? (zuidwest/rucphen/bredanu)" "str"
 
 # Validate station configuration
-if [[ ! "$STATION_CONFIG" =~ ^(zuidwest|rucphen|bredanu)$ ]]; then
+if [[ ! "${STATION_CONFIG}" =~ ^(zuidwest|rucphen|bredanu)$ ]]; then
   echo -e "${RED}Error: Invalid station configuration. Must be 'zuidwest', 'rucphen', or 'bredanu'.${NC}"
   exit 1
 fi
 prompt_user "DO_UPDATES" "y" "Would you like to perform all OS updates? (y/n)" "y/n"
+prompt_user "SET_CPU_PERFORMANCE" "y" "Keep the CPU at maximum performance for real-time audio? (y/n)" "y/n"
 
-if [ "${DO_UPDATES}" == "y" ]; then
+if [[ "${DO_UPDATES}" == "y" ]]; then
   apt_update --silent
+fi
+
+# The performance governor also sets the energy preference and raises the
+# minimum frequency on Intel and AMD P-state drivers (AMD 6.13+ pins it to
+# the nominal frequency, not the boost maximum), so one sysfs write is enough.
+if [[ "${SET_CPU_PERFORMANCE}" == "y" ]]; then
+  echo -e "${BLUE}►► Configuring CPU performance...${NC}"
+  if ! _has_systemd || [[ ! -d /sys/devices/system/cpu/cpufreq/policy0 ]]; then
+    echo -e "${YELLOW}Skipping CPU performance: needs systemd and CPU frequency scaling (virtual machine?).${NC}"
+  else
+    cat > "${CPU_PERFORMANCE_CONF_PATH}" <<'EOF'
+# Keep every CPU core at maximum performance for real-time audio (written by zwfm-liquidsoap install.sh)
+w /sys/devices/system/cpu/cpufreq/policy*/scaling_governor - - - - performance
+EOF
+    systemd-tmpfiles --create "${CPU_PERFORMANCE_CONF_PATH}" || echo -e "${YELLOW}Could not apply the CPU performance configuration now; it is retried at boot.${NC}"
+  fi
 fi
 
 # Create required directories
@@ -135,10 +154,10 @@ done
 echo -e "${BLUE}►► Downloading configuration files...${NC}"
 
 # Set configuration URL based on user choice
-if [ "${STATION_CONFIG}" == "zuidwest" ]; then
+if [[ "${STATION_CONFIG}" == "zuidwest" ]]; then
   LIQUIDSOAP_CONFIG_URL="${LIQUIDSOAP_CONFIG_URL_ZUIDWEST}"
   LIQUIDSOAP_ENV_URL="${LIQUIDSOAP_ENV_URL_ZUIDWEST}"
-elif [ "${STATION_CONFIG}" == "rucphen" ]; then
+elif [[ "${STATION_CONFIG}" == "rucphen" ]]; then
   LIQUIDSOAP_CONFIG_URL="${LIQUIDSOAP_CONFIG_URL_RUCPHEN}"
   LIQUIDSOAP_ENV_URL="${LIQUIDSOAP_ENV_URL_RUCPHEN}"
 else
@@ -176,12 +195,11 @@ fi
 echo -e "${BLUE}►► Installing dependencies...${NC}"
 apt_install --silent unzip socat
 
-
 # Create installation directory
-mkdir -p "${STEREO_TOOL_INSTALL_DIR}"
+mkdir -p "${STEREOTOOL_INSTALL_DIR}"
 
 # Download and install StereoTool
-if ! file_download "${STEREO_TOOL_ZIP_URL}" "${STEREO_TOOL_ZIP_PATH}" "StereoTool"; then
+if ! file_download "${STEREOTOOL_ZIP_URL}" "${STEREOTOOL_ZIP_PATH}" "StereoTool"; then
   exit 1
 fi
 
@@ -189,10 +207,10 @@ fi
 # uses backslashes in member names, so ? is used as the path separator pattern.
 case "${OS_ARCH}" in
   amd64)
-    STEREO_TOOL_ARCHIVE_MEMBER="libStereoTool_${STEREO_TOOL_VERSION}?lib?Linux?IntelAMD?64?libStereoTool_intel64.so"
+    STEREOTOOL_ARCHIVE_MEMBER="libStereoTool_${STEREOTOOL_VERSION}?lib?Linux?IntelAMD?64?libStereoTool_intel64.so"
     ;;
   arm64)
-    STEREO_TOOL_ARCHIVE_MEMBER="libStereoTool_${STEREO_TOOL_VERSION}?lib?Linux?ARM?64?libStereoTool_noX11_arm64.so"
+    STEREOTOOL_ARCHIVE_MEMBER="libStereoTool_${STEREOTOOL_VERSION}?lib?Linux?ARM?64?libStereoTool_noX11_arm64.so"
     ;;
   *)
     echo -e "${RED}Unsupported architecture: ${OS_ARCH}${NC}"
@@ -200,32 +218,32 @@ case "${OS_ARCH}" in
     ;;
 esac
 
-if ! unzip -p "${STEREO_TOOL_ZIP_PATH}" "${STEREO_TOOL_ARCHIVE_MEMBER}" > "${STEREO_TOOL_PLUGIN_TMP}"; then
+if ! unzip -p "${STEREOTOOL_ZIP_PATH}" "${STEREOTOOL_ARCHIVE_MEMBER}" > "${STEREOTOOL_PLUGIN_TMP}"; then
   echo -e "${RED}Error: Unable to extract StereoTool library for ${OS_ARCH}.${NC}"
   exit 1
 fi
 
-if [ ! -s "${STEREO_TOOL_PLUGIN_TMP}" ]; then
+if [[ ! -s "${STEREOTOOL_PLUGIN_TMP}" ]]; then
   echo -e "${RED}Error: Extracted StereoTool library for ${OS_ARCH} is empty.${NC}"
   exit 1
 fi
 
-install -m 644 "${STEREO_TOOL_PLUGIN_TMP}" "${STEREO_TOOL_INSTALL_DIR}/st_plugin.so"
+install -m 644 "${STEREOTOOL_PLUGIN_TMP}" "${STEREOTOOL_INSTALL_DIR}/st_plugin.so"
 
 # Write StereoTool configuration
-STEREOTOOL_RC_PATH="${STEREO_TOOL_INSTALL_DIR}/.st_plugin.so.rc"
-if [ -f "${STEREOTOOL_RC_PATH}" ] && ! file_backup "${STEREOTOOL_RC_PATH}"; then
+STEREOTOOL_RC_PATH="${STEREOTOOL_INSTALL_DIR}/.st_plugin.so.rc"
+if [[ -f "${STEREOTOOL_RC_PATH}" ]] && ! file_backup "${STEREOTOOL_RC_PATH}"; then
   exit 1
 fi
-cat << EOL > "${STEREOTOOL_RC_PATH}"
+cat > "${STEREOTOOL_RC_PATH}" <<'EOF'
 [Stereo Tool Configuration]
 Enable web interface=1
 Whitelist=/0
-EOL
+EOF
 
 # Adjust ownership for the directories (the liquidsoap container runs as UID 100 and GID 101)
 echo -e "${BLUE}►► Setting ownership...${NC}"
-chown -R 100:101 "${STEREO_TOOL_INSTALL_DIR}"
+chown -R 100:101 "${STEREOTOOL_INSTALL_DIR}"
 chown -R 100:101 "${INSTALL_DIR}/socket"
 
 echo -e "${BLUE}►► Validating Docker Compose configuration...${NC}"
@@ -234,23 +252,24 @@ echo -e "${BLUE}►► Validating Docker Compose configuration...${NC}"
 echo -e "${GREEN}Installation completed successfully for ${STATION_CONFIG} configuration!${NC}"
 
 # Display usage instructions
-echo -e "\n${BLUE}►► How to run Liquidsoap:${NC}"
+echo
+echo -e "${BLUE}►► How to run Liquidsoap:${NC}"
 echo -e "${YELLOW}Important: Before starting, make sure to edit the .env file with your configuration:${NC}"
 echo -e "  ${BLUE}nano ${LIQUIDSOAP_ENV_PATH}${NC}"
-echo -e ""
+echo
 echo -e "${YELLOW}To start Liquidsoap:${NC}"
 echo -e "  ${BLUE}cd ${INSTALL_DIR}${NC}"
 echo -e "  ${BLUE}docker compose up -d${NC}"
-echo -e ""
-echo -e "${YELLOW}To access StereoTool GUI (if STEREOTOOL_LICENSE_KEY is set):${NC}"
-echo -e "  Open http://localhost:8080 in your browser"
-echo -e ""
+echo
+echo -e "${YELLOW}To access StereoTool GUI (if STEREOTOOL_LICENSE is set):${NC}"
+echo "  Open http://localhost:8080 in your browser"
+echo
 echo -e "${YELLOW}To view logs:${NC}"
 echo -e "  ${BLUE}docker compose logs -f${NC}"
-echo -e ""
+echo
 echo -e "${YELLOW}To stop Liquidsoap:${NC}"
 echo -e "  ${BLUE}docker compose down${NC}"
-echo -e ""
+echo
 echo -e "${YELLOW}To control silence detection:${NC}"
 echo -e "  ${BLUE}socat - UNIX-CONNECT:${INSTALL_DIR}/socket/liquidsoap.sock${NC}"
 echo -e "  Enable:  ${BLUE}silence.enable${NC}"
