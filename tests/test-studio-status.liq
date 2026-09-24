@@ -47,7 +47,7 @@ assert(not null.defined(without_statistics.latency_ms))
 assert(not null.defined(without_statistics.dropped_packets_total))
 assert(
   null.get(without_statistics.statistics_error) ==
-    "socket closed"
+    "statistics unavailable"
 )
 
 shutdown()

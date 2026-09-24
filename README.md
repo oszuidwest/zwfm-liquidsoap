@@ -307,11 +307,12 @@ Send the same `Authorization: Bearer <token>` header configured for
 
 `outputs.icecast` has an aggregate status and a `streams` array. Each stream
 identifies its host, port, and mount and reports whether it is started and
-connected. `outputs.dab.destinations` contains one object per EDI destination
-with its TCP state, ACK age, byte counters, send queue, unacknowledged segments,
-and retransmissions; unavailable metrics are `null`. Its nullable `error`
-explains why a degraded or down destination is unhealthy; `outputs.dab.error`
-explains failures that no destination covers, such as a crashed encoder or
+connected. Authorized responses include one object per EDI destination in
+`outputs.dab.destinations`; without the matching bearer token, this is `[]` even
+when destinations are configured. Each object reports its TCP state, ACK age,
+byte counters, send queue, unacknowledged segments, and retransmissions;
+unavailable metrics are `null`. Its nullable `error` explains an unhealthy
+destination; `outputs.dab.error` covers failures such as a crashed encoder or
 monitor. `outputs.hls` separates
 the local writer and remote mirror health. The local state reports playlist and
 segment counts plus the age of the latest playlist update. The mirror state

@@ -46,7 +46,7 @@ def studio_srt_connection(~input_id, peer, read_stats) =
       "Unable to read SRT statistics for #{input_id}: #{error.message(err)}",
       level=2
     )
-    {...unavailable, statistics_error = error.message(err)}
+    {...unavailable, statistics_error = "statistics unavailable"}
   end
 end
 
@@ -118,7 +118,7 @@ def create_studio_input(~id, ~port) =
       track_sensitive=false,
       [
         ({is_silence_detection_enabled()}, stripped),
-        ({not is_silence_detection_enabled()}, studio)
+        ({not is_silence_detection_enabled()}, peak_meter)
       ]
     )
 
@@ -193,9 +193,7 @@ def create_studio_input(~id, ~port) =
                 if
                   null.defined(connection.statistics_error)
                 then
-                  "peer=#{connection.peer}, statistics unavailable: #{
-                    null.get(connection.statistics_error)
-                  }"
+                  "peer=#{connection.peer}, statistics unavailable"
                 else
                   "peer=#{connection.peer}, latency=#{
                     connection.latency_ms
