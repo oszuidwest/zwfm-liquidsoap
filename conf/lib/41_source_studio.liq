@@ -9,13 +9,17 @@ let studio_input_status_providers = ref([])
 let studio_level_window_seconds = 0.5
 let studio_level_floor_dbfs = -120.0
 
-def studio_amplitude_to_dbfs(amplitude) =
-  round(max(studio_level_floor_dbfs, min(0.0, dB_of_lin(amplitude))) * 10.0) /
-    10.0
-end
-
-def studio_level_or_null(connected, amplitude) =
-  if connected then studio_amplitude_to_dbfs(amplitude) else null end
+def studio_level_dbfs(connected, amplitude) =
+  if
+    connected
+  then
+    float.truncate(
+      digits=1,
+      max(studio_level_floor_dbfs, min(0.0, dB_of_lin(amplitude)))
+    )
+  else
+    null
+  end
 end
 
 # Factory function to create a studio SRT input
@@ -140,13 +144,13 @@ def create_studio_input(~id, ~port) =
           window_seconds = studio_level_window_seconds,
           rms_dbfs =
             {
-              left = studio_level_or_null(connected, rms_left),
-              right = studio_level_or_null(connected, rms_right)
+              left = studio_level_dbfs(connected, rms_left),
+              right = studio_level_dbfs(connected, rms_right)
             },
           peak_dbfs =
             {
-              left = studio_level_or_null(connected, peak_left),
-              right = studio_level_or_null(connected, peak_right)
+              left = studio_level_dbfs(connected, peak_left),
+              right = studio_level_dbfs(connected, peak_right)
             }
         },
       srt = {connected = connected, connections = connections}

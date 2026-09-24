@@ -34,15 +34,21 @@ let hls_mirror_error = ref("")
 
 # Local progress comes from the writer's own playlist updates; mirror progress
 # from the tick, where a complete successful pass proves the remote copy is
-# current.
-let hls_local_playlist_count = ref(0)
-let hls_local_segment_count = ref(0)
-let hls_local_last_update_at = ref(0.0)
-let hls_mirror_last_sync_at = ref(0.0)
-let hls_mirror_synced_segments = ref(0)
-let hls_mirror_pending_segments = ref(0)
-let hls_mirror_synced_playlists = ref(0)
-let hls_mirror_pending_playlists = ref(0)
+# current. Both stay null until the first progress.
+let hls_local_last_update_at = ref(null)
+let hls_mirror_last_sync_at = ref(null)
+
+# The last mirror tick's local files and mirror state; GET /status derives its
+# counts from it.
+let hls_mirror_state =
+  ref(
+    {
+      playlists = [],
+      segment_names = [],
+      synced_segments = [],
+      synced_playlists = []
+    }
+  )
 
 # Allow several segment intervals for scheduler and upload jitter before a
 # writer or mirror that stopped making progress becomes degraded.
@@ -58,14 +64,10 @@ def hls_mark_mirror_degraded(reason) =
   log(label="hls", reason, level=2)
 end
 
-def hls_progress_timestamp(last_progress_at) =
-  if last_progress_at <= 0.0 then null else last_progress_at end
-end
-
 def hls_progress_age(last_progress_at) =
   null.map(
     fun (progress_at) -> max(0.0, time() - progress_at),
-    hls_progress_timestamp(last_progress_at)
+    last_progress_at
   )
 end
 
@@ -103,6 +105,7 @@ end
 def hls_health() =
   let local_last_update_at = hls_local_last_update_at()
   let mirror_last_sync_at = hls_mirror_last_sync_at()
+  let mirror_state = hls_mirror_state()
   let local =
     hls_component_health(
       "HLS local playlists",
@@ -138,9 +141,9 @@ def hls_health() =
     local =
       {
         ...local,
-        playlist_count = hls_local_playlist_count(),
-        segment_count = hls_local_segment_count(),
-        last_update_at = hls_progress_timestamp(local_last_update_at),
+        playlist_count = list.length(mirror_state.playlists),
+        segment_count = list.length(mirror_state.segment_names),
+        last_update_at = local_last_update_at,
         update_age_seconds = hls_progress_age(local_last_update_at)
       },
     mirror =
@@ -148,12 +151,28 @@ def hls_health() =
         ...mirror,
         host = hls_endpoint_host,
         storage_zone = HLS_BUNNY_STORAGE_ZONE,
-        last_sync_at = hls_progress_timestamp(mirror_last_sync_at),
+        last_sync_at = mirror_last_sync_at,
         sync_age_seconds = hls_progress_age(mirror_last_sync_at),
-        synced_segments = hls_mirror_synced_segments(),
-        pending_segments = hls_mirror_pending_segments(),
-        synced_playlists = hls_mirror_synced_playlists(),
-        pending_playlists = hls_mirror_pending_playlists()
+        synced_segments = list.length(mirror_state.synced_segments),
+        pending_segments =
+          list.length(
+            list.filter(
+              fun (name) -> not list.mem(name, mirror_state.synced_segments),
+              mirror_state.segment_names
+            )
+          ),
+        synced_playlists = list.length(mirror_state.synced_playlists),
+        pending_playlists =
+          list.length(
+            list.filter(
+              fun (snapshot) ->
+                not list.mem(
+                  (snapshot.name, snapshot.content),
+                  mirror_state.synced_playlists
+                ),
+              mirror_state.playlists
+            )
+          )
       }
   }
 end
@@ -418,9 +437,7 @@ def hls_seed_remote_segments((seeded:ref), (synced_segments:ref)) =
   end
 end
 
-# Returns the number of local segments that are still not mirrored.
 def hls_upload_segments((synced_segments:ref), segment_files) =
-  let pending = ref(0)
   list.iter(
     fun (local_path) ->
       begin
@@ -432,14 +449,11 @@ def hls_upload_segments((synced_segments:ref), segment_files) =
             hls_put_file(local_path)
           then
             synced_segments.set(hls_add_unique(remote_name, synced_segments()))
-          else
-            pending := pending() + 1
           end
         end
       end,
     segment_files
   )
-  pending()
 end
 
 def hls_required_segments_ready(snapshot, (synced_segments:ref)) =
@@ -448,11 +462,6 @@ def hls_required_segments_ready(snapshot, (synced_segments:ref)) =
     fun (segment_name) -> list.mem(segment_name, synced_segments()),
     segment_names
   )
-end
-
-def hls_playlist_is_synced(snapshot, synced_playlists) =
-  let previous = list.assoc.nullable(snapshot.name, synced_playlists)
-  null.defined(previous) and null.get(previous) == snapshot.content
 end
 
 def hls_upload_playlist_group(
@@ -465,7 +474,7 @@ def hls_upload_playlist_group(
     fun (snapshot) ->
       begin
         if
-          not hls_playlist_is_synced(snapshot, synced_playlists())
+          not list.mem((snapshot.name, snapshot.content), synced_playlists())
         then
           if
             hls_required_segments_ready(snapshot, synced_segments)
@@ -554,27 +563,6 @@ def hls_delete_stale_segments((synced_segments:ref), protected_segment_names) =
   )
 end
 
-def hls_update_mirror_progress(
-  playlists,
-  pending_segments,
-  synced_segments,
-  synced_playlists,
-  sync_ok
-) =
-  hls_mirror_synced_segments := list.length(synced_segments)
-  hls_mirror_pending_segments := pending_segments
-  hls_mirror_synced_playlists := list.length(synced_playlists)
-  hls_mirror_pending_playlists :=
-    list.length(
-      list.filter(
-        fun (snapshot) ->
-          not hls_playlist_is_synced(snapshot, synced_playlists),
-        playlists
-      )
-    )
-  if sync_ok then hls_mirror_last_sync_at := time() end
-end
-
 def hls_mirror_tick(
   (seeded:ref),
   (synced_segments:ref),
@@ -593,10 +581,7 @@ def hls_mirror_tick(
   let protected_segment_names =
     hls_union(local_segment_names, hls_snapshot_segment_names(playlists))
 
-  hls_local_playlist_count := list.length(playlists)
-  hls_local_segment_count := list.length(segment_files)
-
-  let pending_segments = hls_upload_segments(synced_segments, segment_files)
+  hls_upload_segments(synced_segments, segment_files)
 
   let playlists_ok =
     not list.is_empty(playlists)
@@ -608,16 +593,20 @@ def hls_mirror_tick(
     hls_delete_stale_segments(synced_segments, protected_segment_names)
   end
 
-  let sync_ok = not hls_mirror_tick_failed() and playlists_ok
-  hls_update_mirror_progress(
-    playlists,
-    pending_segments,
-    synced_segments(),
-    synced_playlists(),
-    sync_ok
-  )
+  hls_mirror_state :=
+    {
+      playlists = playlists,
+      segment_names = local_segment_names,
+      synced_segments = synced_segments(),
+      synced_playlists = synced_playlists()
+    }
 
-  if sync_ok then hls_mirror_error := "" end
+  if
+    not hls_mirror_tick_failed() and playlists_ok
+  then
+    hls_mirror_last_sync_at := time()
+    hls_mirror_error := ""
+  end
 end
 
 # Timestamped segment names are never reused across restarts, so Bunny CDN

@@ -32,19 +32,23 @@ let synced_playlists =
     ("live.m3u8", "#EXTM3U\naac_96.m3u8")
   ]
 
-# The writer's file events stamp local progress; the mirror tick records sync.
+# The writer's file events stamp local progress; the mirror tick records its
+# state and, after a clean pass, the sync time.
 hls_local_last_update_at := time()
-hls_update_mirror_progress(
-  playlists,
-  1,
-  ["aac_96_1.ts"],
-  synced_playlists,
-  true
-)
+hls_mirror_state :=
+  {
+    playlists = playlists,
+    segment_names = ["aac_96_1.ts", "aac_96_2.ts"],
+    synced_segments = ["aac_96_1.ts"],
+    synced_playlists = synced_playlists
+  }
+hls_mirror_last_sync_at := time()
 
 let healthy = hls_health()
 assert(healthy.status == "ok")
 assert(healthy.local.status == "ok")
+assert(healthy.local.playlist_count == 2)
+assert(healthy.local.segment_count == 2)
 assert(null.defined(healthy.local.last_update_at))
 assert(null.get(healthy.local.update_age_seconds) < 1.0)
 assert(not null.defined(healthy.local.error))
@@ -61,15 +65,14 @@ assert(not null.defined(healthy.mirror.error))
 let encoded = json.stringify(compact=true, healthy)
 assert(string.contains(substring="\"error\":null", encoded))
 assert(string.contains(substring="\"pending_segments\":1", encoded))
-assert(not string.contains(substring="\"detail\"", encoded))
 
 # Only created or updated playlists count as writer progress.
-hls_local_last_update_at := 0.0
+hls_local_last_update_at := null
 hls_track_local_progress({path = "/hls/aac_96_1.ts", state = "created"})
 hls_track_local_progress({path = "/hls/aac_96.m3u8", state = "deleted"})
-assert(hls_local_last_update_at() == 0.0)
+assert(not null.defined(hls_local_last_update_at()))
 hls_track_local_progress({path = "/hls/aac_96.m3u8", state = "updated"})
-assert(hls_local_last_update_at() > 0.0)
+assert(null.defined(hls_local_last_update_at()))
 
 hls_local_last_update_at := time() - hls_stale_after_seconds - 1.0
 let stale = hls_health()

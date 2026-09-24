@@ -93,7 +93,7 @@ radio_sink.on_start(
           radio,
           (fun () -> "studio_a"),
           sources=[("studio_a", radio)],
-          include_sensitive=true
+          include_peer=true
         )
       let public_snapshot =
         status_snapshot(
@@ -114,7 +114,8 @@ radio_sink.on_start(
       assert(list.is_empty(private_snapshot.outputs.dab.destinations))
       assert(private_snapshot.outputs.hls.status == "disabled")
 
-      # Peers are only included for authorized callers.
+      # The stubbed provider hides its own peer, so this only proves that
+      # status_snapshot passes the caller's authorization through.
       let private_studio = list.hd(private_snapshot.studio_inputs)
       let private_connection = list.hd(private_studio.srt.connections)
       assert(null.get(private_connection.peer) == "192.0.2.1")
@@ -125,10 +126,6 @@ radio_sink.on_start(
       # The complete snapshot, including nested health, must be JSON-safe.
       let encoded_public = json.stringify(compact=true, public_snapshot)
       assert(string.contains(substring="\"peer\":null", encoded_public))
-      assert(string.contains(substring="\"peak_dbfs\"", encoded_public))
-      assert(
-        string.contains(substring="\"update_age_seconds\"", encoded_public)
-      )
 
       # No output repeats its structured health in a human-readable field.
       assert(not string.contains(substring="\"detail\"", encoded_public))

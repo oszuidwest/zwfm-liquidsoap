@@ -314,8 +314,7 @@ mirror state identifies the storage host and zone, reports its most recent
 successful sync, and counts synced and pending playlists and segments. Each HLS
 component is `starting` until its first progress and becomes `degraded` when
 progress stops for several segment intervals; its nullable `error` explains an
-active failure. No output repeats its structured health in a human-readable
-`detail` field.
+active failure.
 
 Use the top-level `status` field for alerting. A switch to the emergency
 fallback, a disconnected Icecast output, or a degraded enabled DAB+/HLS output

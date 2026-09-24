@@ -84,14 +84,14 @@ def dab_edi_args(destinations) =
   list.map(fun (destination) -> "--edi=#{destination}", destinations)
 end
 
-# Parse the monitor's tab-separated destination records. Empty metric fields
-# become JSON null values. The monitor's final human-readable field is used by
-# the dab.status server command, but is not included in the structured record.
+# Empty metric fields become JSON null values.
 def dab_optional_int(value) =
   if value == "" then null else int_of_string(value) end
 end
 
-# Returns the line's human-readable detail and its structured record, if any.
+# Parses one tab-separated destination record from the monitor. Returns the
+# human-readable detail for the dab.status server command and the structured
+# record for GET /status; lines that are not records have no structured part.
 def dab_parse_ack_line(line) =
   let fields = string.split(separator="\t", line)
   if

@@ -9,11 +9,10 @@ let SILENCE_THRESHOLD = -40.0
 %include "../conf/lib/30_silence.liq"
 %include "../conf/lib/41_source_studio.liq"
 
-assert(studio_amplitude_to_dbfs(1.0) == 0.0)
-assert(studio_amplitude_to_dbfs(0.1) == -20.0)
-assert(studio_amplitude_to_dbfs(0.0) == studio_level_floor_dbfs)
-assert(studio_amplitude_to_dbfs(0.0000001) == studio_level_floor_dbfs)
-assert(null.get(studio_level_or_null(true, 0.1)) == -20.0)
-assert(not null.defined(studio_level_or_null(false, 1.0)))
+assert(null.get(studio_level_dbfs(true, 1.0)) == 0.0)
+assert(null.get(studio_level_dbfs(true, 0.1)) == -20.0)
+assert(null.get(studio_level_dbfs(true, 0.0)) == studio_level_floor_dbfs)
+assert(null.get(studio_level_dbfs(true, 0.0000001)) == studio_level_floor_dbfs)
+assert(not null.defined(studio_level_dbfs(false, 1.0)))
 
 shutdown()
