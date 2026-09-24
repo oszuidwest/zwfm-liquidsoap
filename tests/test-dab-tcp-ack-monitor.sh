@@ -62,7 +62,7 @@ assert_status()
   fi
 }
 
-# Compare the first record after rendering tabs as pipes.
+# Compare the first record with tabs rendered as pipes.
 assert_record()
 {
   expected=$1

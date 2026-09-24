@@ -1,5 +1,4 @@
-# Runtime state for silence detection and source forcing, plus shared output
-# status classification.
+# Runtime controls and shared output-health classification.
 
 # Enabled by default; server commands can change it at runtime.
 let silence_detection_enabled = ref(true)
@@ -9,7 +8,7 @@ def is_silence_detection_enabled() =
   silence_detection_enabled()
 end
 
-# Update silence detection and log state changes.
+# Log only actual silence-detection changes.
 def set_silence_detection(enabled) =
   if
     enabled != silence_detection_enabled()
@@ -22,7 +21,7 @@ def set_silence_detection(enabled) =
   end
 end
 
-# Empty means automatic fallback; any other value names the forced source.
+# Empty selects automatic fallback; otherwise the value is a source id.
 let forced_source_name = ref("")
 
 # Read the forced source name.
@@ -63,7 +62,7 @@ def set_forced_source(name) =
   end
 end
 
-# Every other output status degrades GET /status.
+# These states do not degrade aggregate health.
 def status_healthy(status) =
   list.mem(status, ["ok", "starting", "unmonitored", "disabled"])
 end

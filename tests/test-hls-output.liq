@@ -18,9 +18,7 @@ let HLS_SEGMENTS_OVERHEAD = 1
 
 output_hls_stream(sine())
 
-# Tasks start after loading. An exception stops the polling task for good, so a
-# separate timeout fails the test. It only prints the last recorded health, so
-# nothing can block its exit.
+# A separate timeout catches a crashed polling task and reports its last health.
 let last_health =
   ref(
     "no health recorded"

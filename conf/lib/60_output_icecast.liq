@@ -1,6 +1,6 @@
-# Icecast outputs with isolated clocks and runtime health.
+# Icecast outputs: clock isolation and runtime health.
 
-# Health providers registered by each Icecast output.
+# GET /status providers, registered once per Icecast output.
 let icecast_output_health_providers = ref([])
 
 # Create one independently clocked Icecast output.
@@ -15,7 +15,7 @@ def output_icecast_stream(
   ~icecast_password=null,
   ~stream_name=null
 ) =
-  # Resolve optional overrides against station defaults.
+  # Resolve null overrides from station defaults.
   let actual_host = icecast_host ?? ICECAST_HOST
   let actual_port = icecast_port ?? ICECAST_PORT
   let actual_user = icecast_user ?? "source"

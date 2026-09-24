@@ -13,7 +13,7 @@ ACK_WARN_SECONDS=5
 ACK_DOWN_SECONDS=15
 STARTUP_GRACE_SECONDS=10
 
-# Literal space, tab and newline values.
+# POSIX-sh whitespace literals.
 wsp=' 	'
 tab='	'
 nl='

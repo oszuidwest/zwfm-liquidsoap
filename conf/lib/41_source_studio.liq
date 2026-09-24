@@ -1,6 +1,6 @@
-# Studio SRT inputs with silence detection and runtime health.
+# Studio SRT inputs: silence detection and runtime health.
 
-# Health providers registered by each studio input.
+# GET /status providers, registered once per studio input.
 let studio_input_status_providers = ref([])
 
 # Clamp digital silence so status JSON stays finite.
@@ -20,7 +20,7 @@ def studio_level_dbfs(connected, amplitude) =
   end
 end
 
-# Failed statistics reads preserve connectivity and return null metrics.
+# Statistics failures preserve the connection and null only its metrics.
 def studio_srt_connection(~input_id, peer, read_stats) =
   let unavailable =
     {
@@ -60,7 +60,7 @@ end
 
 # Returns a fallible buffered source; output factories make it safe.
 def create_studio_input(~id, ~port) =
-  # Create an encrypted SRT listener.
+  # Require encryption at the SRT listener.
   let studio =
     input.srt(
       id=id,
@@ -136,7 +136,7 @@ def create_studio_input(~id, ~port) =
     )
   output.dummy(id="drain_#{id}", fallible=true, register_telnet=false, buffered)
 
-  # Only authorized status requests expose peer addresses.
+  # Public HTTP snapshots redact peers; local server commands include them.
   def status(~include_peer) =
     let sockets = studio.sockets()
     let connections =
@@ -169,7 +169,7 @@ def create_studio_input(~id, ~port) =
   studio_input_status_providers :=
     list.append(studio_input_status_providers(), [status])
 
-  # Expose buffer readiness for clock-drift diagnostics.
+  # Surface buffer readiness for clock-drift diagnostics.
   server.register(
     description="Show readiness and buffered seconds for #{id}",
     "#{id}.buffer",

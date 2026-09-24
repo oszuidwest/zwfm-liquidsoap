@@ -100,8 +100,7 @@ def register_http_endpoints(radio_source, active_source, ~sources) =
     )
   end
 
-  # Degraded stays on air (200); only down returns 503. HEAD is registered
-  # because some monitors probe with it by default.
+  # Degraded is on air (200); only down is 503. Register HEAD for probes.
   def status_handler(req, res) =
     let snapshot =
       status_snapshot(

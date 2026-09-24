@@ -1,4 +1,4 @@
-# Local HLS output mirrored to Bunny Edge Storage.
+# HLS writes locally and mirrors to Bunny Edge Storage.
 # The isolated clock contains filesystem failures; a watchdog replaces detached
 # outputs. Do not add persist_at: writing state while a failed output detaches
 # re-raises on the dead clock thread and stops the entire process.
@@ -234,9 +234,8 @@ def hls_local_segment_files() =
   hls_local_files(hls_is_segment_name)
 end
 
-# Read HLS_DIR once so a slow mirror cannot freeze local counts. A missing
-# directory degrades local health. file.ls errors cannot be caught in 2.4.5, so
-# check the directory first.
+# Snapshot counts outside mirror work. Guard file.ls because Liquidsoap 2.4.5
+# cannot catch its missing-directory errors.
 def hls_local_file_counts() =
   if
     not hls_enabled
@@ -620,7 +619,7 @@ def hls_segment_name(segment_metadata) =
   }"
 end
 
-# Backoff for recreating a degraded HLS output.
+# Exponential restart backoff.
 let hls_retry_delay_initial = 5.0
 let hls_retry_delay_max = 300.0
 let hls_backoff_reset_seconds = 120.0
@@ -636,7 +635,7 @@ def hls_dir_writable() =
   end
 end
 
-# A new timeline makes prior files stale; the mirror removes them remotely.
+# A fresh timeline makes old local output disposable; the mirror prunes segments.
 def hls_remove_stale_local_files() =
   def is_stale(name) =
     r/^liq.*tmp$/.test(name) or hls_is_sync_file_name(name)
@@ -757,7 +756,7 @@ def output_hls_stream(audio_source) =
       then
         hls_remove_stale_local_files()
 
-        # No persist_at (see header); segment names are never reused.
+        # Omit persist_at to preserve clock-error containment (see header).
         let hls_output =
           output.file.hls(
             id="hls",
@@ -812,7 +811,7 @@ def output_hls_stream(audio_source) =
         and hls_retry_delay() != hls_retry_delay_initial
         and time() - hls_retry_at() > hls_backoff_reset_seconds
       then
-        # Reset backoff after a stable period.
+        # Restore fast retries after sustained health.
         hls_retry_delay := hls_retry_delay_initial
       end
     end

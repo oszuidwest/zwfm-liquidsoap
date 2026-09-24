@@ -19,10 +19,10 @@ then
   )
 end
 
-# Status: disabled, unmonitored, starting, ok, degraded or down.
+# Public states: disabled, unmonitored, starting, ok, degraded or down.
 let dab_ack_status = ref({status = "disabled", destinations = [], error = null})
 
-# Full context for dab.status; GET /status keeps only uncovered failures.
+# dab.status keeps full detail; GET /status keeps only unmatched failures.
 let dab_ack_detail =
   ref(
     "DAB+ output is disabled"
@@ -46,7 +46,7 @@ def dab_set_ack_status(status, detail, ~destinations=[]) =
   end
   dab_ack_detail := detail
 
-  # The aggregate error covers failures without a destination record.
+  # Keep destination errors nested; aggregate only unmatched failures.
   let aggregate_error =
     if
       status_healthy(status) or not list.is_empty(destinations)
@@ -157,7 +157,7 @@ def dab_parse_ack_line(line) =
   end
 end
 
-# Do not trim: that would drop the last record's empty trailing error field.
+# Preserve a connected final record's empty error field.
 def dab_parse_ack_monitor(monitor_output) =
   let lines =
     list.filter(
