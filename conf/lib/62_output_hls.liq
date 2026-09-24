@@ -73,8 +73,7 @@ end
 
 # An explicit failure wins over a stall; a component without any progress yet
 # is still starting.
-def hls_component_health(label, failure, last_progress_at) =
-  let age = hls_progress_age(last_progress_at)
+def hls_component_health(label, failure, age) =
   let failure =
     if
       failure == "" and (age ?? 0.0) > hls_stale_after_seconds
@@ -103,20 +102,20 @@ def hls_component_health(label, failure, last_progress_at) =
 end
 
 def hls_health() =
-  let local_last_update_at = hls_local_last_update_at()
-  let mirror_last_sync_at = hls_mirror_last_sync_at()
+  let local_age = hls_progress_age(hls_local_last_update_at())
+  let mirror_age = hls_progress_age(hls_mirror_last_sync_at())
   let mirror_state = hls_mirror_state()
   let local =
     hls_component_health(
       "HLS local playlists",
       hls_local_error(),
-      local_last_update_at
+      local_age
     )
   let mirror =
     hls_component_health(
       "HLS mirror",
       hls_mirror_error(),
-      mirror_last_sync_at
+      mirror_age
     )
   let statuses = [local.status, mirror.status]
   let status =
@@ -143,17 +142,14 @@ def hls_health() =
         ...local,
         playlist_count = list.length(mirror_state.playlists),
         segment_count = list.length(mirror_state.segment_names),
-        last_update_at = local_last_update_at,
-        update_age_seconds = hls_progress_age(local_last_update_at)
+        update_age_seconds = local_age
       },
     mirror =
       {
         ...mirror,
         host = hls_endpoint_host,
         storage_zone = HLS_BUNNY_STORAGE_ZONE,
-        last_sync_at = mirror_last_sync_at,
-        sync_age_seconds = hls_progress_age(mirror_last_sync_at),
-        synced_segments = list.length(mirror_state.synced_segments),
+        sync_age_seconds = mirror_age,
         pending_segments =
           list.length(
             list.filter(
@@ -161,7 +157,6 @@ def hls_health() =
               mirror_state.segment_names
             )
           ),
-        synced_playlists = list.length(mirror_state.synced_playlists),
         pending_playlists =
           list.length(
             list.filter(

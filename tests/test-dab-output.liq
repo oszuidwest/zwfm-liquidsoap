@@ -34,15 +34,15 @@ end
 assert_invalid_destinations("tcp://one.example:9001,,tcp://two.example:9002")
 assert_invalid_destinations("tcp://one.example:9001,")
 
+# The connected record comes last, so its empty reason field ends the output.
 let ack_snapshot =
   dab_parse_ack_monitor(
-    "degraded\ntcp://192.0.2.10:9171\tok\tESTAB\t0\t100\t101\t1745\t1\t0\tTCP \
-     ESTAB, ack_age=0s\ntcp://192.0.2.20:9175\tdown\t\t\t\t\t\t\t\tno AudioEnc \
-     TCP socket"
+    "degraded\ntcp://192.0.2.20:9175\tdown\t\t\t\t\t\t\t\tno AudioEnc TCP \
+     socket\ntcp://192.0.2.10:9171\tok\tESTAB\t0\t100\t101\t1745\t1\t0\t\n"
   )
 assert(ack_snapshot.status == "degraded")
 assert(list.length(ack_snapshot.destinations) == 2)
-let healthy_destination = list.nth(ack_snapshot.destinations, 0)
+let healthy_destination = list.nth(ack_snapshot.destinations, 1)
 assert(healthy_destination.destination == "tcp://192.0.2.10:9171")
 assert(healthy_destination.status == "ok")
 assert(healthy_destination.tcp_state == "ESTAB")
@@ -52,12 +52,19 @@ assert(null.get(healthy_destination.bytes_acked) == 101)
 assert(null.get(healthy_destination.send_queue_bytes) == 1745)
 assert(null.get(healthy_destination.unacked_segments) == 1)
 assert(null.get(healthy_destination.retransmissions) == 0)
-let down_destination = list.nth(ack_snapshot.destinations, 1)
+let down_destination = list.nth(ack_snapshot.destinations, 0)
 assert(down_destination.status == "down")
 assert(not null.defined(down_destination.ack_age_seconds))
 assert(
   string.contains(
-    substring="no AudioEnc TCP socket",
+    substring="tcp://192.0.2.20:9175 down (no AudioEnc TCP socket)",
+    ack_snapshot.detail
+  )
+)
+assert(
+  string.contains(
+    substring="tcp://192.0.2.10:9171 ok (TCP ESTAB, ack_age=0s, bytes_sent=100, \
+     bytes_acked=101, send_queue=1745, unacked=1, retrans=0)",
     ack_snapshot.detail
   )
 )

@@ -51,18 +51,14 @@ def output_icecast_stream(
   icecast_output.on_disconnect(synchronous=true, fun () -> connected := false)
 
   def health() =
-    let started = icecast_output.is_started()
-    let is_connected = connected()
     {
       id = stream_id,
-      status =
-        if is_connected then "ok" elsif started then "down" else "stopped" end,
       host = actual_host,
       port = actual_port,
       mount = mount,
       description = description,
-      started = started,
-      connected = is_connected
+      started = icecast_output.is_started(),
+      connected = connected()
     }
   end
 

@@ -53,7 +53,6 @@ let studio_input_status_providers =
       fun (~include_peer) ->
         {
           name = "studio_a",
-          ready = true,
           buffer_seconds = 1.03,
           audio =
             {

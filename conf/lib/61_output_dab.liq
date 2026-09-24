@@ -109,8 +109,19 @@ def dab_parse_ack_line(line) =
       send_queue,
       unacked,
       retrans,
-      detail
+      reason
     ] = fields
+    let detail =
+      if
+        reason != ""
+      then
+        reason
+      else
+        "TCP #{tcp_state}, ack_age=#{ack_age}s, bytes_sent=#{bytes_sent}, \
+         bytes_acked=#{bytes_acked}, send_queue=#{send_queue}, unacked=#{
+          unacked
+        }, retrans=#{retrans}"
+      end
     (
       "#{destination} #{status} (#{detail})",
       {
@@ -128,8 +139,14 @@ def dab_parse_ack_line(line) =
   end
 end
 
+# Connected records end in an empty reason field, so only the status line is
+# trimmed; trimming the whole output would drop the last record's final tab.
 def dab_parse_ack_monitor(monitor_output) =
-  let lines = string.split(separator="\n", string.trim(monitor_output))
+  let lines =
+    list.filter(
+      fun (line) -> line != "",
+      string.split(separator="\n", monitor_output)
+    )
   let parsed = list.map(dab_parse_ack_line, list.tl(lines))
   {
     status = string.trim(list.hd(default="", lines)),

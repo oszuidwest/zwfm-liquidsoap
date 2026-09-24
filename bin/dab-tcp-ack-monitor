@@ -50,7 +50,7 @@ debug()
 }
 
 # One tab-separated record per destination from the current loop variables;
-# the argument is the human-readable detail.
+# the argument is the reason the metrics are missing, empty when connected.
 append_record()
 {
   records="${records}${records:+${nl}}${destination}${tab}${endpoint_status}${tab}${tcp_state}${tab}${ack_age}${tab}${bytes_sent}${tab}${bytes_acked}${tab}${send_queue}${tab}${unacked}${tab}${retrans}${tab}$1"
@@ -291,7 +291,7 @@ for destination in ${DESTINATIONS}; do
         endpoint_status=down
       fi
 
-      append_record "TCP ${tcp_state}, ack_age=${ack_age}s, bytes_sent=${bytes_sent}, bytes_acked=${bytes_acked}, send_queue=${send_queue}, unacked=${unacked}, retrans=${retrans}"
+      append_record ""
       previous_connection=${connection}
       previous_acked=${bytes_acked}
     fi

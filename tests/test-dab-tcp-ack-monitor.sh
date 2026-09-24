@@ -62,12 +62,12 @@ assert_status()
   fi
 }
 
-# Compares the structured fields of the first destination record.
+# Compares the first destination record, with its tabs shown as "|".
 assert_record()
 {
   expected=$1
   output=$2
-  actual=$(printf '%s\n' "${output}" | sed -n '2p' | cut -f 1-9 | tr '\t' ' ')
+  actual=$(printf '%s\n' "${output}" | sed -n '2p' | tr '\t' '|')
   if [ "${actual}" != "${expected}" ]; then
     printf 'Expected record %s, got %s:\n%s\n' \
       "${expected}" "${actual}" "${output}" >&2
@@ -91,7 +91,7 @@ DESTINATION=tcp://192.0.2.10:9171
 write_socket 9171 100 101
 output=$(monitor 100 "${DESTINATION}")
 assert_status ok "${output}"
-assert_record "${DESTINATION} ok ESTAB 0 100 101 0 0 0" "${output}"
+assert_record "${DESTINATION}|ok|ESTAB|0|100|101|0|0|0|" "${output}"
 
 output=$(monitor 106 "${DESTINATION}")
 assert_status degraded "${output}"
@@ -110,6 +110,7 @@ assert_status degraded "${output}"
 rm -f -- "${FAKE_SS_DIR}/9171"
 output=$(monitor 119 "${DESTINATION}")
 assert_status down "${output}"
+assert_record "${DESTINATION}|down||||||||no AudioEnc TCP socket" "${output}"
 
 rm -rf -- "${STATE_DIR}"
 write_socket 9171 100 1

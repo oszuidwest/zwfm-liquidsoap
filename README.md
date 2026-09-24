@@ -309,9 +309,9 @@ connected. `outputs.dab.destinations` contains one object per EDI destination
 with its TCP state, ACK age, byte counters, send queue, unacknowledged segments,
 and retransmissions; unavailable metrics are `null`. `outputs.hls` separates
 the local writer and remote mirror health. The local state reports playlist and
-segment counts plus the timestamp and age of the latest playlist update. The
-mirror state identifies the storage host and zone, reports its most recent
-successful sync, and counts synced and pending playlists and segments. Each HLS
+segment counts plus the age of the latest playlist update. The mirror state
+identifies the storage host and zone, reports the age of its most recent
+successful sync, and counts pending playlists and segments. Each HLS
 component is `starting` until its first progress and becomes `degraded` when
 progress stops for several segment intervals; its nullable `error` explains an
 active failure.

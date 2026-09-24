@@ -137,7 +137,6 @@ def create_studio_input(~id, ~port) =
 
     {
       name = id,
-      ready = source.is_ready(buffered),
       buffer_seconds = seconds_of_main(buffered.buffer_length()),
       audio =
         {
