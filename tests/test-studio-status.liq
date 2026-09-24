@@ -1,4 +1,4 @@
-# Minimal settings and dependencies required to load the studio status helpers.
+# Load studio health with minimal configuration.
 let SRT_PASSPHRASE = "test-passphrase"
 let SILENCE_SWITCH_SECONDS = 15.0
 let AUDIO_VALID_SECONDS = 15.0
@@ -17,7 +17,7 @@ assert(not null.defined(studio_level_dbfs(false, 1.0)))
 
 let with_statistics =
   studio_srt_connection(
-    id="studio_a",
+    input_id="studio_a",
     "192.0.2.1",
     fun () ->
       {
@@ -31,10 +31,10 @@ assert(null.get(with_statistics.latency_ms) == 2000)
 assert(null.get(with_statistics.rtt_ms) == 20.5)
 assert(not null.defined(with_statistics.statistics_error))
 
-# A failed statistics read keeps the connection, with only the metrics missing.
+# Statistics failures preserve the connection record.
 let without_statistics =
   studio_srt_connection(
-    id="studio_a",
+    input_id="studio_a",
     "192.0.2.1",
     fun () ->
       error.raise(

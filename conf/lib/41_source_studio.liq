@@ -1,11 +1,9 @@
-# Studio SRT input factory
-# Creates SRT inputs with silence detection and connection handling
+# Studio SRT inputs with silence detection and runtime health.
 
-# Runtime health providers registered by each studio input, read by GET /status.
+# Health providers registered by each studio input.
 let studio_input_status_providers = ref([])
 
-# Stereo RMS and peak meters use the same short window. Digital silence is
-# clamped to a practical floor so the JSON never contains negative infinity.
+# Clamp digital silence so status JSON stays finite.
 let studio_level_window_seconds = 0.5
 let studio_level_floor_dbfs = -120.0
 
@@ -22,9 +20,8 @@ def studio_level_dbfs(connected, amplitude) =
   end
 end
 
-# One SRT connection's receive statistics. A failed read keeps the connection
-# listed with null metrics, so connectivity never depends on statistics.
-def studio_srt_connection(~id, peer, read_stats) =
+# Failed statistics reads preserve connectivity and return null metrics.
+def studio_srt_connection(~input_id, peer, read_stats) =
   try
     let stats = read_stats()
     {
@@ -38,7 +35,7 @@ def studio_srt_connection(~id, peer, read_stats) =
   catch err do
     log(
       label="status",
-      "Unable to read SRT statistics for #{id}: #{error.message(err)}",
+      "Unable to read SRT statistics for #{input_id}: #{error.message(err)}",
       level=2
     )
     {
@@ -52,10 +49,9 @@ def studio_srt_connection(~id, peer, read_stats) =
   end
 end
 
-# Factory function to create a studio SRT input
-# Returns a fallible, buffered source; output factories add their own mksafe()
+# Returns a fallible buffered source; output factories make it safe.
 def create_studio_input(~id, ~port) =
-  # Create SRT input with encryption
+  # Create an encrypted SRT listener.
   let studio =
     input.srt(
       id=id,
@@ -67,15 +63,14 @@ def create_studio_input(~id, ~port) =
       passphrase=SRT_PASSPHRASE
     )
 
-  # Attach connection logging callbacks
+  # Log connection transitions.
   studio.on_connect(synchronous=true, fun () -> log_event(id, "connected"))
   studio.on_disconnect(
     synchronous=true,
     fun () -> log_event(id, "disconnected")
   )
 
-  # Pass-through analyzers expose independent left/right levels without
-  # altering the audio sent to silence detection and the radio chain.
+  # Pass-through meters preserve the downstream audio.
   let rms_meter =
     rms.stereo(id="rms_#{id}", duration=studio_level_window_seconds, studio)
   let peak_meter =
@@ -85,7 +80,7 @@ def create_studio_input(~id, ~port) =
       rms_meter
     )
 
-  # Add silence detection with logging
+  # Detect and log silence transitions.
   let detected = with_silence_detection(id="detect_#{id}", peak_meter)
   detected.on_blank(
     synchronous=true,
@@ -104,12 +99,10 @@ def create_studio_input(~id, ~port) =
       )
   )
 
-  # Strip silence to trigger fallback
+  # Strip silence so the fallback chain can advance.
   let stripped = with_silence_strip(id="strip_#{id}", detected)
 
-  # Return source based on silence detection state
-  # When enabled: use stripped version (triggers fallback on silence)
-  # When disabled: use raw studio (only disconnection triggers fallback)
+  # Disabling silence detection leaves only disconnection-triggered fallback.
   let switched =
     switch(
       id="#{id}_output",
@@ -120,9 +113,7 @@ def create_studio_input(~id, ~port) =
       ]
     )
 
-  # Bridge the SRT input to the shared radio clock. Continuously consume the
-  # producer side so buffered audio from a disconnected standby input expires
-  # and fallback no longer considers that input ready.
+  # Drain into the shared clock so disconnected standby buffers expire.
   let buffered =
     buffer(
       id="buffered_#{id}",
@@ -135,8 +126,7 @@ def create_studio_input(~id, ~port) =
     )
   output.dummy(id="drain_#{id}", fallible=true, register_telnet=false, buffered)
 
-  # One structured snapshot feeds the server command and GET /status. Peer
-  # addresses are only included for callers allowed to see them.
+  # Only authorized status requests expose peer addresses.
   def status(~include_peer) =
     let sockets = studio.sockets()
     let connections =
@@ -145,7 +135,7 @@ def create_studio_input(~id, ~port) =
           begin
             let (peer, raw_socket) = connection
             studio_srt_connection(
-              id=id,
+              input_id=id,
               if include_peer then peer else null end,
               fun () -> srt.socket(raw_socket).bistats()
             )
@@ -179,7 +169,7 @@ def create_studio_input(~id, ~port) =
   studio_input_status_providers :=
     list.append(studio_input_status_providers(), [status])
 
-  # Expose buffer health for diagnosing clock drift.
+  # Expose buffer readiness for clock-drift diagnostics.
   server.register(
     description="Show readiness and buffered seconds for #{id}",
     "#{id}.buffer",

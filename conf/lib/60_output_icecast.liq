@@ -1,11 +1,9 @@
-# Icecast output factory
-# Creates Icecast outputs with automatic clock isolation
+# Icecast outputs with isolated clocks and runtime health.
 
-# Runtime health providers registered by each Icecast output, read by GET /status.
+# Health providers registered by each Icecast output.
 let icecast_output_health_providers = ref([])
 
-# Factory function to create an Icecast output
-# Each output gets its own clock domain via buffer() for stability
+# Create one independently clocked Icecast output.
 def output_icecast_stream(
   ~format,
   ~description,
@@ -17,20 +15,20 @@ def output_icecast_stream(
   ~icecast_password=null,
   ~stream_name=null
 ) =
-  # Use provided parameters or fall back to defaults
+  # Resolve optional overrides against station defaults.
   let actual_host = icecast_host ?? ICECAST_HOST
   let actual_port = icecast_port ?? ICECAST_PORT
   let actual_user = icecast_user ?? "source"
   let actual_password = icecast_password ?? ICECAST_SOURCE_PASSWORD
   let actual_name = stream_name ?? STATION_NAME
 
-  # Unique id so clock warnings name the stream (host disambiguates shared mounts)
+  # Include the host to disambiguate identical mounts in clock warnings.
   def slug(s) =
     string.replace(pattern="[^A-Za-z0-9]+", (fun (_) -> "_"), s)
   end
   let stream_id = "icecast_#{slug(mount)}_#{slug(actual_host)}"
 
-  # Buffer provides clock isolation - each creates a new clock domain
+  # Isolate this output in its own clock domain.
   let clocked_source = mksafe(buffer(id="buf_#{stream_id}", audio_source))
   let connected = ref(false)
 
@@ -67,8 +65,7 @@ def output_icecast_stream(
   icecast_output
 end
 
-# Defined after the factory so the provider list carries health()'s full
-# record type; defined earlier, the fields it does not touch become optional.
+# Keep this after the factory so Liquidsoap infers complete provider records.
 def icecast_health() =
   let streams =
     list.map(

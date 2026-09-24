@@ -1,6 +1,4 @@
-# Shared HTTP endpoints
-# Exposes machine-readable runtime status and accepts authenticated now-playing
-# updates before the output fan-out.
+# Runtime status and authenticated now-playing HTTP endpoints.
 
 let STREAM_METADATA_MAX_BODY_BYTES = 16_384
 
@@ -25,7 +23,7 @@ def read_stream_metadata_body(req) =
   read_stream_metadata_chunks("")
 end
 
-# Harbor lowercases incoming header names before handlers run
+# Harbor lowercases request header names.
 def request_authorized(req) =
   STREAM_METADATA_BEARER_TOKEN != ""
   and req.headers["authorization"] ==
@@ -94,9 +92,7 @@ def register_http_endpoints(radio_source, active_source, ~sources) =
     )
   end
 
-  # HTTP monitors and healthchecks alert on the status code: 503 when the
-  # radio source is down, 200 otherwise (degraded is still on air). HEAD is
-  # registered too because some monitors probe with it by default.
+  # Degraded stays on air (200); only down returns 503. Support HEAD probes.
   def status_handler(req, res) =
     let snapshot =
       status_snapshot(
@@ -162,8 +158,7 @@ def register_http_endpoints(radio_source, active_source, ~sources) =
           "bad or missing bearer token"
         )
       elsif
-        # Liquidsoap buffers each chunked HTTP chunk before req.data() returns
-        # it, so chunked bodies cannot be bounded inside the handler
+        # Liquidsoap buffers chunks before req.data(), defeating this size cap.
         req.headers["transfer-encoding"] != ""
       then
         reject(
@@ -198,8 +193,7 @@ def register_http_endpoints(radio_source, active_source, ~sources) =
                 "missing title"
               )
             else
-              # An omitted artist sends a title-only update instead of an empty
-              # artist tag
+              # Omit the artist tag instead of sending an empty value.
               let new_metadata =
                 if
                   artist == ""

@@ -20,7 +20,7 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v7
 
-      # Shell scripts linting
+      # Lint shell scripts.
       - name: ShellCheck
         uses: ludeeus/action-shellcheck@2.0.0
         with:
@@ -30,7 +30,7 @@ jobs:
       - name: Test DAB TCP ACK monitor
         run: ./tests/test-dab-tcp-ack-monitor.sh
 
-      # Dockerfile linting
+      # Lint the container definition.
       - name: Hadolint
         uses: hadolint/hadolint-action@v3.5.0
         with:
@@ -38,7 +38,7 @@ jobs:
           failure-threshold: warning
           ignore: DL3008,DL3009
 
-      # YAML linting
+      # Lint YAML files.
       - name: YAML Lint
         uses: ibiqlik/action-yamllint@v3.1.1
         with:
@@ -53,14 +53,14 @@ jobs:
               truthy:
                 allowed-values: ['true', 'false', 'on', 'off', 'yes', 'no']
 
-      # Docker Compose validation
+      # Validate the Compose model.
       - name: Docker Compose Check
         run: |
           echo "STATION_NAME_SHORT=test" > .env
           echo "STATION_NAME_FULL=Test Station" >> .env
           docker compose config --quiet
 
-      # Liquidsoap syntax check
+      # Pin syntax checks to the image's Liquidsoap version.
       - name: Get Liquidsoap Version
         id: version
         run: |
@@ -78,7 +78,7 @@ jobs:
         run: |
           echo "Checking Liquidsoap files with ${LIQUIDSOAP_VERSION}..."
 
-          # Check all .liq files in conf directory
+          # Validate every station entrypoint.
           for file in conf/*.liq; do
             if [ -f "$file" ]; then
               echo "Checking ${file}..."
@@ -129,13 +129,13 @@ jobs:
 
       - name: Format Files
         run: |
-          # YAML files (exclude workflow files)
+          # Format YAML except workflow files.
           prettier --write "**/*.yml" "**/*.yaml" "!.github/workflows/**"
 
-          # Liquidsoap files
+          # Format Liquidsoap files.
           liquidsoap-prettier -w "**/*.liq"
 
-          # Docker Compose files
+          # Format Compose files.
           for file in docker-compose*.yml; do
             if [ -f "$file" ]; then
               echo "Formatting $file..."

@@ -1,8 +1,7 @@
 #!/bin/sh
 
-# Reports EDI destination health from TCP ACK progress in ss output. The
-# AudioEnc sockets are matched by process name in the users field; a dead
-# encoder is reported separately by Liquidsoap's reopen_on_error handler.
+# Reports EDI health from AudioEnc TCP ACK progress in ss output. Sockets are
+# matched by process name; Liquidsoap reports dead encoders separately.
 
 set -eu
 set -f
@@ -14,7 +13,7 @@ ACK_WARN_SECONDS=5
 ACK_DOWN_SECONDS=15
 STARTUP_GRACE_SECONDS=10
 
-# wsp is a literal space plus tab; tab is a literal tab; nl is a newline.
+# Literal space, tab and newline values.
 wsp=' 	'
 tab='	'
 nl='
@@ -49,8 +48,7 @@ debug()
   fi
 }
 
-# One tab-separated record per destination from the current loop variables;
-# the argument is the reason the metrics are missing, empty when connected.
+# Append a 10-field destination record; the argument is its optional error.
 append_record()
 {
   records="${records}${records:+${nl}}${destination}${tab}${endpoint_status}${tab}${tcp_state}${tab}${ack_age}${tab}${bytes_sent}${tab}${bytes_acked}${tab}${send_queue}${tab}${unacked}${tab}${retrans}${tab}$1"
@@ -64,7 +62,7 @@ reset_destination_state()
   first_seen=${now}
 }
 
-# down once the endpoint has connected before or the grace period is over.
+# Keep never-connected endpoints starting until grace expires.
 disconnected_status()
 {
   if

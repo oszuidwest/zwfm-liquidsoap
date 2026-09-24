@@ -18,9 +18,8 @@ let HLS_SEGMENTS_OVERHEAD = 1
 
 output_hls_stream(sine())
 
-# Poll until the real writer and mirror tick have both run. The deadline starts
-# at the first poll, so script loading does not count. Errors in thread
-# callbacks are only logged, so every outcome stops the process explicitly.
+# Start the deadline after loading; callback failures only log, so every outcome
+# must stop the process.
 let deadline = ref(0.0)
 thread.run(
   every=0.5,
@@ -29,9 +28,7 @@ thread.run(
       if deadline() == 0.0 then deadline := time() + 30.0 end
       let health = hls_health()
 
-      # Local progress is only stamped by the registered on_file_change
-      # handler; the mirror tick counts two variants plus the main playlist and
-      # at least one segment it could not upload.
+      # Require writer progress plus the expected failed mirror pass.
       if
         health.local.status == "ok"
         and health.local.playlist_count == 3

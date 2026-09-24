@@ -1,4 +1,4 @@
-# Minimal settings required to load and exercise the HLS status helpers.
+# Load the HLS health helpers with minimal configuration.
 let STATION_ID = "test"
 let HLS_BUNNY_STORAGE_ZONE = "test-zone"
 let HLS_BUNNY_ACCESS_KEY = "test-key"
@@ -32,8 +32,7 @@ let synced_playlists =
     ("live.m3u8", "#EXTM3U\naac_96.m3u8")
   ]
 
-# The writer's file events stamp local progress; the mirror tick records its
-# state and, after a clean pass, the sync time.
+# Simulate a complete, successful mirror pass.
 hls_local_last_update_at := time()
 hls_mirror_state :=
   {
@@ -57,7 +56,7 @@ assert(healthy.mirror.pending_segments == 1)
 assert(healthy.mirror.pending_playlists == 0)
 assert(not null.defined(healthy.mirror.error))
 
-# Spread component records must still serialize every field.
+# Guard record-spread serialization.
 let encoded = json.stringify(compact=true, healthy)
 assert(string.contains(substring="\"error\":null", encoded))
 assert(string.contains(substring="\"pending_segments\":1", encoded))

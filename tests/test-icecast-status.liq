@@ -1,4 +1,4 @@
-# Minimal settings required to exercise Icecast output health registration.
+# Load Icecast health with minimal configuration.
 settings.frame.audio.channels := 2
 settings.frame.audio.samplerate := 48000
 

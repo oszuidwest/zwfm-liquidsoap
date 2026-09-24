@@ -1,4 +1,4 @@
-# Minimal settings required to load the DAB output module.
+# Load the DAB helpers with minimal configuration.
 let DAB_ACK_POLL_SECONDS = 1.0
 let DAB_ACK_WARN_SECONDS = 5
 let DAB_ACK_DOWN_SECONDS = 15
@@ -67,7 +67,7 @@ assert(
     "No acknowledgement progress for 7s"
 )
 
-# A destination still in its startup grace is healthy despite a reason.
+# Starting destinations may expose diagnostics without being unhealthy.
 let (_, starting_destination) =
   dab_parse_ack_line(
     "tcp://192.0.2.40:9179\tstarting\t\t\t\t\t\t\t\tno AudioEnc TCP socket"
@@ -88,7 +88,7 @@ assert(
   )
 )
 
-# Only failures without destination records surface as the output's error.
+# Destination errors do not duplicate into the aggregate error.
 dab_set_ack_status(
   "down",
   "DAB+ encoder error: exited"

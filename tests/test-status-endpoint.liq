@@ -1,5 +1,4 @@
-# Loads the real output health modules; only the studio provider is stubbed,
-# because it needs a live SRT listener.
+# Stub only the studio provider, which requires a live SRT listener.
 settings.frame.audio.channels := 2
 settings.frame.audio.samplerate := 48000
 
@@ -36,7 +35,7 @@ let HLS_SEGMENTS_OVERHEAD = 5
 %include "../conf/lib/61_output_dab.liq"
 %include "../conf/lib/62_output_hls.liq"
 
-# An unreachable Icecast server keeps the stream disconnected.
+# Keep the Icecast stream disconnected.
 output_icecast_stream(
   format=%ffmpeg(
     format = "mp3",
@@ -102,7 +101,7 @@ radio_sink.on_start(
           sources=[("studio_a", radio)]
         )
 
-      # A disconnected Icecast stream degrades an otherwise healthy station.
+      # A disconnected Icecast stream degrades the station.
       assert(private_snapshot.radio.ready)
       assert(private_snapshot.status == "degraded")
       assert(private_snapshot.outputs.icecast.status == "down")
@@ -114,8 +113,7 @@ radio_sink.on_start(
       assert(list.is_empty(private_snapshot.outputs.dab.destinations))
       assert(private_snapshot.outputs.hls.status == "disabled")
 
-      # The stubbed provider hides its own peer, so this only proves that
-      # status_snapshot passes the caller's authorization through.
+      # Verify that status_snapshot forwards peer authorization.
       let private_studio = list.hd(private_snapshot.studio_inputs)
       let private_connection = list.hd(private_studio.srt.connections)
       assert(null.get(private_connection.peer) == "192.0.2.1")
@@ -123,11 +121,11 @@ radio_sink.on_start(
       let public_connection = list.hd(public_studio.srt.connections)
       assert(not null.defined(public_connection.peer))
 
-      # The complete snapshot, including nested health, must be JSON-safe.
+      # The full nested snapshot must remain JSON-safe.
       let encoded_public = json.stringify(compact=true, public_snapshot)
       assert(string.contains(substring="\"peer\":null", encoded_public))
 
-      # No output repeats its structured health in a human-readable field.
+      # Structured output health must not be duplicated as detail text.
       assert(not string.contains(substring="\"detail\"", encoded_public))
       thread.run(delay=0.1, shutdown)
     end
