@@ -21,6 +21,13 @@ assert(starting.mirror.storage_zone == "test-zone")
 assert(not null.defined(starting.local.update_age_seconds))
 assert(not null.defined(starting.mirror.sync_age_seconds))
 
+# No first progress degrades after the same grace as stalled progress.
+hls_started_at := time() - hls_stale_after_seconds - 1.0
+let never_started = hls_health()
+assert(never_started.local.status == "degraded")
+assert(never_started.mirror.status == "degraded")
+hls_started_at := time()
+
 # Simulate local output plus a complete, successful mirror pass.
 file.write(data="#EXTM3U", "#{HLS_DIR}/aac_96.m3u8")
 file.write(data="#EXTM3U", "#{HLS_DIR}/live.m3u8")

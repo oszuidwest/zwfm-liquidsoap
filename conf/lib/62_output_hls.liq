@@ -28,6 +28,7 @@ let hls_mirror_error = ref("")
 # Null timestamps mean no local update or complete mirror pass yet.
 let hls_local_last_update_at = ref(null)
 let hls_mirror_last_sync_at = ref(null)
+let hls_started_at = ref(time())
 
 # Local files the last mirror pass left unsynced.
 let hls_mirror_pending = ref({segments = 0, playlists = 0})
@@ -51,13 +52,14 @@ def hls_progress_age(last_progress_at) =
   )
 end
 
-# Explicit failures outrank stalls; missing progress means starting.
+# Explicit failures outrank stalls; missing progress starts the same grace.
 def hls_component_health(label, failure, age) =
+  let observed_age = age ?? max(0.0, time() - hls_started_at())
   let failure =
     if
-      failure == "" and (age ?? 0.0) > hls_stale_after_seconds
+      hls_enabled and failure == "" and observed_age > hls_stale_after_seconds
     then
-      "#{label} has not advanced for #{int_of_float(age ?? 0.0)}s"
+      "#{label} has not advanced for #{int_of_float(observed_age)}s"
     else
       failure
     end
