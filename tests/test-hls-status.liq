@@ -81,4 +81,7 @@ assert(
 )
 assert(missing.local.playlist_count == 0)
 
+assert(not hls_put_file("#{HLS_DIR}/missing.ts"))
+assert(hls_mirror_tick_failed())
+
 shutdown()

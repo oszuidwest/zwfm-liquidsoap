@@ -161,22 +161,18 @@ def hls_put_file(local_path) =
   if
     not file.exists(local_path)
   then
-    log(
-      label="hls",
-      "Skipping HLS upload for missing local file #{local_path}",
-      level=3
+    hls_mark_mirror_degraded(
+      "HLS mirror upload skipped; local file disappeared: #{remote_name}"
     )
     false
   else
     try
       hls_put_data(remote_name, file.contents(local_path))
     catch err do
-      log(
-        label="hls",
+      hls_mark_mirror_degraded(
         "HLS upload read exception for #{remote_name}: #{err.kind}: #{
           err.message
-        }",
-        level=2
+        }"
       )
       false
     end
@@ -605,6 +601,7 @@ def hls_mirror_tick(
 
   if
     not hls_mirror_tick_failed() and playlists_ok
+    and hls_mirror_pending().segments == 0
   then
     hls_mirror_last_sync_at := time()
     hls_mirror_error := ""
