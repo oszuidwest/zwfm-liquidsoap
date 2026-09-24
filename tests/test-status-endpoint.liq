@@ -70,7 +70,8 @@ let studio_input_status_providers =
                     latency_ms = 2000,
                     receive_buffer_ms = 1876,
                     rtt_ms = 20.57,
-                    dropped_packets_total = 0
+                    dropped_packets_total = 0,
+                    statistics_error = null
                   }
                 ]
             }

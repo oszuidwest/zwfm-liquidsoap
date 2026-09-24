@@ -298,7 +298,9 @@ seconds, stereo RMS and peak levels in dBFS over a 0.5-second window, and an SRT
 object with its connection state. Left and right levels are separate. Digital
 silence is clamped to `-120.0` dBFS; levels are `null` when SRT is disconnected.
 Every active SRT connection includes the peer address, negotiated receive
-latency, receive buffer, round-trip time, and total dropped packets. Because
+latency, receive buffer, round-trip time, and total dropped packets. If its
+statistics cannot be read, the connection stays listed and connected with
+`null` metrics and a `statistics_error`. Because
 `/status` does not require authentication, peer addresses are `null` by default.
 Send the same `Authorization: Bearer <token>` header configured for
 `POST /metadata` to include them.

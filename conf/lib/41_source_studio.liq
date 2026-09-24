@@ -22,6 +22,36 @@ def studio_level_dbfs(connected, amplitude) =
   end
 end
 
+# One SRT connection's receive statistics. A failed read keeps the connection
+# listed with null metrics, so connectivity never depends on statistics.
+def studio_srt_connection(~id, peer, read_stats) =
+  try
+    let stats = read_stats()
+    {
+      peer = peer,
+      latency_ms = stats.msRcvTsbPdDelay,
+      receive_buffer_ms = stats.msRcvBuf,
+      rtt_ms = stats.msRTT,
+      dropped_packets_total = stats.pktRcvDropTotal,
+      statistics_error = null
+    }
+  catch err do
+    log(
+      label="status",
+      "Unable to read SRT statistics for #{id}: #{error.message(err)}",
+      level=2
+    )
+    {
+      peer = peer,
+      latency_ms = null,
+      receive_buffer_ms = null,
+      rtt_ms = null,
+      dropped_packets_total = null,
+      statistics_error = error.message(err)
+    }
+  end
+end
+
 # Factory function to create a studio SRT input
 # Returns a fallible, buffered source; output factories add their own mksafe()
 def create_studio_input(~id, ~port) =
@@ -108,30 +138,21 @@ def create_studio_input(~id, ~port) =
   # One structured snapshot feeds the server command and GET /status. Peer
   # addresses are only included for callers allowed to see them.
   def status(~include_peer) =
+    let sockets = studio.sockets()
     let connections =
-      list.filter_map(
+      list.map(
         fun (connection) ->
-          try
+          begin
             let (peer, raw_socket) = connection
-            let stats = srt.socket(raw_socket).bistats()
-            {
-              peer = if include_peer then peer else null end,
-              latency_ms = stats.msRcvTsbPdDelay,
-              receive_buffer_ms = stats.msRcvBuf,
-              rtt_ms = stats.msRTT,
-              dropped_packets_total = stats.pktRcvDropTotal
-            }
-          catch err do
-            log(
-              label="status",
-              "Unable to read SRT statistics for #{id}: #{error.message(err)}",
-              level=2
+            studio_srt_connection(
+              id=id,
+              if include_peer then peer else null end,
+              fun () -> srt.socket(raw_socket).bistats()
             )
-            null
           end,
-        studio.sockets()
+        sockets
       )
-    let connected = not list.is_empty(connections)
+    let connected = not list.is_empty(sockets)
     let (rms_left, rms_right) = rms_meter.rms()
     let (peak_left, peak_right) = peak_meter.peak()
 
@@ -179,10 +200,19 @@ def create_studio_input(~id, ~port) =
             separator="; ",
             list.map(
               fun (connection) ->
-                "peer=#{connection.peer}, latency=#{connection.latency_ms}ms, \
-                 buffer=#{connection.receive_buffer_ms}ms, rtt=#{
-                  connection.rtt_ms
-                }ms, dropped_total=#{connection.dropped_packets_total}",
+                if
+                  null.defined(connection.statistics_error)
+                then
+                  "peer=#{connection.peer}, statistics unavailable: #{
+                    null.get(connection.statistics_error)
+                  }"
+                else
+                  "peer=#{connection.peer}, latency=#{
+                    connection.latency_ms
+                  }ms, buffer=#{connection.receive_buffer_ms}ms, rtt=#{
+                    connection.rtt_ms
+                  }ms, dropped_total=#{connection.dropped_packets_total}"
+                end,
               snapshot.srt.connections
             )
           )
