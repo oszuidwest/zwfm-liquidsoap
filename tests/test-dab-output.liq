@@ -87,6 +87,28 @@ assert(
     ack_snapshot.detail
   )
 )
+
+# Only failures without destination records surface as the output's error.
+dab_set_ack_status(
+  "down",
+  "DAB+ encoder error: exited"
+)
+assert(
+  null.get(dab_ack_status().error) ==
+    "DAB+ encoder error: exited"
+)
+dab_set_ack_status(
+  ack_snapshot.status,
+  ack_snapshot.detail,
+  destinations=ack_snapshot.destinations
+)
+assert(not null.defined(dab_ack_status().error))
+dab_set_ack_status(
+  "starting",
+  "Waiting for AudioEnc TCP acknowledgements"
+)
+assert(not null.defined(dab_ack_status().error))
+
 let encoded_ack_snapshot = json.stringify(compact=true, ack_snapshot)
 assert(string.contains(substring="\"ack_age_seconds\":0", encoded_ack_snapshot))
 assert(

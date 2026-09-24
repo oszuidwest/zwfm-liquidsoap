@@ -21,10 +21,10 @@ then
 end
 
 # DAB+ health: status is disabled, unmonitored, starting, ok, degraded or down
-let dab_ack_status = ref({status = "disabled", destinations = []})
+let dab_ack_status = ref({status = "disabled", destinations = [], error = null})
 
-# Human-readable context remains available through the dab.status server
-# command, but is omitted from the structured HTTP status response.
+# Full human-readable context for the dab.status server command; GET /status
+# only carries it as the error of failures without destination records.
 let dab_ack_detail =
   ref(
     "DAB+ output is disabled"
@@ -48,7 +48,19 @@ def dab_set_ack_status(status, detail, ~destinations=[]) =
     )
   end
   dab_ack_detail := detail
-  dab_ack_status := {status = status, destinations = destinations}
+
+  # Destination problems stay in destinations[].error; this only explains
+  # failures no destination covers, such as a crashed encoder or monitor.
+  let error =
+    if
+      status_healthy(status) or not list.is_empty(destinations)
+    then
+      null
+    else
+      detail
+    end
+  dab_ack_status :=
+    {status = status, destinations = destinations, error = error}
 end
 
 # The monitor identifies AudioEnc's EDI sockets in ss output by process
