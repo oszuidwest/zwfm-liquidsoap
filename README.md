@@ -309,7 +309,8 @@ Send the same `Authorization: Bearer <token>` header configured for
 identifies its host, port, and mount and reports whether it is started and
 connected. `outputs.dab.destinations` contains one object per EDI destination
 with its TCP state, ACK age, byte counters, send queue, unacknowledged segments,
-and retransmissions; unavailable metrics are `null`. `outputs.hls` separates
+and retransmissions; unavailable metrics are `null`. Its nullable `error`
+explains why a degraded or down destination is unhealthy. `outputs.hls` separates
 the local writer and remote mirror health. The local state reports playlist and
 segment counts plus the age of the latest playlist update. The mirror state
 identifies the storage host and zone, reports the age of its most recent

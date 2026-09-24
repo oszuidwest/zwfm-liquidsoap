@@ -133,7 +133,21 @@ def dab_parse_ack_line(line) =
         bytes_acked = dab_optional_int(bytes_acked),
         send_queue_bytes = dab_optional_int(send_queue),
         unacked_segments = dab_optional_int(unacked),
-        retransmissions = dab_optional_int(retrans)
+        retransmissions = dab_optional_int(retrans),
+        error =
+          # A connected destination has no monitor reason, so an unhealthy one
+          # is stalled on acknowledgements.
+          if
+            status_healthy(status)
+          then
+            null
+          elsif
+            reason != ""
+          then
+            reason
+          else
+            "No acknowledgement progress for #{ack_age}s"
+          end
       }
     )
   end

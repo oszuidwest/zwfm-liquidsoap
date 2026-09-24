@@ -38,11 +38,11 @@ assert_invalid_destinations("tcp://one.example:9001,")
 let ack_snapshot =
   dab_parse_ack_monitor(
     "degraded\ntcp://192.0.2.20:9175\tdown\t\t\t\t\t\t\t\tno AudioEnc TCP \
-     socket\ntcp://192.0.2.10:9171\tok\tESTAB\t0\t100\t101\t1745\t1\t0\t\n"
+     socket\ntcp://192.0.2.30:9177\tdegraded\tESTAB\t7\t300\t200\t0\t0\t0\t\ntcp://192.0.2.10:9171\tok\tESTAB\t0\t100\t101\t1745\t1\t0\t\n"
   )
 assert(ack_snapshot.status == "degraded")
-assert(list.length(ack_snapshot.destinations) == 2)
-let healthy_destination = list.nth(ack_snapshot.destinations, 1)
+assert(list.length(ack_snapshot.destinations) == 3)
+let healthy_destination = list.nth(ack_snapshot.destinations, 2)
 assert(healthy_destination.destination == "tcp://192.0.2.10:9171")
 assert(healthy_destination.status == "ok")
 assert(healthy_destination.tcp_state == "ESTAB")
@@ -52,9 +52,28 @@ assert(null.get(healthy_destination.bytes_acked) == 101)
 assert(null.get(healthy_destination.send_queue_bytes) == 1745)
 assert(null.get(healthy_destination.unacked_segments) == 1)
 assert(null.get(healthy_destination.retransmissions) == 0)
+assert(not null.defined(healthy_destination.error))
 let down_destination = list.nth(ack_snapshot.destinations, 0)
 assert(down_destination.status == "down")
 assert(not null.defined(down_destination.ack_age_seconds))
+assert(
+  null.get(down_destination.error) ==
+    "no AudioEnc TCP socket"
+)
+
+let stalled_destination = list.nth(ack_snapshot.destinations, 1)
+assert(
+  null.get(stalled_destination.error) ==
+    "No acknowledgement progress for 7s"
+)
+
+# A destination still in its startup grace is healthy despite a reason.
+let (_, starting_destination) =
+  dab_parse_ack_line(
+    "tcp://192.0.2.40:9179\tstarting\t\t\t\t\t\t\t\tno AudioEnc TCP socket"
+  )
+assert(not null.defined(null.get(starting_destination).error))
+
 assert(
   string.contains(
     substring="tcp://192.0.2.20:9175 down (no AudioEnc TCP socket)",
