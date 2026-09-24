@@ -42,6 +42,16 @@ let HLS_SEGMENTS_OVERHEAD = 5
 %include "../conf/lib/61_output_dab.liq"
 %include "../conf/lib/62_output_hls.liq"
 
+let dab_fixture =
+  dab_parse_ack_monitor(
+    "ok\ntcp://192.0.2.10:9171\tok\tESTAB\t0\t100\t101\t1745\t1\t0\t"
+  )
+dab_set_ack_status(
+  dab_fixture.status,
+  dab_fixture.detail,
+  destinations=dab_fixture.destinations
+)
+
 # Keep the Icecast stream disconnected.
 output_icecast_stream(
   format=%ffmpeg(
@@ -119,7 +129,7 @@ radio_sink.on_start(
           "Test stream"
       )
       assert(not icecast.connected)
-      assert(snapshot.outputs.dab.status == "disabled")
+      assert(snapshot.outputs.dab.status == "ok")
       assert(list.is_empty(snapshot.outputs.dab.destinations))
       assert(snapshot.outputs.hls.status == "disabled")
 
@@ -133,7 +143,7 @@ radio_sink.on_start(
 
       # Only the configured bearer token exposes peer addresses over HTTP.
       thread.run(
-        delay=0.1,
+        delay=1.0,
         fun () ->
           begin
             # Started does not mean connected: Icecast connects lazily.
@@ -141,33 +151,27 @@ radio_sink.on_start(
             assert(started_stream.started)
             assert(not started_stream.connected)
 
-            def assert_peer(headers, expected) =
+            def assert_sensitive(headers, expected_peer, expected_sensitive) =
               let body =
                 http.get(
                   timeout=2.0,
                   headers=headers,
                   "http://127.0.0.1:7000/status"
                 )
-              assert(string.contains(substring="\"peer\":#{expected}", body))
+              assert(
+                string.contains(substring="\"peer\":#{expected_peer}", body)
+              )
+              assert(
+                string.contains(substring="tcp://192.0.2.10:9171", body) ==
+                  expected_sensitive
+              )
             end
-            assert_peer([], "null")
-            assert_peer(
-              [
-                (
-                  "Authorization",
-                  "Bearer wrong"
-                )
-              ],
-              "null"
-            )
-            assert_peer(
-              [
-                (
-                  "Authorization",
-                  "Bearer test-token"
-                )
-              ],
-              "\"192.0.2.1\""
+            assert_sensitive([], "null", false)
+            assert_sensitive([("Authorization", "Bearer wrong")], "null", false)
+            assert_sensitive(
+              [("Authorization", "Bearer test-token")],
+              "\"192.0.2.1\"",
+              true
             )
             shutdown()
           end

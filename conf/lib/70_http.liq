@@ -34,7 +34,7 @@ def status_snapshot(
   radio_source,
   active_source,
   ~sources,
-  ~include_peer=false
+  ~include_sensitive=false
 ) =
   let radio_ready = radio_source.is_ready()
   let active_source = active_source()
@@ -72,10 +72,18 @@ def status_snapshot(
       ),
     studio_inputs =
       list.map(
-        fun (get_status) -> get_status(include_peer=include_peer),
+        fun (get_status) -> get_status(include_peer=include_sensitive),
         studio_input_status_providers()
       ),
-    outputs = {icecast = icecast_state, dab = dab_state, hls = hls_state}
+    outputs = {
+      icecast = icecast_state,
+      dab = {
+        ...dab_state,
+        destinations =
+          if include_sensitive then dab_state.destinations else [] end
+      },
+      hls = hls_state
+    }
   }
 end
 
@@ -100,7 +108,7 @@ def register_http_endpoints(radio_source, active_source, ~sources) =
         radio_source,
         active_source,
         sources=sources,
-        include_peer=request_authorized(req)
+        include_sensitive=request_authorized(req)
       )
     res.header("Cache-Control", "no-store")
     if snapshot.status == "down" then res.status_code(503) end
