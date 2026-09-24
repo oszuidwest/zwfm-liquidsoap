@@ -3,7 +3,7 @@ let STATION_ID = "test"
 let HLS_BUNNY_STORAGE_ZONE = "test-zone"
 let HLS_BUNNY_ACCESS_KEY = "test-key"
 let HLS_BUNNY_ENDPOINT = "https://storage.example.test/"
-let HLS_DIR = "/hls"
+let HLS_DIR = file.temp_dir(cleanup=true, "hls-status-test")
 let HLS_BITRATE_MID = 96
 let HLS_BITRATE_HIGH = 192
 let HLS_SEGMENT_DURATION = 4.0
@@ -21,26 +21,13 @@ assert(starting.mirror.storage_zone == "test-zone")
 assert(not null.defined(starting.local.update_age_seconds))
 assert(not null.defined(starting.mirror.sync_age_seconds))
 
-let playlists =
-  [
-    {name = "aac_96.m3u8", content = "#EXTM3U\naac_96_1.ts"},
-    {name = "live.m3u8", content = "#EXTM3U\naac_96.m3u8"}
-  ]
-let synced_playlists =
-  [
-    ("aac_96.m3u8", "#EXTM3U\naac_96_1.ts"),
-    ("live.m3u8", "#EXTM3U\naac_96.m3u8")
-  ]
-
-# Simulate a complete, successful mirror pass.
+# Simulate local output plus a complete, successful mirror pass.
+file.write(data="#EXTM3U", "#{HLS_DIR}/aac_96.m3u8")
+file.write(data="#EXTM3U", "#{HLS_DIR}/live.m3u8")
+file.write(data="", "#{HLS_DIR}/aac_96_1.ts")
+file.write(data="", "#{HLS_DIR}/aac_96_2.ts")
 hls_local_last_update_at := time()
-hls_mirror_state :=
-  {
-    playlists = playlists,
-    segment_names = ["aac_96_1.ts", "aac_96_2.ts"],
-    synced_segments = ["aac_96_1.ts"],
-    synced_playlists = synced_playlists
-  }
+hls_mirror_pending := {segments = 1, playlists = 0}
 hls_mirror_last_sync_at := time()
 
 let healthy = hls_health()
@@ -74,5 +61,17 @@ let stale = hls_health()
 assert(stale.status == "degraded")
 assert(stale.local.status == "degraded")
 assert(null.defined(stale.local.error))
+
+# A missing HLS_DIR degrades local health even with fresh writer progress.
+hls_local_last_update_at := time()
+file.rmdir(HLS_DIR)
+let missing = hls_health()
+assert(missing.status == "degraded")
+assert(missing.local.status == "degraded")
+assert(
+  null.get(missing.local.error) ==
+    "HLS_DIR #{HLS_DIR} is missing"
+)
+assert(missing.local.playlist_count == 0)
 
 shutdown()

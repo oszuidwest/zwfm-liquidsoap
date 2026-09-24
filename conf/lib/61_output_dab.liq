@@ -28,7 +28,8 @@ let dab_ack_detail =
     "DAB+ output is disabled"
   )
 
-# Avoid monitor ticks racing Liquidsoap's scheduler shutdown.
+# A tick racing scheduler shutdown cannot enforce its process.read timeout and
+# logs a misleading startup warning.
 let dab_ack_monitor_running = ref(false)
 on_shutdown(fun () -> dab_ack_monitor_running := false)
 
@@ -156,7 +157,7 @@ def dab_parse_ack_line(line) =
   end
 end
 
-# Preserve the final empty error field of connected records.
+# Do not trim: that would drop the last record's empty trailing error field.
 def dab_parse_ack_monitor(monitor_output) =
   let lines =
     list.filter(

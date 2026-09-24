@@ -1,4 +1,5 @@
-# Runtime state for silence detection and source forcing.
+# Runtime state for silence detection and source forcing, plus shared output
+# status classification.
 
 # Enabled by default; server commands can change it at runtime.
 let silence_detection_enabled = ref(true)

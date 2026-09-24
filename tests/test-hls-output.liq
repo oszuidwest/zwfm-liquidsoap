@@ -18,15 +18,30 @@ let HLS_SEGMENTS_OVERHEAD = 1
 
 output_hls_stream(sine())
 
-# Start the deadline after loading; callback failures only log, so every outcome
-# must stop the process.
-let deadline = ref(0.0)
+# Tasks start after loading. An exception stops the polling task for good, so a
+# separate timeout fails the test. It only prints the last recorded health, so
+# nothing can block its exit.
+let last_health =
+  ref(
+    "no health recorded"
+  )
+thread.run(
+  delay=30.0,
+  fun () ->
+    begin
+      print(
+        "HLS output test timed out: #{last_health()}"
+      )
+      shutdown(code=1)
+    end
+)
+
 thread.run(
   every=0.5,
   fun () ->
-    try
-      if deadline() == 0.0 then deadline := time() + 30.0 end
+    begin
       let health = hls_health()
+      last_health := json.stringify(health)
 
       # Require writer progress plus the expected failed mirror pass.
       if
@@ -37,18 +52,6 @@ thread.run(
         and health.mirror.pending_segments > 0
       then
         shutdown()
-      elsif
-        time() > deadline()
-      then
-        print(
-          "HLS output test timed out: #{json.stringify(health)}"
-        )
-        shutdown(code=1)
       end
-    catch err do
-      print(
-        "HLS output test failed: #{error.message(err)}"
-      )
-      shutdown(code=1)
     end
 )

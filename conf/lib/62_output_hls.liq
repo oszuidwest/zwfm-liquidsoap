@@ -1,6 +1,7 @@
 # Local HLS output mirrored to Bunny Edge Storage.
 # The isolated clock contains filesystem failures; a watchdog replaces detached
-# outputs. Do not add persist_at: its error path can stop the entire process.
+# outputs. Do not add persist_at: writing state while a failed output detaches
+# re-raises on the dead clock thread and stops the entire process.
 
 let hls_bunny_headers = [("AccessKey", HLS_BUNNY_ACCESS_KEY), ("Expect", "")]
 let hls_main_playlist_name = "live.m3u8"
@@ -28,16 +29,8 @@ let hls_mirror_error = ref("")
 let hls_local_last_update_at = ref(null)
 let hls_mirror_last_sync_at = ref(null)
 
-# GET /status derives counts from the latest mirror snapshot.
-let hls_mirror_state =
-  ref(
-    {
-      playlists = [],
-      segment_names = [],
-      synced_segments = [],
-      synced_playlists = []
-    }
-  )
+# Local files the last mirror pass left unsynced.
+let hls_mirror_pending = ref({segments = 0, playlists = 0})
 
 # Allow at least four segment intervals for scheduling and upload jitter.
 let hls_stale_after_seconds = max(15.0, HLS_SEGMENT_DURATION * 4.0)
@@ -64,7 +57,7 @@ def hls_component_health(label, failure, age) =
     if
       failure == "" and (age ?? 0.0) > hls_stale_after_seconds
     then
-      "#{label} has not advanced for #{int_of_float(null.get(age))}s"
+      "#{label} has not advanced for #{int_of_float(age ?? 0.0)}s"
     else
       failure
     end
@@ -85,77 +78,6 @@ def hls_component_health(label, failure, age) =
       "starting"
     end
   {status = status, error = if failure == "" then null else failure end}
-end
-
-def hls_health() =
-  let local_age = hls_progress_age(hls_local_last_update_at())
-  let mirror_age = hls_progress_age(hls_mirror_last_sync_at())
-  let mirror_state = hls_mirror_state()
-  let local =
-    hls_component_health(
-      "HLS local playlists",
-      hls_local_error(),
-      local_age
-    )
-  let mirror =
-    hls_component_health(
-      "HLS mirror",
-      hls_mirror_error(),
-      mirror_age
-    )
-  let statuses = [local.status, mirror.status]
-  let status =
-    if
-      not hls_enabled
-    then
-      "disabled"
-    elsif
-      list.mem("degraded", statuses)
-    then
-      "degraded"
-    elsif
-      list.mem("starting", statuses)
-    then
-      "starting"
-    else
-      "ok"
-    end
-
-  {
-    status = status,
-    local =
-      {
-        ...local,
-        playlist_count = list.length(mirror_state.playlists),
-        segment_count = list.length(mirror_state.segment_names),
-        update_age_seconds = local_age
-      },
-    mirror =
-      {
-        ...mirror,
-        host = hls_endpoint_host,
-        storage_zone = HLS_BUNNY_STORAGE_ZONE,
-        sync_age_seconds = mirror_age,
-        pending_segments =
-          list.length(
-            list.filter(
-              fun (name) -> not list.mem(name, mirror_state.synced_segments),
-              mirror_state.segment_names
-            )
-          ),
-        pending_playlists =
-          list.length(
-            list.filter(
-              fun (snapshot) ->
-                not list.mem(
-                  (snapshot.name, snapshot.content),
-                  mirror_state.synced_playlists
-                ),
-              mirror_state.playlists
-            )
-          )
-      }
-  }
 end
 
 def hls_remote_url(remote_name) =
@@ -308,6 +230,94 @@ end
 
 def hls_local_segment_files() =
   hls_local_files(hls_is_segment_name)
+end
+
+# Read HLS_DIR once so a slow mirror cannot freeze local counts. A missing
+# directory degrades local health. file.ls errors cannot be caught in 2.4.5, so
+# check the directory first.
+def hls_local_file_counts() =
+  if
+    not hls_enabled
+  then
+    {playlists = 0, segments = 0, error = ""}
+  elsif
+    not file.is_directory(HLS_DIR)
+  then
+    {
+      playlists = 0,
+      segments = 0,
+      error =
+        "HLS_DIR #{HLS_DIR} is missing"
+    }
+  else
+    let names = list.map(path.basename, hls_local_files(hls_is_sync_file_name))
+    {
+      playlists = list.length(list.filter(hls_is_playlist_name, names)),
+      segments = list.length(list.filter(hls_is_segment_name, names)),
+      error = ""
+    }
+  end
+end
+
+def hls_health() =
+  let local_age = hls_progress_age(hls_local_last_update_at())
+  let mirror_age = hls_progress_age(hls_mirror_last_sync_at())
+  let local_files = hls_local_file_counts()
+  let local =
+    hls_component_health(
+      "HLS local playlists",
+      if
+        hls_local_error() != ""
+      then
+        hls_local_error()
+      else
+        local_files.error
+      end,
+      local_age
+    )
+  let mirror =
+    hls_component_health(
+      "HLS mirror",
+      hls_mirror_error(),
+      mirror_age
+    )
+  let statuses = [local.status, mirror.status]
+  let status =
+    if
+      not hls_enabled
+    then
+      "disabled"
+    elsif
+      list.mem("degraded", statuses)
+    then
+      "degraded"
+    elsif
+      list.mem("starting", statuses)
+    then
+      "starting"
+    else
+      "ok"
+    end
+
+  {
+    status = status,
+    local =
+      {
+        ...local,
+        playlist_count = local_files.playlists,
+        segment_count = local_files.segments,
+        update_age_seconds = local_age
+      },
+    mirror =
+      {
+        ...mirror,
+        host = hls_endpoint_host,
+        storage_zone = HLS_BUNNY_STORAGE_ZONE,
+        sync_age_seconds = mirror_age,
+        pending_segments = hls_mirror_pending().segments,
+        pending_playlists = hls_mirror_pending().playlists
+      }
+  }
 end
 
 def hls_read_playlist_snapshot(local_path) =
@@ -570,12 +580,26 @@ def hls_mirror_tick(
     hls_delete_stale_segments(synced_segments, protected_segment_names)
   end
 
-  hls_mirror_state :=
+  hls_mirror_pending :=
     {
-      playlists = playlists,
-      segment_names = local_segment_names,
-      synced_segments = synced_segments(),
-      synced_playlists = synced_playlists()
+      segments =
+        list.length(
+          list.filter(
+            fun (name) -> not list.mem(name, synced_segments()),
+            local_segment_names
+          )
+        ),
+      playlists =
+        list.length(
+          list.filter(
+            fun (snapshot) ->
+              not list.mem(
+                (snapshot.name, snapshot.content),
+                synced_playlists()
+              ),
+            playlists
+          )
+        )
     }
 
   if
@@ -731,7 +755,7 @@ def output_hls_stream(audio_source) =
       then
         hls_remove_stale_local_files()
 
-        # Omit persist_at: its error path can stop the entire process.
+        # No persist_at (see header); segment names are never reused.
         let hls_output =
           output.file.hls(
             id="hls",
@@ -830,21 +854,19 @@ def output_hls_stream(audio_source) =
     fun (_) ->
       begin
         let health = hls_health()
-        let errors =
-          list.filter_map(
-            fun (reason) -> reason,
-            [health.local.error, health.mirror.error]
+        let reasons =
+          string.concat(
+            separator="; ",
+            list.filter_map(
+              fun (reason) -> reason,
+              [health.local.error, health.mirror.error]
+            )
           )
         if
-          list.is_empty(errors)
+          reasons == ""
         then
           health.status
         else
-          let reasons =
-            string.concat(
-              separator="; ",
-              errors
-            )
           "#{health.status}: #{reasons}"
         end
       end

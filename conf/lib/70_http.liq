@@ -92,7 +92,8 @@ def register_http_endpoints(radio_source, active_source, ~sources) =
     )
   end
 
-  # Degraded stays on air (200); only down returns 503. Support HEAD probes.
+  # Degraded stays on air (200); only down returns 503. HEAD is registered
+  # because some monitors probe with it by default.
   def status_handler(req, res) =
     let snapshot =
       status_snapshot(
@@ -158,7 +159,8 @@ def register_http_endpoints(radio_source, active_source, ~sources) =
           "bad or missing bearer token"
         )
       elsif
-        # Liquidsoap buffers chunks before req.data(), defeating this size cap.
+        # Harbor reads each chunk whole before req.data() returns, so the body
+        # size cap cannot bound chunked requests.
         req.headers["transfer-encoding"] != ""
       then
         reject(

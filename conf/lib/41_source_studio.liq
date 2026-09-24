@@ -22,15 +22,23 @@ end
 
 # Failed statistics reads preserve connectivity and return null metrics.
 def studio_srt_connection(~input_id, peer, read_stats) =
+  let unavailable =
+    {
+      peer = peer,
+      latency_ms = null,
+      receive_buffer_ms = null,
+      rtt_ms = null,
+      dropped_packets_total = null,
+      statistics_error = null
+    }
   try
     let stats = read_stats()
     {
-      peer = peer,
+      ...unavailable,
       latency_ms = stats.msRcvTsbPdDelay,
       receive_buffer_ms = stats.msRcvBuf,
       rtt_ms = stats.msRTT,
-      dropped_packets_total = stats.pktRcvDropTotal,
-      statistics_error = null
+      dropped_packets_total = stats.pktRcvDropTotal
     }
   catch err do
     log(
@@ -38,15 +46,16 @@ def studio_srt_connection(~input_id, peer, read_stats) =
       "Unable to read SRT statistics for #{input_id}: #{error.message(err)}",
       level=2
     )
-    {
-      peer = peer,
-      latency_ms = null,
-      receive_buffer_ms = null,
-      rtt_ms = null,
-      dropped_packets_total = null,
-      statistics_error = error.message(err)
-    }
+    {...unavailable, statistics_error = error.message(err)}
   end
+end
+
+def studio_levels_dbfs(connected, levels) =
+  let (left, right) = levels
+  {
+    left = studio_level_dbfs(connected, left),
+    right = studio_level_dbfs(connected, right)
+  }
 end
 
 # Returns a fallible buffered source; output factories make it safe.
@@ -109,11 +118,12 @@ def create_studio_input(~id, ~port) =
       track_sensitive=false,
       [
         ({is_silence_detection_enabled()}, stripped),
-        ({not is_silence_detection_enabled()}, peak_meter)
+        ({not is_silence_detection_enabled()}, studio)
       ]
     )
 
-  # Drain into the shared clock so disconnected standby buffers expire.
+  # Drain into the shared clock so a disconnected standby input's buffer expires
+  # and fallback stops treating it as ready.
   let buffered =
     buffer(
       id="buffered_#{id}",
@@ -143,8 +153,6 @@ def create_studio_input(~id, ~port) =
         sockets
       )
     let connected = not list.is_empty(sockets)
-    let (rms_left, rms_right) = rms_meter.rms()
-    let (peak_left, peak_right) = peak_meter.peak()
 
     {
       name = id,
@@ -152,16 +160,8 @@ def create_studio_input(~id, ~port) =
       audio =
         {
           window_seconds = studio_level_window_seconds,
-          rms_dbfs =
-            {
-              left = studio_level_dbfs(connected, rms_left),
-              right = studio_level_dbfs(connected, rms_right)
-            },
-          peak_dbfs =
-            {
-              left = studio_level_dbfs(connected, peak_left),
-              right = studio_level_dbfs(connected, peak_right)
-            }
+          rms_dbfs = studio_levels_dbfs(connected, rms_meter.rms()),
+          peak_dbfs = studio_levels_dbfs(connected, peak_meter.peak())
         },
       srt = {connected = connected, connections = connections}
     }
