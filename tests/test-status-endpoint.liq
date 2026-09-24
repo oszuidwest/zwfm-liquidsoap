@@ -4,7 +4,7 @@ settings.frame.audio.samplerate := 48000
 
 let STATION_ID = "test"
 let STREAM_METADATA_PORT = 7000
-let STREAM_METADATA_BEARER_TOKEN = ""
+let STREAM_METADATA_BEARER_TOKEN = "test-token"
 let ICECAST_HOST = "127.0.0.1"
 let ICECAST_PORT = 65534
 let ICECAST_SOURCE_PASSWORD = "test"
@@ -82,6 +82,8 @@ let studio_input_status_providers =
 
 let radio = blank()
 
+register_http_endpoints(radio, (fun () -> "studio_a"), sources=[("studio_a", radio)])
+
 let radio_sink = output.dummy(start=false, register_telnet=false, radio)
 radio_sink.on_start(
   synchronous=true,
@@ -127,7 +129,28 @@ radio_sink.on_start(
 
       # Structured output health must not be duplicated as detail text.
       assert(not string.contains(substring="\"detail\"", encoded_public))
-      thread.run(delay=0.1, shutdown)
+      thread.run(
+        delay=0.1,
+        fun () ->
+          begin
+            def assert_peer(headers, expected) =
+              let body =
+                http.get(
+                  timeout=2.0,
+                  headers=headers,
+                  "http://127.0.0.1:7000/status"
+                )
+              assert(string.contains(substring="\"peer\":#{expected}", body))
+            end
+            assert_peer([], "null")
+            assert_peer([("Authorization", "Bearer wrong")], "null")
+            assert_peer(
+              [("Authorization", "Bearer test-token")],
+              "\"192.0.2.1\""
+            )
+            shutdown()
+          end
+      )
     end
 )
 radio_sink.start()

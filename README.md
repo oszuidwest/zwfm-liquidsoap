@@ -317,9 +317,10 @@ the local writer and remote mirror health. The local state reports playlist and
 segment counts plus the age of the latest playlist update. The mirror state
 identifies the storage host and zone, reports the age of its most recent
 successful sync, and counts pending playlists and segments. Each HLS
-component is `starting` until its first progress and becomes `degraded` when
-progress stops for several segment intervals; its nullable `error` explains an
-active failure.
+component is `starting` until its first progress unless it reports an error,
+which makes it `degraded` immediately. It also becomes `degraded` when progress
+stops for several segment intervals; its nullable `error` explains an active
+failure.
 
 Use the top-level `status` field for alerting. A switch to the emergency
 fallback, a disconnected Icecast output, or a degraded enabled DAB+/HLS output
