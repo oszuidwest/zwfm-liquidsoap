@@ -34,12 +34,9 @@ def output_icecast_stream(
   let clocked_source = mksafe(buffer(id="buf_#{stream_id}", audio_source))
   let connected = ref(false)
 
-  # Start after callbacks and health registration so even a very fast initial
-  # connection is reflected correctly in the status endpoint.
   let icecast_output =
     output.icecast(
       id=stream_id,
-      start=false,
       format,
       host=actual_host,
       port=actual_port,
@@ -57,7 +54,7 @@ def output_icecast_stream(
     let started = icecast_output.is_started()
     let is_connected = connected()
     {
-      id = icecast_output.id(),
+      id = stream_id,
       status =
         if is_connected then "ok" elsif started then "down" else "stopped" end,
       host = actual_host,
@@ -65,14 +62,13 @@ def output_icecast_stream(
       mount = mount,
       description = description,
       started = started,
-      ready = icecast_output.is_ready(),
       connected = is_connected
     }
   end
 
   icecast_output_health_providers :=
     list.append(icecast_output_health_providers(), [health])
-  icecast_output.start()
+  icecast_output
 end
 
 # Defined after the factory so the provider list carries health()'s full

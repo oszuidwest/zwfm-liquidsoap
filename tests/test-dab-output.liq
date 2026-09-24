@@ -9,6 +9,8 @@ let DAB_EDI_DESTINATIONS = ""
 let DAB_METADATA_SOCKET = ""
 let DAB_METADATA_SIZE = ""
 
+%include "../conf/lib/10_logging.liq"
+%include "../conf/lib/20_state.liq"
 %include "../conf/lib/61_output_dab.liq"
 
 assert(

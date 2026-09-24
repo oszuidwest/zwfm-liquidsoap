@@ -32,13 +32,12 @@ let hls_remote_dir_url =
 let hls_local_error = ref("")
 let hls_mirror_error = ref("")
 
-# Runtime progress is observed by the mirror tick. Playlist content changes
-# prove that the local writer advances; a complete successful mirror pass proves
-# that the remote copy is current.
+# Local progress comes from the writer's own playlist updates; mirror progress
+# from the tick, where a complete successful pass proves the remote copy is
+# current.
 let hls_local_playlist_count = ref(0)
 let hls_local_segment_count = ref(0)
 let hls_local_last_update_at = ref(0.0)
-let hls_local_playlist_fingerprint = ref("")
 let hls_mirror_last_sync_at = ref(0.0)
 let hls_mirror_synced_segments = ref(0)
 let hls_mirror_pending_segments = ref(0)
@@ -59,85 +58,75 @@ def hls_mark_mirror_degraded(reason) =
   log(label="hls", reason, level=2)
 end
 
-def hls_progress_age(last_progress_at) =
-  if
-    last_progress_at <= 0.0
-  then
-    null
-  else
-    max(0.0, time() - last_progress_at)
-  end
-end
-
 def hls_progress_timestamp(last_progress_at) =
   if last_progress_at <= 0.0 then null else last_progress_at end
 end
 
-def hls_progress_failure(label, explicit_failure, last_progress_at) =
+def hls_progress_age(last_progress_at) =
+  null.map(
+    fun (progress_at) -> max(0.0, time() - progress_at),
+    hls_progress_timestamp(last_progress_at)
+  )
+end
+
+# An explicit failure wins over a stall; a component without any progress yet
+# is still starting.
+def hls_component_health(label, failure, last_progress_at) =
   let age = hls_progress_age(last_progress_at)
-  if
-    explicit_failure != ""
-  then
-    explicit_failure
-  elsif
-    null.defined(age) and null.get(age) > hls_stale_after_seconds
-  then
-    "#{label} has not advanced for #{int_of_float(null.get(age))}s"
-  else
-    ""
-  end
-end
-
-def hls_component_status(failure, last_progress_at) =
-  if
-    not hls_enabled
-  then
-    "disabled"
-  elsif
-    failure != ""
-  then
-    "degraded"
-  elsif
-    last_progress_at <= 0.0
-  then
-    "starting"
-  else
-    "ok"
-  end
-end
-
-def hls_optional_error(failure) =
-  if failure == "" then null else failure end
-end
-
-def hls_health() =
-  let local_last_update_at = hls_local_last_update_at()
-  let mirror_last_sync_at = hls_mirror_last_sync_at()
-  let local_failure =
-    hls_progress_failure(
-      "HLS local playlists",
-      hls_local_error(),
-      local_last_update_at
-    )
-  let mirror_failure =
-    hls_progress_failure(
-      "HLS mirror",
-      hls_mirror_error(),
-      mirror_last_sync_at
-    )
-  let local_status = hls_component_status(local_failure, local_last_update_at)
-  let mirror_status = hls_component_status(mirror_failure, mirror_last_sync_at)
+  let failure =
+    if
+      failure == "" and (age ?? 0.0) > hls_stale_after_seconds
+    then
+      "#{label} has not advanced for #{int_of_float(null.get(age))}s"
+    else
+      failure
+    end
   let status =
     if
       not hls_enabled
     then
       "disabled"
     elsif
-      local_status == "degraded" or mirror_status == "degraded"
+      failure != ""
     then
       "degraded"
     elsif
-      local_status == "starting" or mirror_status == "starting"
+      null.defined(age)
+    then
+      "ok"
+    else
+      "starting"
+    end
+  {status = status, error = if failure == "" then null else failure end}
+end
+
+def hls_health() =
+  let local_last_update_at = hls_local_last_update_at()
+  let mirror_last_sync_at = hls_mirror_last_sync_at()
+  let local =
+    hls_component_health(
+      "HLS local playlists",
+      hls_local_error(),
+      local_last_update_at
+    )
+  let mirror =
+    hls_component_health(
+      "HLS mirror",
+      hls_mirror_error(),
+      mirror_last_sync_at
+    )
+  let statuses = [local.status, mirror.status]
+  let status =
+    if
+      not hls_enabled
+    then
+      "disabled"
+    elsif
+      list.mem("degraded", statuses)
+    then
+      "degraded"
+    elsif
+      list.mem("starting", statuses)
     then
       "starting"
     else
@@ -148,8 +137,7 @@ def hls_health() =
     status = status,
     local =
       {
-        status = local_status,
-        error = hls_optional_error(local_failure),
+        ...local,
         playlist_count = hls_local_playlist_count(),
         segment_count = hls_local_segment_count(),
         last_update_at = hls_progress_timestamp(local_last_update_at),
@@ -157,8 +145,7 @@ def hls_health() =
       },
     mirror =
       {
-        status = mirror_status,
-        error = hls_optional_error(mirror_failure),
+        ...mirror,
         host = hls_endpoint_host,
         storage_zone = HLS_BUNNY_STORAGE_ZONE,
         last_sync_at = hls_progress_timestamp(mirror_last_sync_at),
@@ -181,6 +168,18 @@ end
 
 def hls_is_playlist_name(name) =
   r/\.m3u8$/.test(name)
+end
+
+# output.file.hls on_file_change handler. Variant playlists are rewritten on
+# every segment, so the writer's own events prove local progress even while a
+# slow mirror tick runs.
+def hls_track_local_progress(change) =
+  if
+    change.state != "deleted"
+    and hls_is_playlist_name(path.basename(change.path))
+  then
+    hls_local_last_update_at := time()
+  end
 end
 
 def hls_is_segment_name(name) =
@@ -419,7 +418,9 @@ def hls_seed_remote_segments((seeded:ref), (synced_segments:ref)) =
   end
 end
 
+# Returns the number of local segments that are still not mirrored.
 def hls_upload_segments((synced_segments:ref), segment_files) =
+  let pending = ref(0)
   list.iter(
     fun (local_path) ->
       begin
@@ -431,11 +432,14 @@ def hls_upload_segments((synced_segments:ref), segment_files) =
             hls_put_file(local_path)
           then
             synced_segments.set(hls_add_unique(remote_name, synced_segments()))
+          else
+            pending := pending() + 1
           end
         end
       end,
     segment_files
   )
+  pending()
 end
 
 def hls_required_segments_ready(snapshot, (synced_segments:ref)) =
@@ -444,6 +448,11 @@ def hls_required_segments_ready(snapshot, (synced_segments:ref)) =
     fun (segment_name) -> list.mem(segment_name, synced_segments()),
     segment_names
   )
+end
+
+def hls_playlist_is_synced(snapshot, synced_playlists) =
+  let previous = list.assoc.nullable(snapshot.name, synced_playlists)
+  null.defined(previous) and null.get(previous) == snapshot.content
 end
 
 def hls_upload_playlist_group(
@@ -455,11 +464,8 @@ def hls_upload_playlist_group(
   list.iter(
     fun (snapshot) ->
       begin
-        let previous = list.assoc.nullable(snapshot.name, synced_playlists())
-        let changed =
-          not null.defined(previous) or null.get(previous) != snapshot.content
         if
-          changed
+          not hls_playlist_is_synced(snapshot, synced_playlists())
         then
           if
             hls_required_segments_ready(snapshot, synced_segments)
@@ -548,51 +554,21 @@ def hls_delete_stale_segments((synced_segments:ref), protected_segment_names) =
   )
 end
 
-def hls_update_local_progress(playlists, segment_files) =
-  let fingerprint =
-    string.concat(
-      separator="\n",
-      list.map(
-        fun (snapshot) -> "#{snapshot.name}\n#{snapshot.content}",
-        playlists
-      )
-    )
-  hls_local_playlist_count := list.length(playlists)
-  hls_local_segment_count := list.length(segment_files)
-  if
-    fingerprint != "" and fingerprint != hls_local_playlist_fingerprint()
-  then
-    hls_local_last_update_at := time()
-  end
-  hls_local_playlist_fingerprint := fingerprint
-end
-
-def hls_playlist_is_synced(snapshot, synced_playlists) =
-  let previous = list.assoc.nullable(snapshot.name, synced_playlists)
-  null.defined(previous) and null.get(previous) == snapshot.content
-end
-
 def hls_update_mirror_progress(
   playlists,
-  local_segment_names,
-  (synced_segments:ref),
-  (synced_playlists:ref),
+  pending_segments,
+  synced_segments,
+  synced_playlists,
   sync_ok
 ) =
-  hls_mirror_synced_segments := list.length(synced_segments())
-  hls_mirror_pending_segments :=
-    list.length(
-      list.filter(
-        fun (name) -> not list.mem(name, synced_segments()),
-        local_segment_names
-      )
-    )
-  hls_mirror_synced_playlists := list.length(synced_playlists())
+  hls_mirror_synced_segments := list.length(synced_segments)
+  hls_mirror_pending_segments := pending_segments
+  hls_mirror_synced_playlists := list.length(synced_playlists)
   hls_mirror_pending_playlists :=
     list.length(
       list.filter(
         fun (snapshot) ->
-          not hls_playlist_is_synced(snapshot, synced_playlists()),
+          not hls_playlist_is_synced(snapshot, synced_playlists),
         playlists
       )
     )
@@ -617,9 +593,10 @@ def hls_mirror_tick(
   let protected_segment_names =
     hls_union(local_segment_names, hls_snapshot_segment_names(playlists))
 
-  hls_update_local_progress(playlists, segment_files)
+  hls_local_playlist_count := list.length(playlists)
+  hls_local_segment_count := list.length(segment_files)
 
-  hls_upload_segments(synced_segments, segment_files)
+  let pending_segments = hls_upload_segments(synced_segments, segment_files)
 
   let playlists_ok =
     not list.is_empty(playlists)
@@ -634,9 +611,9 @@ def hls_mirror_tick(
   let sync_ok = not hls_mirror_tick_failed() and playlists_ok
   hls_update_mirror_progress(
     playlists,
-    local_segment_names,
-    synced_segments,
-    synced_playlists,
+    pending_segments,
+    synced_segments(),
+    synced_playlists(),
     sync_ok
   )
 
@@ -800,7 +777,7 @@ def output_hls_stream(audio_source) =
         # No persist_at: segment names are timestamped and never reused (see
         # hls_segment_name), and persist_at breaks the error containment
         # above.
-        ignore(
+        let hls_output =
           output.file.hls(
             id="hls",
             playlist=hls_main_playlist_name,
@@ -812,7 +789,7 @@ def output_hls_stream(audio_source) =
             [("aac_96", aac_mid), ("aac_192", aac_high)],
             hls_source
           )
-        )
+        hls_output.on_file_change(synchronous=true, hls_track_local_progress)
         hls_local_error := ""
         log(
           label="hls",

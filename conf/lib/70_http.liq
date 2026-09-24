@@ -50,9 +50,10 @@ def status_snapshot(
       "down"
     elsif
       active_source == "fallback"
-      or not list.mem(icecast_state.status, ["ok", "disabled"])
-      or not dab_ack_healthy(dab_state.status)
-      or hls_state.status == "degraded"
+      or not list.for_all(
+        status_healthy,
+        [icecast_state.status, dab_state.status, hls_state.status]
+      )
     then
       "degraded"
     else

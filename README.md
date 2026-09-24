@@ -276,7 +276,7 @@ socat - UNIX-CONNECT:/opt/liquidsoap/socket/liquidsoap.sock
 | `silence.disable`           | Sets silence detection to off                                      |
 | `silence.status`            | Shows the silence detection state                                  |
 | `dab.status`                | Shows acknowledgement progress for each DAB+ TCP destination       |
-| `hls.status`                | Shows the HLS output health (`ok`, `degraded: <reason>`, or `disabled`) |
+| `hls.status`                | Shows the HLS output health (`starting`, `ok`, `degraded: <reason>`, or `disabled`) |
 
 All commands have an immediate effect.
 
@@ -304,19 +304,18 @@ Send the same `Authorization: Bearer <token>` header configured for
 `POST /metadata` to include them.
 
 `outputs.icecast` has an aggregate status and a `streams` array. Each stream
-identifies its host, port, and mount and reports whether it is started, ready,
-and connected. `outputs.dab.destinations` contains one object per EDI
-destination with its TCP state, ACK age, byte counters, send queue, unacknowledged
-segments, and retransmissions. DAB health uses only these structured fields;
-it does not duplicate them in human-readable `detail` fields. Unavailable
-metrics are `null`. `outputs.hls`
-separates the local writer and remote mirror health. The local state reports
-playlist and segment counts plus the timestamp and age of the latest playlist
-update. The mirror state identifies the storage host and zone, reports its most
-recent successful sync, and counts synced and pending playlists and segments.
-The component becomes `degraded` when progress stops for several segment
-intervals. Its nullable `error` explains an active failure; there are no
-duplicated `detail` fields.
+identifies its host, port, and mount and reports whether it is started and
+connected. `outputs.dab.destinations` contains one object per EDI destination
+with its TCP state, ACK age, byte counters, send queue, unacknowledged segments,
+and retransmissions; unavailable metrics are `null`. `outputs.hls` separates
+the local writer and remote mirror health. The local state reports playlist and
+segment counts plus the timestamp and age of the latest playlist update. The
+mirror state identifies the storage host and zone, reports its most recent
+successful sync, and counts synced and pending playlists and segments. Each HLS
+component is `starting` until its first progress and becomes `degraded` when
+progress stops for several segment intervals; its nullable `error` explains an
+active failure. No output repeats its structured health in a human-readable
+`detail` field.
 
 Use the top-level `status` field for alerting. A switch to the emergency
 fallback, a disconnected Icecast output, or a degraded enabled DAB+/HLS output

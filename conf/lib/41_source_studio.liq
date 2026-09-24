@@ -10,14 +10,8 @@ let studio_level_window_seconds = 0.5
 let studio_level_floor_dbfs = -120.0
 
 def studio_amplitude_to_dbfs(amplitude) =
-  if
-    amplitude <= 0.000001
-  then
-    studio_level_floor_dbfs
-  else
-    let dbfs = 20.0 * log10(amplitude)
-    round(max(studio_level_floor_dbfs, min(0.0, dbfs)) * 10.0) / 10.0
-  end
+  round(max(studio_level_floor_dbfs, min(0.0, dB_of_lin(amplitude))) * 10.0) /
+    10.0
 end
 
 def studio_level_or_null(connected, amplitude) =

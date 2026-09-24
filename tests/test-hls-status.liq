@@ -26,21 +26,18 @@ let playlists =
     {name = "aac_96.m3u8", content = "#EXTM3U\naac_96_1.ts"},
     {name = "live.m3u8", content = "#EXTM3U\naac_96.m3u8"}
   ]
-let segment_files = ["/hls/aac_96_1.ts", "/hls/aac_96_2.ts"]
-let synced_segments = ref(["aac_96_1.ts"])
 let synced_playlists =
-  ref(
-    [
-      ("aac_96.m3u8", "#EXTM3U\naac_96_1.ts"),
-      ("live.m3u8", "#EXTM3U\naac_96.m3u8")
-    ]
-  )
+  [
+    ("aac_96.m3u8", "#EXTM3U\naac_96_1.ts"),
+    ("live.m3u8", "#EXTM3U\naac_96.m3u8")
+  ]
 
-hls_update_local_progress(playlists, segment_files)
+# The writer's file events stamp local progress; the mirror tick records sync.
+hls_local_last_update_at := time()
 hls_update_mirror_progress(
   playlists,
-  ["aac_96_1.ts", "aac_96_2.ts"],
-  synced_segments,
+  1,
+  ["aac_96_1.ts"],
   synced_playlists,
   true
 )
@@ -48,8 +45,6 @@ hls_update_mirror_progress(
 let healthy = hls_health()
 assert(healthy.status == "ok")
 assert(healthy.local.status == "ok")
-assert(healthy.local.playlist_count == 2)
-assert(healthy.local.segment_count == 2)
 assert(null.defined(healthy.local.last_update_at))
 assert(null.get(healthy.local.update_age_seconds) < 1.0)
 assert(not null.defined(healthy.local.error))
@@ -62,10 +57,19 @@ assert(healthy.mirror.synced_playlists == 2)
 assert(healthy.mirror.pending_playlists == 0)
 assert(not null.defined(healthy.mirror.error))
 
+# Spread component records must still serialize every field.
 let encoded = json.stringify(compact=true, healthy)
+assert(string.contains(substring="\"error\":null", encoded))
+assert(string.contains(substring="\"pending_segments\":1", encoded))
 assert(not string.contains(substring="\"detail\"", encoded))
-assert(string.contains(substring="\"host\":\"storage.example.test\"", encoded))
-assert(string.contains(substring="\"storage_zone\":\"test-zone\"", encoded))
+
+# Only created or updated playlists count as writer progress.
+hls_local_last_update_at := 0.0
+hls_track_local_progress({path = "/hls/aac_96_1.ts", state = "created"})
+hls_track_local_progress({path = "/hls/aac_96.m3u8", state = "deleted"})
+assert(hls_local_last_update_at() == 0.0)
+hls_track_local_progress({path = "/hls/aac_96.m3u8", state = "updated"})
+assert(hls_local_last_update_at() > 0.0)
 
 hls_local_last_update_at := time() - hls_stale_after_seconds - 1.0
 let stale = hls_health()

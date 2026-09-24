@@ -88,30 +88,16 @@ jobs:
             fi
           done
 
-      - name: Test DAB output helpers
+      - name: Run Liquidsoap tests
         env:
           LIQUIDSOAP_VERSION: ${{ steps.version.outputs.version }}
         run: |
-          docker run --rm -v "$PWD:/app" -w /app \
-            "savonet/liquidsoap:${LIQUIDSOAP_VERSION}" \
-            liquidsoap tests/test-dab-output.liq
-
-      - name: Test status endpoint helpers
-        env:
-          LIQUIDSOAP_VERSION: ${{ steps.version.outputs.version }}
-        run: |
-          docker run --rm -v "$PWD:/app" -w /app \
-            "savonet/liquidsoap:${LIQUIDSOAP_VERSION}" \
-            liquidsoap tests/test-status-endpoint.liq
-          docker run --rm -v "$PWD:/app" -w /app \
-            "savonet/liquidsoap:${LIQUIDSOAP_VERSION}" \
-            liquidsoap tests/test-icecast-status.liq
-          docker run --rm -v "$PWD:/app" -w /app \
-            "savonet/liquidsoap:${LIQUIDSOAP_VERSION}" \
-            liquidsoap tests/test-hls-status.liq
-          docker run --rm -v "$PWD:/app" -w /app \
-            "savonet/liquidsoap:${LIQUIDSOAP_VERSION}" \
-            liquidsoap tests/test-studio-levels.liq
+          for test in tests/*.liq; do
+            echo "Running ${test}..."
+            docker run --rm -v "$PWD:/app" -w /app \
+              "savonet/liquidsoap:${LIQUIDSOAP_VERSION}" \
+              liquidsoap "${test}"
+          done
 
       - name: Set Lint Success
         id: lint_result

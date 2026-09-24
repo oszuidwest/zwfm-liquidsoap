@@ -242,10 +242,6 @@ for destination in ${DESTINATIONS}; do
     else
       send_queue=${3:-0}
       connection="${4:-?}>${5:-?}"
-      bytes_sent=0
-      bytes_acked=0
-      unacked=0
-      retrans=0
       for field; do
         case ${field} in
           bytes_sent:*) bytes_sent=${field#*:} ;;

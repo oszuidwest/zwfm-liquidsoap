@@ -66,3 +66,8 @@ def set_forced_source(name) =
     )
   end
 end
+
+# Output health: any status outside this list makes GET /status degraded
+def status_healthy(status) =
+  list.mem(status, ["ok", "starting", "unmonitored", "disabled"])
+end

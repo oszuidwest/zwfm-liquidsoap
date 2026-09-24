@@ -30,10 +30,6 @@ let dab_ack_detail =
     "DAB+ output is disabled"
   )
 
-def dab_ack_healthy(status) =
-  list.mem(status, ["ok", "starting", "unmonitored", "disabled"])
-end
-
 # Stop recurring monitor work before Liquidsoap tears down its internal
 # scheduler. Otherwise a tick racing with shutdown cannot enforce the
 # process.read timeout and emits a misleading startup warning.
@@ -48,7 +44,7 @@ def dab_set_ack_status(status, detail, ~destinations=[]) =
     log(
       label="dab",
       "TCP ACK monitor: #{previous} -> #{status}",
-      level=if dab_ack_healthy(status) then 3 else 2 end
+      level=if status_healthy(status) then 3 else 2 end
     )
   end
   dab_ack_detail := detail
@@ -95,12 +91,13 @@ def dab_optional_int(value) =
   if value == "" then null else int_of_string(value) end
 end
 
-def dab_parse_ack_destination(line) =
+# Returns the line's human-readable detail and its structured record, if any.
+def dab_parse_ack_line(line) =
   let fields = string.split(separator="\t", line)
   if
     list.length(fields) != 10
   then
-    null
+    (line, null)
   else
     let [
       destination,
@@ -112,40 +109,32 @@ def dab_parse_ack_destination(line) =
       send_queue,
       unacked,
       retrans,
-      _
+      detail
     ] = fields
-    {
-      destination = destination,
-      status = status,
-      tcp_state = tcp_state,
-      ack_age_seconds = dab_optional_int(ack_age),
-      bytes_sent = dab_optional_int(bytes_sent),
-      bytes_acked = dab_optional_int(bytes_acked),
-      send_queue_bytes = dab_optional_int(send_queue),
-      unacked_segments = dab_optional_int(unacked),
-      retransmissions = dab_optional_int(retrans)
-    }
+    (
+      "#{destination} #{status} (#{detail})",
+      {
+        destination = destination,
+        status = status,
+        tcp_state = tcp_state,
+        ack_age_seconds = dab_optional_int(ack_age),
+        bytes_sent = dab_optional_int(bytes_sent),
+        bytes_acked = dab_optional_int(bytes_acked),
+        send_queue_bytes = dab_optional_int(send_queue),
+        unacked_segments = dab_optional_int(unacked),
+        retransmissions = dab_optional_int(retrans)
+      }
+    )
   end
 end
 
 def dab_parse_ack_monitor(monitor_output) =
   let lines = string.split(separator="\n", string.trim(monitor_output))
-  let records = list.tl(lines)
-  def describe(line) =
-    let fields = string.split(separator="\t", line)
-    if
-      list.length(fields) == 10
-    then
-      let [destination, status, _, _, _, _, _, _, _, detail] = fields
-      "#{destination} #{status} (#{detail})"
-    else
-      line
-    end
-  end
+  let parsed = list.map(dab_parse_ack_line, list.tl(lines))
   {
     status = string.trim(list.hd(default="", lines)),
-    detail = string.concat(separator="\n", list.map(describe, records)),
-    destinations = list.filter_map(dab_parse_ack_destination, records)
+    detail = string.concat(separator="\n", list.map(fst, parsed)),
+    destinations = list.filter_map(snd, parsed)
   }
 end
 
@@ -271,10 +260,6 @@ def output_dab_stream(audio_source) =
   server.register(
     description="Show DAB+ TCP acknowledgement health",
     "dab.status",
-    fun (_) ->
-      begin
-        let s = dab_ack_status()
-        "#{s.status}\n#{dab_ack_detail()}"
-      end
+    fun (_) -> "#{dab_ack_status().status}\n#{dab_ack_detail()}"
   )
 end
