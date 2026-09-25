@@ -167,9 +167,23 @@ radio_sink.on_start(
               )
             end
             assert_sensitive([], "null", false)
-            assert_sensitive([("Authorization", "Bearer wrong")], "null", false)
             assert_sensitive(
-              [("Authorization", "Bearer test-token")],
+              [
+                (
+                  "Authorization",
+                  "Bearer wrong"
+                )
+              ],
+              "null",
+              false
+            )
+            assert_sensitive(
+              [
+                (
+                  "Authorization",
+                  "Bearer test-token"
+                )
+              ],
               "\"192.0.2.1\"",
               true
             )

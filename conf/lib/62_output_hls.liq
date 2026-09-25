@@ -594,7 +594,8 @@ def hls_mirror_tick(
     }
 
   if
-    not hls_mirror_tick_failed() and playlists_ok
+    not hls_mirror_tick_failed()
+    and playlists_ok
     and hls_mirror_pending().segments == 0
   then
     hls_mirror_last_sync_at := time()

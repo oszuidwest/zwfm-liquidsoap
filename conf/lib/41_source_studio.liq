@@ -46,7 +46,11 @@ def studio_srt_connection(~input_id, peer, read_stats) =
       "Unable to read SRT statistics for #{input_id}: #{error.message(err)}",
       level=2
     )
-    {...unavailable, statistics_error = "statistics unavailable"}
+    {
+      ...unavailable,
+      statistics_error =
+        "statistics unavailable"
+    }
   end
 end
 

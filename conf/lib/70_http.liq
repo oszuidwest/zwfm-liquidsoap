@@ -75,15 +75,17 @@ def status_snapshot(
         fun (get_status) -> get_status(include_peer=include_sensitive),
         studio_input_status_providers()
       ),
-    outputs = {
-      icecast = icecast_state,
-      dab = {
-        ...dab_state,
-        destinations =
-          if include_sensitive then dab_state.destinations else [] end
-      },
-      hls = hls_state
-    }
+    outputs =
+      {
+        icecast = icecast_state,
+        dab =
+          {
+            ...dab_state,
+            destinations =
+              if include_sensitive then dab_state.destinations else [] end
+          },
+        hls = hls_state
+      }
   }
 end
 
