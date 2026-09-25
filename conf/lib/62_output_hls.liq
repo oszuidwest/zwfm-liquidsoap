@@ -24,6 +24,7 @@ let hls_remote_dir_url =
 # Independent errors prevent one HLS component from masking the other.
 let hls_local_error = ref("")
 let hls_mirror_error = ref("")
+let hls_local_file_names = ref([])
 
 # Null timestamps mean no local update or complete mirror pass yet.
 let hls_local_last_update_at = ref(null)
@@ -94,16 +95,6 @@ def hls_is_playlist_name(name) =
   r/\.m3u8$/.test(name)
 end
 
-# Playlist write events track local progress independently of mirror latency.
-def hls_track_local_progress(change) =
-  if
-    change.state != "deleted"
-    and hls_is_playlist_name(path.basename(change.path))
-  then
-    hls_local_last_update_at := time()
-  end
-end
-
 def hls_is_segment_name(name) =
   r/\.(aac|ts)$/.test(name)
 end
@@ -114,6 +105,27 @@ end
 
 def hls_add_unique(name, names) =
   if list.mem(name, names) then names else [name, ...names] end
+end
+
+# File events track local counts and progress independently of mirror latency.
+def hls_track_local_progress(change) =
+  let name = path.basename(change.path)
+  if
+    change.state == "deleted"
+  then
+    hls_local_file_names :=
+      list.filter(fun (file_name) -> file_name != name, hls_local_file_names())
+  elsif
+    hls_is_sync_file_name(name)
+  then
+    hls_local_file_names := hls_add_unique(name, hls_local_file_names())
+  end
+
+  if
+    change.state != "deleted" and hls_is_playlist_name(name)
+  then
+    hls_local_last_update_at := time()
+  end
 end
 
 def hls_union(names, extra_names) =
@@ -230,36 +242,12 @@ def hls_local_segment_files() =
   hls_local_files(hls_is_segment_name)
 end
 
-# Snapshot counts outside mirror work. Guard file.ls because Liquidsoap 2.4.5
-# cannot catch its missing-directory errors.
-def hls_local_file_counts() =
-  if
-    not hls_enabled
-  then
-    {playlists = 0, segments = 0, error = ""}
-  elsif
-    not file.is_directory(HLS_DIR)
-  then
-    {
-      playlists = 0,
-      segments = 0,
-      error =
-        "HLS_DIR #{HLS_DIR} is missing"
-    }
-  else
-    let names = list.map(path.basename, hls_local_files(hls_is_sync_file_name))
-    {
-      playlists = list.length(list.filter(hls_is_playlist_name, names)),
-      segments = list.length(list.filter(hls_is_segment_name, names)),
-      error = ""
-    }
-  end
-end
-
 def hls_health() =
   let local_age = hls_progress_age(hls_local_last_update_at())
   let mirror_age = hls_progress_age(hls_mirror_last_sync_at())
-  let local_files = hls_local_file_counts()
+  let hls_dir_present = file.is_directory(HLS_DIR)
+  let local_file_names =
+    if hls_dir_present then hls_local_file_names() else [] end
   let local =
     hls_component_health(
       "HLS local playlists",
@@ -267,8 +255,12 @@ def hls_health() =
         hls_local_error() != ""
       then
         hls_local_error()
+      elsif
+        hls_enabled and not hls_dir_present
+      then
+        "HLS_DIR #{HLS_DIR} is missing"
       else
-        local_files.error
+        ""
       end,
       local_age
     )
@@ -301,8 +293,10 @@ def hls_health() =
     local =
       {
         ...local,
-        playlist_count = local_files.playlists,
-        segment_count = local_files.segments,
+        playlist_count =
+          list.length(list.filter(hls_is_playlist_name, local_file_names)),
+        segment_count =
+          list.length(list.filter(hls_is_segment_name, local_file_names)),
         update_age_seconds = local_age
       },
     mirror =
@@ -634,6 +628,8 @@ end
 
 # A fresh timeline makes old local output disposable; the mirror prunes segments.
 def hls_remove_stale_local_files() =
+  hls_local_file_names := []
+
   def is_stale(name) =
     r/^liq.*tmp$/.test(name) or hls_is_sync_file_name(name)
   end

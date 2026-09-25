@@ -33,6 +33,8 @@ file.write(data="#EXTM3U", "#{HLS_DIR}/aac_96.m3u8")
 file.write(data="#EXTM3U", "#{HLS_DIR}/live.m3u8")
 file.write(data="", "#{HLS_DIR}/aac_96_1.ts")
 file.write(data="", "#{HLS_DIR}/aac_96_2.ts")
+hls_local_file_names :=
+  ["aac_96.m3u8", "live.m3u8", "aac_96_1.ts", "aac_96_2.ts"]
 hls_local_last_update_at := time()
 hls_mirror_pending := {segments = 1, playlists = 0}
 hls_mirror_last_sync_at := time()
@@ -57,11 +59,13 @@ assert(string.contains(substring="\"pending_segments\":1", encoded))
 
 # Only created or updated playlists count as writer progress.
 hls_local_last_update_at := null
+hls_local_file_names := []
 hls_track_local_progress({path = "/hls/aac_96_1.ts", state = "created"})
 hls_track_local_progress({path = "/hls/aac_96.m3u8", state = "deleted"})
 assert(not null.defined(hls_local_last_update_at()))
 hls_track_local_progress({path = "/hls/aac_96.m3u8", state = "updated"})
 assert(null.defined(hls_local_last_update_at()))
+assert(hls_health().local.playlist_count == 1)
 
 hls_local_last_update_at := time() - hls_stale_after_seconds - 1.0
 let stale = hls_health()
