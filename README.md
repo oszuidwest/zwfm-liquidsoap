@@ -276,7 +276,7 @@ socat - UNIX-CONNECT:/opt/liquidsoap/socket/liquidsoap.sock
 | `silence.disable`           | Sets silence detection to off                                      |
 | `silence.status`            | Shows the silence detection state                                  |
 | `dab.status`                | Shows acknowledgement progress for each DAB+ TCP destination       |
-| `hls.status`                | Shows the HLS output health (`ok`, `degraded: <reason>`, or `disabled`) |
+| `hls.status`                | Shows the HLS output health (`starting`, `ok`, `degraded: <reason>`, or `disabled`) |
 
 All commands have an immediate effect.
 
@@ -291,14 +291,45 @@ curl -s http://127.0.0.1:7000/status | jq
 ```
 
 The response contains the overall state (`ok`, `degraded`, or `down`), the
-active source and mode, readiness for every source, the silence-detection
-state, and a `status` plus `detail` for the DAB+ and HLS outputs. Use the
-top-level `status` field for alerting. A switch to the emergency fallback or a
-degraded enabled output makes the overall state `degraded`; an unavailable
-radio source makes it `down`. The HTTP status code follows the overall state:
-`200 OK` for `ok` and `degraded`, `503 Service Unavailable` for `down`, so a
-monitor that only checks the status code alerts when the station is off air.
-`HEAD /status` returns the same status code without a body.
+active source and mode, readiness for every source, detailed studio-input
+health, the silence-detection state, and structured health for Icecast, DAB+,
+and HLS outputs. Each item in `studio_inputs` reports its audio buffer in
+seconds, stereo RMS and peak levels in dBFS over a 0.5-second window, and an SRT
+object with its connection state. Left and right levels are separate. Digital
+silence is clamped to `-120.0` dBFS; levels are `null` when SRT is disconnected.
+Every active SRT connection includes the peer address, negotiated receive
+latency, receive buffer, round-trip time, and total dropped packets. If its
+statistics cannot be read, the connection stays listed and connected with
+`null` metrics and a `statistics_error`. Because
+`/status` does not require authentication, peer addresses are `null` by default.
+Send the same `Authorization: Bearer <token>` header configured for
+`POST /metadata` to include them.
+
+`outputs.icecast` has an aggregate status and a `streams` array. Each stream
+identifies its host, port, and mount and reports whether it is started and
+connected. Authorized responses include one object per EDI destination in
+`outputs.dab.destinations`; without the matching bearer token, this is `[]` even
+when destinations are configured. Each object reports its TCP state, ACK age,
+byte counters, send queue, unacknowledged segments, and retransmissions;
+unavailable metrics are `null`. Its nullable `error` explains an unhealthy
+destination; `outputs.dab.error` covers failures such as a crashed encoder or
+monitor. `outputs.hls` separates
+the local writer and remote mirror health. The local state reports playlist and
+segment counts plus the age of the latest playlist update. The mirror state
+identifies the storage host and zone, reports the age of its most recent
+successful sync, and counts pending playlists and segments. Each HLS
+component is `starting` until its first progress unless it reports an error,
+which makes it `degraded` immediately. It also becomes `degraded` when progress
+stops for several segment intervals; its nullable `error` explains an active
+failure.
+
+Use the top-level `status` field for alerting. A switch to the emergency
+fallback, a disconnected Icecast output, or a degraded enabled DAB+/HLS output
+makes the overall state `degraded`; an unavailable radio source makes it `down`.
+The HTTP status code follows the overall state: `200 OK` for `ok` and
+`degraded`, `503 Service Unavailable` for `down`, so a monitor that only checks
+the status code alerts when the station is off air. `HEAD /status` returns the
+same status code without a body.
 
 ## Silence Detection
 

@@ -62,6 +62,19 @@ assert_status()
   fi
 }
 
+# Compare the first record with tabs rendered as pipes.
+assert_record()
+{
+  expected=$1
+  output=$2
+  actual=$(printf '%s\n' "${output}" | sed -n '2p' | tr '\t' '|')
+  if [ "${actual}" != "${expected}" ]; then
+    printf 'Expected record %s, got %s:\n%s\n' \
+      "${expected}" "${actual}" "${output}" >&2
+    exit 1
+  fi
+}
+
 write_socket()
 {
   port=$1
@@ -78,6 +91,7 @@ DESTINATION=tcp://192.0.2.10:9171
 write_socket 9171 100 101
 output=$(monitor 100 "${DESTINATION}")
 assert_status ok "${output}"
+assert_record "${DESTINATION}|ok|ESTAB|0|100|101|0|0|0|" "${output}"
 
 output=$(monitor 106 "${DESTINATION}")
 assert_status degraded "${output}"
@@ -96,6 +110,7 @@ assert_status degraded "${output}"
 rm -f -- "${FAKE_SS_DIR}/9171"
 output=$(monitor 119 "${DESTINATION}")
 assert_status down "${output}"
+assert_record "${DESTINATION}|down||||||||no AudioEnc TCP socket" "${output}"
 
 rm -rf -- "${STATE_DIR}"
 write_socket 9171 100 1

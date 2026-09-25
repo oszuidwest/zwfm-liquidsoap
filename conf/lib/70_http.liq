@@ -1,6 +1,4 @@
-# Shared HTTP endpoints
-# Exposes machine-readable runtime status and accepts authenticated now-playing
-# updates before the output fan-out.
+# Runtime status and authenticated now-playing HTTP endpoints.
 
 let STREAM_METADATA_MAX_BODY_BYTES = 16_384
 
@@ -25,9 +23,22 @@ def read_stream_metadata_body(req) =
   read_stream_metadata_chunks("")
 end
 
-def status_snapshot(radio_source, active_source, ~sources) =
+# Harbor lowercases request header names.
+def request_authorized(req) =
+  STREAM_METADATA_BEARER_TOKEN != ""
+  and req.headers["authorization"] ==
+    "Bearer #{STREAM_METADATA_BEARER_TOKEN}"
+end
+
+def status_snapshot(
+  radio_source,
+  active_source,
+  ~sources,
+  ~include_sensitive=false
+) =
   let radio_ready = radio_source.is_ready()
   let active_source = active_source()
+  let icecast_state = icecast_health()
   let dab_state = dab_ack_status()
   let hls_state = hls_health()
   let status =
@@ -37,8 +48,10 @@ def status_snapshot(radio_source, active_source, ~sources) =
       "down"
     elsif
       active_source == "fallback"
-      or not dab_ack_healthy(dab_state.status)
-      or hls_state.status == "degraded"
+      or not list.for_all(
+        status_healthy,
+        [icecast_state.status, dab_state.status, hls_state.status]
+      )
     then
       "degraded"
     else
@@ -57,7 +70,20 @@ def status_snapshot(radio_source, active_source, ~sources) =
         fun ((name, src)) -> {name = name, ready = source.is_ready(src)},
         sources
       ),
-    outputs = {dab = dab_state, hls = hls_state}
+    studio_inputs =
+      list.map(
+        fun (get_status) -> get_status(include_peer=include_sensitive),
+        studio_input_status_providers()
+      ),
+    outputs = {
+      icecast = icecast_state,
+      dab = {
+        ...dab_state,
+        destinations =
+          if include_sensitive then dab_state.destinations else [] end
+      },
+      hls = hls_state
+    }
   }
 end
 
@@ -74,11 +100,15 @@ def register_http_endpoints(radio_source, active_source, ~sources) =
     )
   end
 
-  # HTTP monitors and healthchecks alert on the status code: 503 when the
-  # radio source is down, 200 otherwise (degraded is still on air). HEAD is
-  # registered too because some monitors probe with it by default.
-  def status_handler(_, res) =
-    let snapshot = status_snapshot(radio_source, active_source, sources=sources)
+  # Degraded is on air (200); only down is 503. Register HEAD for probes.
+  def status_handler(req, res) =
+    let snapshot =
+      status_snapshot(
+        radio_source,
+        active_source,
+        sources=sources,
+        include_sensitive=request_authorized(req)
+      )
     res.header("Cache-Control", "no-store")
     if snapshot.status == "down" then res.status_code(503) end
     res.json(compact=true, snapshot)
@@ -123,10 +153,8 @@ def register_http_endpoints(radio_source, active_source, ~sources) =
         res.data(body)
       end
 
-      # Harbor lowercases incoming header names before handlers run
       if
-        req.headers["authorization"] !=
-          "Bearer #{STREAM_METADATA_BEARER_TOKEN}"
+        not request_authorized(req)
       then
         res.header(
           "WWW-Authenticate",
@@ -138,8 +166,8 @@ def register_http_endpoints(radio_source, active_source, ~sources) =
           "bad or missing bearer token"
         )
       elsif
-        # Liquidsoap buffers each chunked HTTP chunk before req.data() returns
-        # it, so chunked bodies cannot be bounded inside the handler
+        # Harbor reads each chunk whole before req.data() returns, so the body
+        # size cap cannot bound chunked requests.
         req.headers["transfer-encoding"] != ""
       then
         reject(
@@ -174,8 +202,7 @@ def register_http_endpoints(radio_source, active_source, ~sources) =
                 "missing title"
               )
             else
-              # An omitted artist sends a title-only update instead of an empty
-              # artist tag
+              # Omit the artist tag instead of sending an empty value.
               let new_metadata =
                 if
                   artist == ""

@@ -1,17 +1,14 @@
-# Runtime state management
-# Mutable state for silence detection and source forcing
-# Controlled via server socket commands (see 90_server.liq)
+# Runtime controls and shared output-health classification.
 
-# Silence detection state
-# Default: enabled. Use silence.enable/silence.disable commands to change.
+# Enabled by default; server commands can change it at runtime.
 let silence_detection_enabled = ref(true)
 
-# Check if silence detection is currently enabled
+# Read the current silence-detection state.
 def is_silence_detection_enabled() =
   silence_detection_enabled()
 end
 
-# Set silence detection state
+# Log only actual silence-detection changes.
 def set_silence_detection(enabled) =
   if
     enabled != silence_detection_enabled()
@@ -24,32 +21,30 @@ def set_silence_detection(enabled) =
   end
 end
 
-# Source forcing state
-# Empty string = auto mode (normal fallback behavior)
-# "studio_a", "studio_b", "fallback" = force that specific source
+# Empty selects automatic fallback; otherwise the value is a source id.
 let forced_source_name = ref("")
 
-# Get current forced source name (empty = auto)
+# Read the forced source name.
 def get_forced_source() =
   forced_source_name()
 end
 
-# Check if in auto mode (no forced source)
+# Check whether source selection is automatic.
 def is_auto_mode() =
   forced_source_name() == ""
 end
 
-# Check if a specific source should be forced
+# Check whether a source is forced.
 def should_use_source(name) =
   forced_source_name() == name
 end
 
-# "auto" or "forced", as reported by the status command and GET /status
+# Return the public source-selection mode.
 def radio_mode() =
   if is_auto_mode() then "auto" else "forced" end
 end
 
-# Set forced source (or empty string for auto mode)
+# Update the forced source; empty restores automatic selection.
 def set_forced_source(name) =
   forced_source_name := name
   if
@@ -65,4 +60,9 @@ def set_forced_source(name) =
       level=3
     )
   end
+end
+
+# These states do not degrade aggregate health.
+def status_healthy(status) =
+  list.mem(status, ["ok", "starting", "unmonitored", "disabled"])
 end

@@ -1,5 +1,4 @@
-# DAB+ output configuration
-# Uses ODR-AudioEnc for DAB+ encoding with EDI output
+# DAB+ EDI output through ODR-AudioEnc.
 
 if
   DAB_ACK_POLL_SECONDS <= 0.0
@@ -20,27 +19,21 @@ then
   )
 end
 
-# DAB+ health: status is disabled, unmonitored, starting, ok, degraded or down
-let dab_ack_status =
+# Public states: disabled, unmonitored, starting, ok, degraded or down.
+let dab_ack_status = ref({status = "disabled", destinations = [], error = null})
+
+# dab.status keeps full detail; GET /status keeps only unmatched failures.
+let dab_ack_detail =
   ref(
-    {
-      status = "disabled",
-      detail =
-        "DAB+ output is disabled"
-    }
+    "DAB+ output is disabled"
   )
 
-def dab_ack_healthy(status) =
-  list.mem(status, ["ok", "starting", "unmonitored", "disabled"])
-end
-
-# Stop recurring monitor work before Liquidsoap tears down its internal
-# scheduler. Otherwise a tick racing with shutdown cannot enforce the
-# process.read timeout and emits a misleading startup warning.
+# A tick racing scheduler shutdown cannot enforce its process.read timeout and
+# logs a misleading startup warning.
 let dab_ack_monitor_running = ref(false)
 on_shutdown(fun () -> dab_ack_monitor_running := false)
 
-def dab_set_ack_status(status, detail) =
+def dab_set_ack_status(status, detail, ~destinations=[]) =
   let previous = dab_ack_status().status
   if
     status != previous
@@ -48,14 +41,25 @@ def dab_set_ack_status(status, detail) =
     log(
       label="dab",
       "TCP ACK monitor: #{previous} -> #{status}",
-      level=if dab_ack_healthy(status) then 3 else 2 end
+      level=if status_healthy(status) then 3 else 2 end
     )
   end
-  dab_ack_status := {status = status, detail = detail}
+  dab_ack_detail := detail
+
+  # Keep destination errors nested; aggregate only unmatched failures.
+  let aggregate_error =
+    if
+      status_healthy(status) or not list.is_empty(destinations)
+    then
+      null
+    else
+      detail
+    end
+  dab_ack_status :=
+    {status = status, destinations = destinations, error = aggregate_error}
 end
 
-# The monitor identifies AudioEnc's EDI sockets in ss output by process
-# name; a dead encoder is reported by the reopen_on_error handler below.
+# The monitor matches AudioEnc's EDI sockets by process name in ss output.
 let dab_ack_monitor_command =
   process.quote.command(
     "/usr/local/bin/dab-tcp-ack-monitor",
@@ -87,22 +91,99 @@ def dab_edi_args(destinations) =
   list.map(fun (destination) -> "--edi=#{destination}", destinations)
 end
 
-# The monitor prints its state on the first line and detail on the rest
+# Map absent metrics to JSON null.
+def dab_optional_int(value) =
+  if value == "" then null else int_of_string(value) end
+end
+
+# Return command detail plus structured status for one monitor record.
+def dab_parse_ack_line(line) =
+  let fields = string.split(separator="\t", line)
+  if
+    list.length(fields) != 10
+  then
+    (line, null)
+  else
+    let [
+      destination,
+      status,
+      tcp_state,
+      ack_age,
+      bytes_sent,
+      bytes_acked,
+      send_queue,
+      unacked,
+      retrans,
+      reason
+    ] = fields
+    let detail =
+      if
+        reason != ""
+      then
+        reason
+      else
+        "TCP #{tcp_state}, ack_age=#{ack_age}s, bytes_sent=#{bytes_sent}, \
+         bytes_acked=#{bytes_acked}, send_queue=#{send_queue}, unacked=#{
+          unacked
+        }, retrans=#{retrans}"
+      end
+    (
+      "#{destination} #{status} (#{detail})",
+      {
+        destination = destination,
+        status = status,
+        tcp_state = tcp_state,
+        ack_age_seconds = dab_optional_int(ack_age),
+        bytes_sent = dab_optional_int(bytes_sent),
+        bytes_acked = dab_optional_int(bytes_acked),
+        send_queue_bytes = dab_optional_int(send_queue),
+        unacked_segments = dab_optional_int(unacked),
+        retransmissions = dab_optional_int(retrans),
+        error =
+          # An unhealthy connected socket has stalled acknowledgements.
+          if
+            status_healthy(status)
+          then
+            null
+          elsif
+            reason != ""
+          then
+            reason
+          else
+            "No acknowledgement progress for #{ack_age}s"
+          end
+      }
+    )
+  end
+end
+
+# Preserve a connected final record's empty error field.
+def dab_parse_ack_monitor(monitor_output) =
+  let lines =
+    list.filter(
+      fun (line) -> line != "",
+      string.split(separator="\n", monitor_output)
+    )
+  let parsed = list.map(dab_parse_ack_line, list.tl(lines))
+  {
+    status = string.trim(list.hd(default="", lines)),
+    detail = string.concat(separator="\n", list.map(fst, parsed)),
+    destinations = list.filter_map(snd, parsed)
+  }
+end
+
+# Poll and apply the monitor snapshot.
 def dab_ack_monitor_tick() =
   if
     dab_ack_monitor_running()
   then
     try
-      let lines =
-        string.split(
-          separator="\n",
-          string.trim(
-            process.read(timeout=5.0, log_errors=false, dab_ack_monitor_command)
-          )
+      let snapshot =
+        dab_parse_ack_monitor(
+          process.read(timeout=5.0, log_errors=false, dab_ack_monitor_command)
         )
-      let status = string.trim(list.hd(default="", lines))
       if
-        status == ""
+        snapshot.status == ""
       then
         dab_set_ack_status(
           "down",
@@ -110,8 +191,9 @@ def dab_ack_monitor_tick() =
         )
       else
         dab_set_ack_status(
-          status,
-          string.trim(string.concat(separator="\n", list.tl(lines)))
+          snapshot.status,
+          snapshot.detail,
+          destinations=snapshot.destinations
         )
       end
     catch err do
@@ -123,8 +205,7 @@ def dab_ack_monitor_tick() =
   end
 end
 
-# Create DAB+ output stream
-# Requires both DAB_BITRATE and DAB_EDI_DESTINATIONS to be configured
+# Create the output when bitrate and destinations are configured.
 def output_dab_stream(audio_source) =
   if
     DAB_BITRATE != "" and DAB_EDI_DESTINATIONS != ""
@@ -136,7 +217,7 @@ def output_dab_stream(audio_source) =
       level=3
     )
 
-    # Buffer provides clock isolation
+    # Isolate DAB in its own clock domain.
     let audio_to_dab = mksafe(buffer(audio_source))
 
     let pad_args =
@@ -179,9 +260,7 @@ def output_dab_stream(audio_source) =
       )
     end
 
-    # Feed audio to ODR-AudioEnc. Without reopen_on_error a dead encoder
-    # raises a fatal clock error that stops the whole process; returning a
-    # delay respawns the encoder instead and leaves other outputs untouched.
+    # Restart a dead encoder instead of propagating its fatal clock error.
     ignore(
       output.external(
         %wav(channels = 2, samplerate = 48000),
@@ -212,10 +291,6 @@ def output_dab_stream(audio_source) =
   server.register(
     description="Show DAB+ TCP acknowledgement health",
     "dab.status",
-    fun (_) ->
-      begin
-        let s = dab_ack_status()
-        "#{s.status}\n#{s.detail}"
-      end
+    fun (_) -> "#{dab_ack_status().status}\n#{dab_ack_detail()}"
   )
 end
