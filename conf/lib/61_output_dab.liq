@@ -173,28 +173,57 @@ def dab_parse_ack_monitor(monitor_output) =
   }
 end
 
+# Unhealthy destinations with their error codes, as one log line.
+def dab_destination_problems(destinations) =
+  string.concat(
+    separator="; ",
+    list.filter_map(
+      fun (d) ->
+        null.map(
+          fun (error) ->
+            "#{d.destination} #{d.status} (#{error})",
+          d.error
+        ),
+      destinations
+    )
+  )
+end
+
 def dab_set_ack_status(status, detail, ~failure=null, ~destinations=null) =
-  let previous = dab_ack_status().status
+  # Reserve the aggregate error for failures not tied to one destination.
+  let failure = if status_healthy(status) then null else failure end
+  let destinations =
+    destinations ?? dab_configured_destinations(status, failure)
+
+  # GET /status exposes only codes, so log what is unhealthy when it changes.
+  let previous = dab_ack_status()
+  let problems = dab_destination_problems(destinations)
   if
-    status != previous
+    status != previous.status
+    or failure != previous.error
+    or problems != dab_destination_problems(previous.destinations)
   then
+    let reason =
+      if
+        null.defined(failure)
+      then
+        " (#{detail})"
+      elsif
+        problems != ""
+      then
+        " (#{problems})"
+      else
+        ""
+      end
     log(
       label="dab",
-      "TCP ACK monitor: #{previous} -> #{status}",
+      "TCP ACK monitor: #{previous.status} -> #{status}#{reason}",
       level=if status_healthy(status) then 3 else 2 end
     )
   end
   dab_ack_detail := detail
-
-  # Reserve the aggregate error for failures not tied to one destination.
-  let failure = if status_healthy(status) then null else failure end
   dab_ack_status :=
-    {
-      status = status,
-      destinations =
-        destinations ?? dab_configured_destinations(status, failure),
-      error = failure
-    }
+    {status = status, destinations = destinations, error = failure}
 end
 
 # Poll and apply the monitor snapshot.
@@ -308,7 +337,7 @@ def output_dab_stream(audio_source) =
               failure="encoder_error"
             )
             log(
-              "DAB+ encoder error: #{err} - restarting ODR-AudioEnc in 5s",
+              "Restarting ODR-AudioEnc in 5s",
               level=2
             )
             5.0
