@@ -49,4 +49,30 @@ assert(
   null.get(without_statistics.statistics_error) == "statistics_unavailable"
 )
 
+# Disconnection outranks silence, silence outranks buffer readiness.
+def assert_health(health, expected_status, expected_error) =
+  assert(health.status == expected_status)
+  assert(health.error == expected_error)
+end
+assert_health(
+  studio_input_health(connected=false, silent=true, ready=false),
+  "down",
+  "disconnected"
+)
+assert_health(
+  studio_input_health(connected=true, silent=true, ready=false),
+  "degraded",
+  "silent"
+)
+assert_health(
+  studio_input_health(connected=true, silent=false, ready=false),
+  "starting",
+  null
+)
+assert_health(
+  studio_input_health(connected=true, silent=false, ready=true),
+  "ok",
+  null
+)
+
 shutdown()

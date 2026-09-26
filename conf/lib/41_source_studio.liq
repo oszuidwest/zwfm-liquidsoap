@@ -50,6 +50,26 @@ def studio_srt_connection(~input_id, peer, read_stats) =
   end
 end
 
+# Disconnection outranks silence; a connected input whose buffer is not yet
+# ready is still filling.
+def studio_input_health(~connected, ~silent, ~ready) =
+  if
+    not connected
+  then
+    {status = "down", error = "disconnected"}
+  elsif
+    silent
+  then
+    {status = "degraded", error = "silent"}
+  elsif
+    not ready
+  then
+    {status = "starting", error = null}
+  else
+    {status = "ok", error = null}
+  end
+end
+
 def studio_levels_dbfs(connected, levels) =
   let (left, right) = levels
   {
@@ -154,8 +174,18 @@ def create_studio_input(~id, ~port) =
       )
     let connected = not list.is_empty(sockets)
 
+    # The detector is only pulled while silence detection is enabled.
+    let health =
+      studio_input_health(
+        connected=connected,
+        silent=is_silence_detection_enabled() and detected.is_blank(),
+        ready=source.is_ready(buffered)
+      )
+
     {
       name = id,
+      status = health.status,
+      error = health.error,
       buffer_seconds = seconds_of_main(buffered.buffer_length()),
       audio =
         {

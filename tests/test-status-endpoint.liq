@@ -69,6 +69,8 @@ studio_input_status_providers :=
     fun () ->
       {
         name = "studio_a",
+        status = "ok",
+        error = null,
         buffer_seconds = 1.03,
         audio =
           {
@@ -130,6 +132,9 @@ radio_sink.on_start(
           "Test stream"
       )
       assert(not icecast.connected)
+      let studio = list.hd(snapshot.studio_inputs)
+      assert(studio.status == "ok")
+      assert(not null.defined(studio.error))
       assert(snapshot.outputs.dab.status == "ok")
       assert(list.length(snapshot.outputs.dab.destinations) == 1)
       assert(snapshot.outputs.hls.status == "disabled")
