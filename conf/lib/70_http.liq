@@ -30,18 +30,66 @@ def request_authorized(req, token) =
     "Bearer #{token}"
 end
 
-def reject_unauthorized(res, realm) =
+def http_reject(res, label, code, body, reason) =
   log(
-    label=realm,
-    "Rejected #{realm} request: bad or missing bearer token",
+    label=label,
+    "Rejected #{label} request: #{reason}",
     level=3
   )
-  res.header(
-    "WWW-Authenticate",
-    "Bearer realm=\"#{realm}\""
-  )
-  res.status_code(401)
-  res.data("Unauthorized\n")
+  res.status_code(code)
+  res.data(body)
+end
+
+# Every handler registered here requires its token; an empty token disables it.
+def register_bearer_endpoint(
+  ~label,
+  ~token,
+  ~token_name,
+  ~method,
+  path,
+  handler
+) =
+  if
+    token == ""
+  then
+    log(
+      label=label,
+      "#{method} #{path} disabled - #{token_name} not configured",
+      level=3
+    )
+  else
+    harbor.http.register(
+      port=HTTP_PORT,
+      method=method,
+      path,
+      fun (req, res) ->
+        begin
+          res.header("Cache-Control", "no-store")
+          if
+            request_authorized(req, token)
+          then
+            handler(req, res)
+          else
+            res.header(
+              "WWW-Authenticate",
+              "Bearer realm=\"#{label}\""
+            )
+            http_reject(
+              res,
+              label,
+              401,
+              "Unauthorized\n",
+              "bad or missing bearer token"
+            )
+          end
+        end
+    )
+    log(
+      label=label,
+      "#{method} #{path} enabled on port #{HTTP_PORT}",
+      level=3
+    )
+  end
 end
 
 # Keep the schema stable by representing unavailable values as null.
@@ -100,146 +148,97 @@ def register_http_endpoints(radio_source, active_source, ~sources) =
     )
   end
 
-  if
-    STATUS_BEARER_TOKEN == ""
-  then
-    log(
-      label="status",
-      "Status endpoint disabled - STATUS_BEARER_TOKEN not configured",
-      level=3
-    )
-  else
-    # Degraded is on air (200); only down is 503.
-    def status_handler(req, res) =
-      res.header("Cache-Control", "no-store")
-      if
-        not request_authorized(req, STATUS_BEARER_TOKEN)
-      then
-        reject_unauthorized(res, "status")
-      else
-        let snapshot =
-          status_snapshot(radio_source, active_source, sources=sources)
-        if snapshot.status == "down" then res.status_code(503) end
-        res.json(compact=true, snapshot)
-      end
-    end
-
-    harbor.http.register(
-      port=HTTP_PORT,
-      method="GET",
-      "/status",
-      status_handler
-    )
-    log(
-      label="status",
-      "Status endpoint enabled on port #{HTTP_PORT}",
-      level=3
-    )
+  # Degraded is on air (200); only down is 503.
+  def status_handler(_, res) =
+    let snapshot = status_snapshot(radio_source, active_source, sources=sources)
+    if snapshot.status == "down" then res.status_code(503) end
+    res.json(compact=true, snapshot)
   end
 
-  if
-    STREAM_METADATA_BEARER_TOKEN == ""
-  then
-    log(
-      label="metadata",
-      "Stream metadata endpoint disabled - STREAM_METADATA_BEARER_TOKEN not \
-       configured",
-      level=3
-    )
-  else
-    def stream_metadata_handler(req, res) =
-      res.header("Cache-Control", "no-store")
+  def stream_metadata_handler(req, res) =
+    def reject(code, body, reason) =
+      http_reject(res, "metadata", code, body, reason)
+    end
 
-      def reject(code, body, reason) =
-        log(
-          label="metadata",
-          "Rejected metadata request: #{reason}",
-          level=3
-        )
-        res.status_code(code)
-        res.data(body)
-      end
+    if
+      # Harbor reads each chunk whole before req.data() returns, so the body
+      # size cap cannot bound chunked requests.
+      req.headers["transfer-encoding"] != ""
+    then
+      reject(
+        413,
+        "Payload Too Large\n",
+        "unsupported transfer encoding"
+      )
+    else
+      let request_body = read_stream_metadata_body(req)
 
       if
-        not request_authorized(req, STREAM_METADATA_BEARER_TOKEN)
-      then
-        reject_unauthorized(res, "metadata")
-      elsif
-        # Harbor reads each chunk whole before req.data() returns, so the body
-        # size cap cannot bound chunked requests.
-        req.headers["transfer-encoding"] != ""
+        request_body.too_large
       then
         reject(
           413,
           "Payload Too Large\n",
-          "unsupported transfer encoding"
+          "body exceeds #{STREAM_METADATA_MAX_BODY_BYTES} bytes"
         )
       else
-        let request_body = read_stream_metadata_body(req)
+        try
+          let json.parse ({title, artist} : {title: string, artist: string?}) =
+            request_body.body
+          let artist = artist ?? ""
 
-        if
-          request_body.too_large
-        then
-          reject(
-            413,
-            "Payload Too Large\n",
-            "body exceeds #{STREAM_METADATA_MAX_BODY_BYTES} bytes"
-          )
-        else
-          try
-            let json.parse ({title, artist} :
-              {title: string, artist: string?}
-            ) = request_body.body
-            let artist = artist ?? ""
-
-            if
-              title == ""
-            then
-              reject(
-                400,
-                "Missing title\n",
-                "missing title"
-              )
-            else
-              # Omit the artist tag instead of sending an empty value.
-              let new_metadata =
-                if
-                  artist == ""
-                then
-                  [("title", title)]
-                else
-                  [("artist", artist), ("title", title)]
-                end
-
-              radio_source.insert_metadata(new_metadata)
-              res.status_code(204)
-              log(
-                label="metadata",
-                "Inserted stream metadata",
-                level=3
-              )
-            end
-          catch err : [error.json] do
+          if
+            title == ""
+          then
             reject(
               400,
-              "Invalid JSON body\n",
-              "invalid JSON body: #{err.message}"
+              "Missing title\n",
+              "missing title"
+            )
+          else
+            # Omit the artist tag instead of sending an empty value.
+            let new_metadata =
+              if
+                artist == ""
+              then
+                [("title", title)]
+              else
+                [("artist", artist), ("title", title)]
+              end
+
+            radio_source.insert_metadata(new_metadata)
+            res.status_code(204)
+            log(
+              label="metadata",
+              "Inserted stream metadata",
+              level=3
             )
           end
+        catch err : [error.json] do
+          reject(
+            400,
+            "Invalid JSON body\n",
+            "invalid JSON body: #{err.message}"
+          )
         end
       end
     end
-
-    harbor.http.register(
-      port=HTTP_PORT,
-      method="POST",
-      "/metadata",
-      stream_metadata_handler
-    )
-    log(
-      label="metadata",
-      "Stream metadata endpoint enabled on port #{HTTP_PORT}",
-      level=3
-    )
   end
+
+  register_bearer_endpoint(
+    label="status",
+    token=STATUS_BEARER_TOKEN,
+    token_name="STATUS_BEARER_TOKEN",
+    method="GET",
+    "/status",
+    status_handler
+  )
+  register_bearer_endpoint(
+    label="metadata",
+    token=STREAM_METADATA_BEARER_TOKEN,
+    token_name="STREAM_METADATA_BEARER_TOKEN",
+    method="POST",
+    "/metadata",
+    stream_metadata_handler
+  )
 end

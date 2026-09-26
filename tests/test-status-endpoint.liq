@@ -159,6 +159,15 @@ radio_sink.on_start(
             assert(started_stream.started)
             assert(not started_stream.connected)
 
+            def bearer(token) =
+              [
+                (
+                  "Authorization",
+                  "Bearer #{token}"
+                )
+              ]
+            end
+
             def get_status(headers) =
               http.get(
                 timeout=2.0,
@@ -167,42 +176,22 @@ radio_sink.on_start(
               )
             end
 
-            def assert_unauthorized(headers) =
-              let response = get_status(headers)
+            def assert_unauthorized(response, realm) =
               assert(response.status_code == 401)
               assert(
                 response.headers["www-authenticate"] ==
-                  "Bearer realm=\"status\""
+                  "Bearer realm=\"#{realm}\""
               )
               assert(not string.contains(substring="192.0.2", response))
             end
-            assert_unauthorized([])
+            assert_unauthorized(get_status([]), "status")
+            assert_unauthorized(get_status(bearer("wrong")), "status")
             assert_unauthorized(
-              [
-                (
-                  "Authorization",
-                  "Bearer wrong"
-                )
-              ]
-            )
-            assert_unauthorized(
-              [
-                (
-                  "Authorization",
-                  "Bearer test-metadata-token"
-                )
-              ]
+              get_status(bearer("test-metadata-token")),
+              "status"
             )
 
-            let response =
-              get_status(
-                [
-                  (
-                    "Authorization",
-                    "Bearer test-status-token"
-                  )
-                ]
-              )
+            let response = get_status(bearer("test-status-token"))
             assert(response.status_code == 200)
             assert(
               string.contains(substring="\"peer\":\"192.0.2.1\"", response)
@@ -215,22 +204,14 @@ radio_sink.on_start(
             )
 
             # Endpoint tokens are not interchangeable.
-            let metadata_response =
+            assert_unauthorized(
               http.post(
                 timeout=2.0,
-                headers=[
-                  (
-                    "Authorization",
-                    "Bearer test-status-token"
-                  )
-                ],
+                headers=bearer("test-status-token"),
                 data="{\"title\":\"x\"}",
                 "http://127.0.0.1:7000/metadata"
-              )
-            assert(metadata_response.status_code == 401)
-            assert(
-              metadata_response.headers["www-authenticate"] ==
-                "Bearer realm=\"metadata\""
+              ),
+              "metadata"
             )
             shutdown()
           catch err do
