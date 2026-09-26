@@ -22,7 +22,7 @@ end
 # Public states: disabled, unmonitored, starting, ok, degraded or down.
 let dab_ack_status = ref({status = "disabled", destinations = [], error = null})
 
-# dab.status keeps readable detail; GET /status reports error codes.
+# Text for dab.status; GET /status reports structured error codes instead.
 let dab_ack_detail =
   ref(
     "DAB+ output is disabled"
@@ -138,21 +138,22 @@ def dab_parse_ack_line(line) =
   end
 end
 
-# Configured destinations stand in until the monitor reports on them.
+# Configured destinations stand in whenever no monitor records are available.
 def dab_configured_destinations(status, failure) =
-  list.filter_map(
+  list.map(
     fun (destination) ->
-      if
-        destination == ""
-      then
-        null
-      else
-        snd(
-          dab_parse_ack_line(
-            "#{destination}\t#{status}\t\t\t\t\t\t\t\t#{failure}"
-          )
-        )
-      end,
+      {
+        destination = destination,
+        status = status,
+        tcp_state = null,
+        ack_age_seconds = null,
+        bytes_sent = null,
+        bytes_acked = null,
+        send_queue_bytes = null,
+        unacked_segments = null,
+        retransmissions = null,
+        error = failure
+      },
     dab_destination_urls(DAB_EDI_DESTINATIONS)
   )
 end
@@ -191,7 +192,7 @@ def dab_set_ack_status(status, detail, ~failure=null, ~destinations=null) =
     {
       status = status,
       destinations =
-        destinations ?? dab_configured_destinations(status, failure ?? ""),
+        destinations ?? dab_configured_destinations(status, failure),
       error = failure
     }
 end

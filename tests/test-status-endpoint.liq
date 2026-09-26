@@ -209,6 +209,25 @@ radio_sink.on_start(
                 response
               )
             )
+
+            # The status token must not write metadata either.
+            let metadata_response =
+              http.post(
+                timeout=2.0,
+                headers=[
+                  (
+                    "Authorization",
+                    "Bearer test-status-token"
+                  )
+                ],
+                data="{\"title\":\"x\"}",
+                "http://127.0.0.1:7000/metadata"
+              )
+            assert(metadata_response.status_code == 401)
+            assert(
+              metadata_response.headers["www-authenticate"] ==
+                "Bearer realm=\"metadata\""
+            )
             shutdown()
           catch err do
             print(

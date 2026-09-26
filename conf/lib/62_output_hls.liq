@@ -776,19 +776,16 @@ def output_hls_stream(audio_source) =
         )
         true
       else
+        hls_mark_degraded(
+          "dir_not_writable",
+          "HLS_DIR #{HLS_DIR} is not writable"
+        )
         false
       end
     end
 
     # Start degraded when HLS_DIR is unwritable; the watchdog retries.
-    def hls_mark_dir_not_writable() =
-      hls_mark_degraded(
-        "dir_not_writable",
-        "HLS_DIR #{HLS_DIR} is not writable"
-      )
-    end
-
-    if not try_start_hls_output() then hls_mark_dir_not_writable() end
+    ignore(try_start_hls_output())
 
     def hls_watchdog() =
       if
@@ -802,8 +799,6 @@ def output_hls_stream(audio_source) =
             "HLS output recovered",
             level=2
           )
-        else
-          hls_mark_dir_not_writable()
         end
       elsif
         not hls_degraded()

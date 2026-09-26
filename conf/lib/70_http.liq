@@ -30,6 +30,20 @@ def request_authorized(req, token) =
     "Bearer #{token}"
 end
 
+def reject_unauthorized(res, realm) =
+  log(
+    label=realm,
+    "Rejected #{realm} request: bad or missing bearer token",
+    level=3
+  )
+  res.header(
+    "WWW-Authenticate",
+    "Bearer realm=\"#{realm}\""
+  )
+  res.status_code(401)
+  res.data("Unauthorized\n")
+end
+
 # Every field is always present; unavailable values are null.
 def status_snapshot(radio_source, active_source, ~sources) =
   let radio_ready = radio_source.is_ready()
@@ -101,12 +115,7 @@ def register_http_endpoints(radio_source, active_source, ~sources) =
       if
         not request_authorized(req, STATUS_BEARER_TOKEN)
       then
-        res.header(
-          "WWW-Authenticate",
-          "Bearer realm=\"status\""
-        )
-        res.status_code(401)
-        res.data("Unauthorized\n")
+        reject_unauthorized(res, "status")
       else
         let snapshot =
           status_snapshot(radio_source, active_source, sources=sources)
@@ -154,15 +163,7 @@ def register_http_endpoints(radio_source, active_source, ~sources) =
       if
         not request_authorized(req, STREAM_METADATA_BEARER_TOKEN)
       then
-        res.header(
-          "WWW-Authenticate",
-          "Bearer realm=\"metadata\""
-        )
-        reject(
-          401,
-          "Unauthorized\n",
-          "bad or missing bearer token"
-        )
+        reject_unauthorized(res, "metadata")
       elsif
         # Harbor reads each chunk whole before req.data() returns, so the body
         # size cap cannot bound chunked requests.

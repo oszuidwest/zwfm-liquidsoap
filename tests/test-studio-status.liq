@@ -42,7 +42,7 @@ let without_statistics =
         "socket closed"
       )
   )
-assert(null.get(without_statistics.peer) == "192.0.2.1")
+assert(without_statistics.peer == "192.0.2.1")
 assert(not null.defined(without_statistics.latency_ms))
 assert(not null.defined(without_statistics.dropped_packets_total))
 assert(

@@ -301,8 +301,7 @@ The response has a fixed schema: every field is always present with the same
 type, and a value that is not available is `null` instead of being left out.
 Lists such as `outputs.icecast.streams` and `outputs.dab.destinations` are
 empty only when nothing of that kind is configured. Error fields contain a
-stable code, never free text; the log and the socket commands keep the full
-reason.
+stable code, never free text; the log keeps the full reason.
 
 The response contains the overall state (`ok`, `degraded`, or `down`), the
 active source and mode, readiness for every source, detailed studio-input
@@ -322,22 +321,23 @@ connected. `outputs.dab.destinations` has one object per configured EDI
 destination, in configuration order. Each object reports its TCP state, ACK
 age, byte counters, send queue, unacknowledged segments, and retransmissions;
 unavailable metrics and an unknown TCP state are `null`. Until the ACK monitor
-has reported, and when monitoring is disabled, destinations are listed with
-their configured URL and `null` metrics. `outputs.hls` separates the local
-writer and remote mirror health. The local state reports playlist and segment
-counts plus the age of the latest playlist update. The mirror state identifies
-the storage host and zone (`null` when HLS is disabled), reports the age of its
-most recent successful sync, and counts pending playlists and segments. Each
-HLS component is `starting` until its first progress unless it reports an
-error, which makes it `degraded` immediately. It also becomes `degraded` when
-progress stops for several segment intervals.
+has reported, when monitoring is disabled, and after an encoder or monitor
+failure, destinations are listed with their configured URL and `null` metrics.
+`outputs.hls` separates the local writer and remote mirror health. The local
+state reports playlist and segment counts plus the age of the latest playlist
+update. The mirror state identifies the storage host and zone (`null` when HLS
+is disabled), reports the age of its most recent successful sync, and counts
+pending playlists and segments. Each HLS component is `starting` until its
+first progress unless it reports an error, which makes it `degraded`
+immediately. It also becomes `degraded` when progress stops for several segment
+intervals.
 
 Error codes are `null` while a component is healthy:
 
 | Field                                  | Codes                                                                                                   |
 | -------------------------------------- | ------------------------------------------------------------------------------------------------------- |
 | `studio_inputs[].srt.connections[].statistics_error` | `statistics_unavailable`                                                                  |
-| `outputs.dab.error`                    | `encoder_error` (ODR-AudioEnc crashed), `monitor_failed` (the ACK monitor did not produce a result)     |
+| `outputs.dab.error`                    | `encoder_error` (ODR-AudioEnc crashed), `monitor_failed` (the ACK monitor gave no usable result)        |
 | `outputs.dab.destinations[].error`     | `ack_stalled`, `no_socket`, `tcp_not_established`, `invalid_destination`, or the aggregate code above   |
 | `outputs.hls.local.error`              | `dir_missing`, `dir_not_writable`, `clock_error`, `stalled`                                             |
 | `outputs.hls.mirror.error`             | `listing_failed`, `upload_failed`, `delete_failed`, `read_failed`, `local_file_missing`, `stalled`      |
