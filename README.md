@@ -188,9 +188,9 @@ This table shows all environment variables in the system. You must set each vari
 | `HLS_SEGMENT_DURATION`            | HLS segment duration in seconds                        | `4.0`                             | `4.0`                                                           | `conf/lib/00_settings.liq`             | All             |
 | `HLS_SEGMENTS`                    | Segments per live playlist                             | `10`                              | `10`                                                            | `conf/lib/00_settings.liq`             | All             |
 | `HLS_SEGMENTS_OVERHEAD`           | Extra old segments kept locally                        | `5`                               | `5`                                                             | `conf/lib/00_settings.liq`             | All             |
-| **Status and Stream Metadata**    | | | | | |
-| `STREAM_METADATA_BIND`            | Host address for the status and metadata API           | `127.0.0.1`                       | `0.0.0.0`                                                       | `docker-compose.yml`                   | All             |
-| `STREAM_METADATA_PORT`            | Port for the shared status and metadata API            | `7000`                            | `7000`                                                          | Liquidsoap and Compose                 | All             |
+| **HTTP API**                      | | | | | |
+| `HTTP_BIND`                       | Host address for the HTTP API (status and metadata)    | `127.0.0.1`                       | `0.0.0.0`                                                       | `docker-compose.yml`                   | All             |
+| `HTTP_PORT`                       | Port for the HTTP API (status and metadata)            | `7000`                            | `7000`                                                          | Liquidsoap and Compose                 | All             |
 | `STREAM_METADATA_BEARER_TOKEN`    | Bearer token that sets the metadata API to on          | _(none)_                          | `long-random-token`                                             | `conf/lib/00_settings.liq`             | All             |
 | `STATUS_BEARER_TOKEN`             | Bearer token that sets the status API to on            | _(none)_                          | `other-long-random-token`                                       | `conf/lib/00_settings.liq`             | All             |
 | **DME Configuration**             | | | | | |
@@ -284,7 +284,7 @@ All commands have an immediate effect.
 ### JSON Status Endpoint
 
 For monitoring systems, `GET /status` exposes the runtime state as JSON on
-`STREAM_METADATA_PORT`. The endpoint is registered only when
+`HTTP_PORT`. The endpoint is registered only when
 `STATUS_BEARER_TOKEN` is set, and every request must send that token. Use a
 different value than `STREAM_METADATA_BEARER_TOKEN`, so a monitoring system
 cannot write metadata. Compose binds this port to `127.0.0.1` by default.
@@ -483,7 +483,7 @@ PAD sends metadata together with the audio. Examples are song titles and station
 
 ## Shared Stream Metadata
 
-If `STREAM_METADATA_BEARER_TOKEN` is set, Liquidsoap accepts now-playing updates. The endpoint is `POST /metadata` on `STREAM_METADATA_PORT`. The system inserts the metadata into the main radio source. This point is before the processing and the output fan-out. As a result, one update goes to all compatible stream outputs:
+If `STREAM_METADATA_BEARER_TOKEN` is set, Liquidsoap accepts now-playing updates. The endpoint is `POST /metadata` on `HTTP_PORT`. The system inserts the metadata into the main radio source. This point is before the processing and the output fan-out. As a result, one update goes to all compatible stream outputs:
 
 - the Icecast MP3 and AAC mounts
 - the DME Icecast mounts for Radio Rucphen and BredaNu

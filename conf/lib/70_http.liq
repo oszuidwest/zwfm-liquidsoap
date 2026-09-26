@@ -78,13 +78,11 @@ end
 def register_http_endpoints(radio_source, active_source, ~sources) =
   # Out-of-range ports would silently bind port mod 65536.
   if
-    STREAM_METADATA_PORT < 1 or STREAM_METADATA_PORT > 65535
+    HTTP_PORT < 1 or HTTP_PORT > 65535
   then
     error.raise(
       error.invalid,
-      "STREAM_METADATA_PORT must be between 1 and 65535, got #{
-        STREAM_METADATA_PORT
-      }"
+      "HTTP_PORT must be between 1 and 65535, got #{HTTP_PORT}"
     )
   end
 
@@ -118,14 +116,14 @@ def register_http_endpoints(radio_source, active_source, ~sources) =
     end
 
     harbor.http.register(
-      port=STREAM_METADATA_PORT,
+      port=HTTP_PORT,
       method="GET",
       "/status",
       status_handler
     )
     log(
       label="status",
-      "Status endpoint enabled on port #{STREAM_METADATA_PORT}",
+      "Status endpoint enabled on port #{HTTP_PORT}",
       level=3
     )
   end
@@ -232,14 +230,14 @@ def register_http_endpoints(radio_source, active_source, ~sources) =
     end
 
     harbor.http.register(
-      port=STREAM_METADATA_PORT,
+      port=HTTP_PORT,
       method="POST",
       "/metadata",
       stream_metadata_handler
     )
     log(
       label="metadata",
-      "Stream metadata endpoint enabled on port #{STREAM_METADATA_PORT}",
+      "Stream metadata endpoint enabled on port #{HTTP_PORT}",
       level=3
     )
   end
