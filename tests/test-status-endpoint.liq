@@ -9,7 +9,8 @@ let SILENCE_SWITCH_SECONDS = 15.0
 let AUDIO_VALID_SECONDS = 15.0
 let SILENCE_THRESHOLD = -40.0
 let STREAM_METADATA_PORT = 7000
-let STREAM_METADATA_BEARER_TOKEN = "test-token"
+let STREAM_METADATA_BEARER_TOKEN = "test-metadata-token"
+let STATUS_BEARER_TOKEN = "test-status-token"
 let ICECAST_HOST = "127.0.0.1"
 let ICECAST_PORT = 65534
 let ICECAST_SOURCE_PASSWORD = "test"
@@ -65,7 +66,7 @@ output_icecast_stream(
 
 studio_input_status_providers :=
   [
-    fun (~include_peer) ->
+    fun () ->
       {
         name = "studio_a",
         buffer_seconds = 1.03,
@@ -81,7 +82,7 @@ studio_input_status_providers :=
             connections =
               [
                 {
-                  peer = if include_peer then "192.0.2.1" else null end,
+                  peer = "192.0.2.1",
                   latency_ms = 2000,
                   receive_buffer_ms = 1876,
                   rtt_ms = 20.57,
@@ -130,8 +131,10 @@ radio_sink.on_start(
       )
       assert(not icecast.connected)
       assert(snapshot.outputs.dab.status == "ok")
-      assert(list.is_empty(snapshot.outputs.dab.destinations))
+      assert(list.length(snapshot.outputs.dab.destinations) == 1)
       assert(snapshot.outputs.hls.status == "disabled")
+      assert(not null.defined(snapshot.outputs.hls.mirror.host))
+      assert(not null.defined(snapshot.outputs.hls.mirror.storage_zone))
 
       # Structured output health must not be duplicated as detail text.
       assert(
@@ -141,53 +144,77 @@ radio_sink.on_start(
         )
       )
 
-      # Only the configured bearer token exposes peer addresses over HTTP.
+      # Only the status bearer token opens the endpoint. A failed assertion in
+      # this thread must stop the process instead of leaving it running.
       thread.run(
         delay=1.0,
         fun () ->
-          begin
+          try
             # Started does not mean connected: Icecast connects lazily.
             let started_stream = list.hd(icecast_health().streams)
             assert(started_stream.started)
             assert(not started_stream.connected)
 
-            def assert_sensitive(headers, expected_peer, expected_sensitive) =
-              let body =
-                http.get(
-                  timeout=2.0,
-                  headers=headers,
-                  "http://127.0.0.1:7000/status"
-                )
-              assert(
-                string.contains(substring="\"peer\":#{expected_peer}", body)
-              )
-              assert(
-                string.contains(substring="tcp://192.0.2.10:9171", body) ==
-                  expected_sensitive
+            def get_status(headers) =
+              http.get(
+                timeout=2.0,
+                headers=headers,
+                "http://127.0.0.1:7000/status"
               )
             end
-            assert_sensitive([], "null", false)
-            assert_sensitive(
+
+            def assert_unauthorized(headers) =
+              let response = get_status(headers)
+              assert(response.status_code == 401)
+              assert(
+                response.headers["www-authenticate"] ==
+                  "Bearer realm=\"status\""
+              )
+              assert(not string.contains(substring="192.0.2", response))
+            end
+            assert_unauthorized([])
+            assert_unauthorized(
               [
                 (
                   "Authorization",
                   "Bearer wrong"
                 )
-              ],
-              "null",
-              false
+              ]
             )
-            assert_sensitive(
+            assert_unauthorized(
               [
                 (
                   "Authorization",
-                  "Bearer test-token"
+                  "Bearer test-metadata-token"
                 )
-              ],
-              "\"192.0.2.1\"",
-              true
+              ]
+            )
+
+            let response =
+              get_status(
+                [
+                  (
+                    "Authorization",
+                    "Bearer test-status-token"
+                  )
+                ]
+              )
+            assert(response.status_code == 200)
+            assert(
+              string.contains(substring="\"peer\":\"192.0.2.1\"", response)
+            )
+            assert(
+              string.contains(
+                substring="\"destination\":\"tcp://192.0.2.10:9171\"",
+                response
+              )
             )
             shutdown()
+          catch err do
+            print(
+              "Status endpoint test failed: #{err}"
+            )
+            shutdown(code=1)
           end
       )
     end

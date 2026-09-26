@@ -46,11 +46,7 @@ def studio_srt_connection(~input_id, peer, read_stats) =
       "Unable to read SRT statistics for #{input_id}: #{error.message(err)}",
       level=2
     )
-    {
-      ...unavailable,
-      statistics_error =
-        "statistics unavailable"
-    }
+    {...unavailable, statistics_error = "statistics_unavailable"}
   end
 end
 
@@ -140,8 +136,8 @@ def create_studio_input(~id, ~port) =
     )
   output.dummy(id="drain_#{id}", fallible=true, register_telnet=false, buffered)
 
-  # Public HTTP snapshots redact peers; local server commands include them.
-  def status(~include_peer) =
+  # Shared by GET /status and the local server commands.
+  def status() =
     let sockets = studio.sockets()
     let connections =
       list.map(
@@ -150,7 +146,7 @@ def create_studio_input(~id, ~port) =
             let (peer, raw_socket) = connection
             studio_srt_connection(
               input_id=id,
-              if include_peer then peer else null end,
+              peer,
               fun () -> srt.socket(raw_socket).bistats()
             )
           end,
@@ -188,7 +184,7 @@ def create_studio_input(~id, ~port) =
     "#{id}.srt",
     fun (_) ->
       begin
-        let snapshot = status(include_peer=true)
+        let snapshot = status()
         let details =
           string.concat(
             separator="; ",

@@ -71,7 +71,7 @@ hls_local_last_update_at := time() - hls_stale_after_seconds - 1.0
 let stale = hls_health()
 assert(stale.status == "degraded")
 assert(stale.local.status == "degraded")
-assert(null.defined(stale.local.error))
+assert(null.get(stale.local.error) == "stalled")
 
 # A missing HLS_DIR degrades local health even with fresh writer progress.
 hls_local_last_update_at := time()
@@ -79,13 +79,11 @@ file.rmdir(HLS_DIR)
 let missing = hls_health()
 assert(missing.status == "degraded")
 assert(missing.local.status == "degraded")
-assert(
-  null.get(missing.local.error) ==
-    "HLS_DIR #{HLS_DIR} is missing"
-)
+assert(null.get(missing.local.error) == "dir_missing")
 assert(missing.local.playlist_count == 0)
 
 assert(not hls_put_file("#{HLS_DIR}/missing.ts"))
 assert(hls_mirror_tick_failed())
+assert(null.get(hls_health().mirror.error) == "local_file_missing")
 
 shutdown()

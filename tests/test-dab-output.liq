@@ -5,7 +5,8 @@ let DAB_ACK_DOWN_SECONDS = 15
 let DAB_ACK_STARTUP_GRACE_SECONDS = 10
 let DAB_ACK_MONITOR_ENABLED = true
 let DAB_BITRATE = ""
-let DAB_EDI_DESTINATIONS = ""
+let DAB_EDI_DESTINATIONS =
+  "tcp://192.0.2.10:9171, udp://192.0.2.11:9172"
 let DAB_METADATA_SOCKET = ""
 let DAB_METADATA_SIZE = ""
 
@@ -37,8 +38,7 @@ assert_invalid_destinations("tcp://one.example:9001,")
 # The connected record comes last, so its empty reason field ends the output.
 let ack_snapshot =
   dab_parse_ack_monitor(
-    "degraded\ntcp://192.0.2.20:9175\tdown\t\t\t\t\t\t\t\tno AudioEnc TCP \
-     socket\ntcp://192.0.2.30:9177\tdegraded\tESTAB\t7\t300\t200\t0\t0\t0\t\ntcp://192.0.2.10:9171\tok\tESTAB\t0\t100\t101\t1745\t1\t0\t\n"
+    "degraded\ntcp://192.0.2.20:9175\tdown\t\t\t\t\t\t\t\tno_socket\ntcp://192.0.2.30:9177\tdegraded\tESTAB\t7\t300\t200\t0\t0\t0\t\ntcp://192.0.2.10:9171\tok\tESTAB\t0\t100\t101\t1745\t1\t0\t\n"
   )
 assert(ack_snapshot.status == "degraded")
 assert(list.length(ack_snapshot.destinations) == 3)
@@ -56,27 +56,20 @@ assert(not null.defined(healthy_destination.error))
 let down_destination = list.nth(ack_snapshot.destinations, 0)
 assert(down_destination.status == "down")
 assert(not null.defined(down_destination.ack_age_seconds))
-assert(
-  null.get(down_destination.error) ==
-    "no AudioEnc TCP socket"
-)
+assert(not null.defined(down_destination.tcp_state))
+assert(null.get(down_destination.error) == "no_socket")
 
 let stalled_destination = list.nth(ack_snapshot.destinations, 1)
-assert(
-  null.get(stalled_destination.error) ==
-    "No acknowledgement progress for 7s"
-)
+assert(null.get(stalled_destination.error) == "ack_stalled")
 
 # Starting destinations may expose diagnostics without being unhealthy.
 let (_, starting_destination) =
-  dab_parse_ack_line(
-    "tcp://192.0.2.40:9179\tstarting\t\t\t\t\t\t\t\tno AudioEnc TCP socket"
-  )
+  dab_parse_ack_line("tcp://192.0.2.40:9179\tstarting\t\t\t\t\t\t\t\tno_socket")
 assert(not null.defined(null.get(starting_destination).error))
 
 assert(
   string.contains(
-    substring="tcp://192.0.2.20:9175 down (no AudioEnc TCP socket)",
+    substring="tcp://192.0.2.20:9175 down (no_socket)",
     ack_snapshot.detail
   )
 )
@@ -88,26 +81,44 @@ assert(
   )
 )
 
-# Destination errors do not duplicate into the aggregate error.
+# Configured destinations stand in for failures outside any destination.
 dab_set_ack_status(
   "down",
-  "DAB+ encoder error: exited"
+  "DAB+ encoder error: exited",
+  failure="encoder_error"
 )
+assert(null.get(dab_ack_status().error) == "encoder_error")
+let placeholders = dab_ack_status().destinations
 assert(
-  null.get(dab_ack_status().error) ==
-    "DAB+ encoder error: exited"
+  list.map(fun (d) -> d.destination, placeholders) ==
+    ["tcp://192.0.2.10:9171", "udp://192.0.2.11:9172"]
 )
+assert(list.for_all(fun (d) -> d.status == "down", placeholders))
+assert(
+  list.for_all(fun (d) -> null.get(d.error) == "encoder_error", placeholders)
+)
+assert(list.for_all(fun (d) -> not null.defined(d.tcp_state), placeholders))
+
+# Destination errors do not duplicate into the aggregate error.
 dab_set_ack_status(
   ack_snapshot.status,
   ack_snapshot.detail,
   destinations=ack_snapshot.destinations
 )
 assert(not null.defined(dab_ack_status().error))
+assert(list.length(dab_ack_status().destinations) == 3)
+
 dab_set_ack_status(
   "starting",
   "Waiting for AudioEnc TCP acknowledgements"
 )
 assert(not null.defined(dab_ack_status().error))
+assert(
+  list.for_all(
+    fun (d) -> d.status == "starting" and not null.defined(d.error),
+    dab_ack_status().destinations
+  )
+)
 
 let encoded_ack_snapshot = json.stringify(compact=true, ack_snapshot)
 assert(string.contains(substring="\"ack_age_seconds\":0", encoded_ack_snapshot))

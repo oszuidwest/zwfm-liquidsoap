@@ -192,6 +192,7 @@ This table shows all environment variables in the system. You must set each vari
 | `STREAM_METADATA_BIND`            | Host address for the status and metadata API           | `127.0.0.1`                       | `0.0.0.0`                                                       | `docker-compose.yml`                   | All             |
 | `STREAM_METADATA_PORT`            | Port for the shared status and metadata API            | `7000`                            | `7000`                                                          | Liquidsoap and Compose                 | All             |
 | `STREAM_METADATA_BEARER_TOKEN`    | Bearer token that sets the metadata API to on          | _(none)_                          | `long-random-token`                                             | `conf/lib/00_settings.liq`             | All             |
+| `STATUS_BEARER_TOKEN`             | Bearer token that sets the status API to on            | _(none)_                          | `other-long-random-token`                                       | `conf/lib/00_settings.liq`             | All             |
 | **DME Configuration**             | | | | | |
 | `DME_PRIMARY_HOST`                | Primary DME server                                     | _(required)_                      | `ingest1.dme.nl`                                                | `conf/rucphen.liq`, `conf/bredanu.liq` | Rucphen/BredaNu |
 | `DME_PRIMARY_PORT`                | Primary DME port                                       | _(required)_                      | `8010`                                                          | `conf/rucphen.liq`, `conf/bredanu.liq` | Rucphen/BredaNu |
@@ -276,19 +277,32 @@ socat - UNIX-CONNECT:/opt/liquidsoap/socket/liquidsoap.sock
 | `silence.disable`           | Sets silence detection to off                                      |
 | `silence.status`            | Shows the silence detection state                                  |
 | `dab.status`                | Shows acknowledgement progress for each DAB+ TCP destination       |
-| `hls.status`                | Shows the HLS output health (`starting`, `ok`, `degraded: <reason>`, or `disabled`) |
+| `hls.status`                | Shows the HLS output health (`starting`, `ok`, `degraded: local=<code>; mirror=<code>`, or `disabled`) |
 
 All commands have an immediate effect.
 
 ### JSON Status Endpoint
 
 For monitoring systems, `GET /status` exposes the runtime state as JSON on
-`STREAM_METADATA_PORT`. It is always registered and does not require the
-metadata bearer token. Compose binds this port to `127.0.0.1` by default.
+`STREAM_METADATA_PORT`. The endpoint is registered only when
+`STATUS_BEARER_TOKEN` is set, and every request must send that token. Use a
+different value than `STREAM_METADATA_BEARER_TOKEN`, so a monitoring system
+cannot write metadata. Compose binds this port to `127.0.0.1` by default.
 
 ```bash
-curl -s http://127.0.0.1:7000/status | jq
+curl -s -H "Authorization: Bearer ${STATUS_BEARER_TOKEN}" \
+  http://127.0.0.1:7000/status | jq
 ```
+
+A missing or wrong token returns `401 Unauthorized` with the
+`WWW-Authenticate: Bearer realm="status"` header. Only `GET` is registered.
+
+The response has a fixed schema: every field is always present with the same
+type, and a value that is not available is `null` instead of being left out.
+Lists such as `outputs.icecast.streams` and `outputs.dab.destinations` are
+empty only when nothing of that kind is configured. Error fields contain a
+stable code, never free text; the log and the socket commands keep the full
+reason.
 
 The response contains the overall state (`ok`, `degraded`, or `down`), the
 active source and mode, readiness for every source, detailed studio-input
@@ -300,36 +314,40 @@ silence is clamped to `-120.0` dBFS; levels are `null` when SRT is disconnected.
 Every active SRT connection includes the peer address, negotiated receive
 latency, receive buffer, round-trip time, and total dropped packets. If its
 statistics cannot be read, the connection stays listed and connected with
-`null` metrics and a `statistics_error`. Because
-`/status` does not require authentication, peer addresses are `null` by default.
-Send the same `Authorization: Bearer <token>` header configured for
-`POST /metadata` to include them.
+`null` metrics and `statistics_error: "statistics_unavailable"`.
 
 `outputs.icecast` has an aggregate status and a `streams` array. Each stream
 identifies its host, port, and mount and reports whether it is started and
-connected. Authorized responses include one object per EDI destination in
-`outputs.dab.destinations`; without the matching bearer token, this is `[]` even
-when destinations are configured. Each object reports its TCP state, ACK age,
-byte counters, send queue, unacknowledged segments, and retransmissions;
-unavailable metrics are `null`. Its nullable `error` explains an unhealthy
-destination; `outputs.dab.error` covers failures such as a crashed encoder or
-monitor. `outputs.hls` separates
-the local writer and remote mirror health. The local state reports playlist and
-segment counts plus the age of the latest playlist update. The mirror state
-identifies the storage host and zone, reports the age of its most recent
-successful sync, and counts pending playlists and segments. Each HLS
-component is `starting` until its first progress unless it reports an error,
-which makes it `degraded` immediately. It also becomes `degraded` when progress
-stops for several segment intervals; its nullable `error` explains an active
-failure.
+connected. `outputs.dab.destinations` has one object per configured EDI
+destination, in configuration order. Each object reports its TCP state, ACK
+age, byte counters, send queue, unacknowledged segments, and retransmissions;
+unavailable metrics and an unknown TCP state are `null`. Until the ACK monitor
+has reported, and when monitoring is disabled, destinations are listed with
+their configured URL and `null` metrics. `outputs.hls` separates the local
+writer and remote mirror health. The local state reports playlist and segment
+counts plus the age of the latest playlist update. The mirror state identifies
+the storage host and zone (`null` when HLS is disabled), reports the age of its
+most recent successful sync, and counts pending playlists and segments. Each
+HLS component is `starting` until its first progress unless it reports an
+error, which makes it `degraded` immediately. It also becomes `degraded` when
+progress stops for several segment intervals.
+
+Error codes are `null` while a component is healthy:
+
+| Field                                  | Codes                                                                                                   |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `studio_inputs[].srt.connections[].statistics_error` | `statistics_unavailable`                                                                  |
+| `outputs.dab.error`                    | `encoder_error` (ODR-AudioEnc crashed), `monitor_failed` (the ACK monitor did not produce a result)     |
+| `outputs.dab.destinations[].error`     | `ack_stalled`, `no_socket`, `tcp_not_established`, `invalid_destination`, or the aggregate code above   |
+| `outputs.hls.local.error`              | `dir_missing`, `dir_not_writable`, `clock_error`, `stalled`                                             |
+| `outputs.hls.mirror.error`             | `listing_failed`, `upload_failed`, `delete_failed`, `read_failed`, `local_file_missing`, `stalled`      |
 
 Use the top-level `status` field for alerting. A switch to the emergency
 fallback, a disconnected Icecast output, or a degraded enabled DAB+/HLS output
 makes the overall state `degraded`; an unavailable radio source makes it `down`.
 The HTTP status code follows the overall state: `200 OK` for `ok` and
 `degraded`, `503 Service Unavailable` for `down`, so a monitor that only checks
-the status code alerts when the station is off air. `HEAD /status` returns the
-same status code without a body.
+the status code alerts when the station is off air.
 
 ## Silence Detection
 
@@ -485,7 +503,7 @@ curl http://127.0.0.1:7000/metadata \
 
 The rules are: a `title` that is not empty, an optional `artist`, and the correct bearer token.
 
-The endpoint returns `204 No Content` if the update is correct. It returns `400 Bad Request` if the JSON body is invalid or `title` is missing. It returns `401 Unauthorized` if the bearer token is missing or wrong. The `401` response includes the `WWW-Authenticate: Bearer realm="metadata"` header. It returns `413 Payload Too Large` if the body is larger than 16 KiB or has a `Transfer-Encoding` header. Chunked bodies are not supported. If you do not send `artist`, the update contains only the title. If no bearer token is set, the metadata endpoint is not registered, but `GET /status` remains available. If the API does not respond, do a check of the container health, the bind address, the port, and the firewall rules.
+The endpoint returns `204 No Content` if the update is correct. It returns `400 Bad Request` if the JSON body is invalid or `title` is missing. It returns `401 Unauthorized` if the bearer token is missing or wrong. The `401` response includes the `WWW-Authenticate: Bearer realm="metadata"` header. It returns `413 Payload Too Large` if the body is larger than 16 KiB or has a `Transfer-Encoding` header. Chunked bodies are not supported. If you do not send `artist`, the update contains only the title. If no bearer token is set, the metadata endpoint is not registered. `GET /status` has its own token, `STATUS_BEARER_TOKEN`; the metadata token does not open it. If the API does not respond, do a check of the container health, the bind address, the port, and the firewall rules.
 
 As an option, configure one URL output in [zwfm-metadata](https://github.com/oszuidwest/zwfm-metadata). Set the input priority, the filters, and the delay:
 
@@ -571,7 +589,7 @@ The correct results are: two AAC-LC variants with the `mp4a.40.2` codec string, 
 HLS is an optional CDN output. It must not stop the primary Icecast, DAB+, or DME outputs. Two layers make sure of this:
 
 - `/hls` is a dedicated tmpfs mount of 64 MB, owned by the container user. A full host disk, a read-only remount, or wrong ownership after deployment cannot touch the HLS writer. The live window uses approximately 2.5 MB. A host directory or a manual `chown` is not necessary.
-- The HLS chain operates on its own Liquidsoap clock with an error handler. If a write fails (for example, if the tmpfs is full), only the HLS output stops. The system writes the failure to the log at error level, and `hls.status` reports `degraded: <reason>`. A watchdog makes the output again when `/hls` accepts writes. The watchdog uses exponential backoff, from 5 seconds to a maximum of 5 minutes. The primary outputs continue during this sequence, and a restart is not necessary.
+- The HLS chain operates on its own Liquidsoap clock with an error handler. If a write fails (for example, if the tmpfs is full), only the HLS output stops. The system writes the failure to the log at error level, and `hls.status` reports `degraded: local=<code>`. A watchdog makes the output again when `/hls` accepts writes. The watchdog uses exponential backoff, from 5 seconds to a maximum of 5 minutes. The primary outputs continue during this sequence, and a restart is not necessary.
 
 Older installations get the tmpfs mount when you do `install.sh` again. The script refreshes `docker-compose.yml`. The old `./hls` host directory then has no function, and you can remove it.
 

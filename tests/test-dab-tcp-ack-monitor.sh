@@ -110,7 +110,7 @@ assert_status degraded "${output}"
 rm -f -- "${FAKE_SS_DIR}/9171"
 output=$(monitor 119 "${DESTINATION}")
 assert_status down "${output}"
-assert_record "${DESTINATION}|down||||||||no AudioEnc TCP socket" "${output}"
+assert_record "${DESTINATION}|down||||||||no_socket" "${output}"
 
 rm -rf -- "${STATE_DIR}"
 write_socket 9171 100 1
@@ -148,5 +148,20 @@ assert_status degraded "${output}"
 rm -rf -- "${STATE_DIR}"
 output=$(monitor 120 udp://192.0.2.10:9171)
 assert_status unmonitored "${output}"
+assert_record "udp://192.0.2.10:9171|unmonitored||||||||not_tcp" "${output}"
+
+cat > "${FAKE_SS_DIR}/9171" <<EOF
+SYN-SENT 0 1 10.0.0.2:41000 192.0.2.10:9171 users:(("odr-audioenc",pid=4242,fd=5))
+EOF
+output=$(monitor 200 "${DESTINATION}" 5 15 2)
+output=$(monitor 203 "${DESTINATION}" 5 15 2)
+assert_status down "${output}"
+assert_record "${DESTINATION}|down|SYN-SENT|||||||tcp_not_established" \
+  "${output}"
+
+output=$(monitor 204 tcp://192.0.2.10:99999)
+assert_status down "${output}"
+assert_record "tcp://192.0.2.10:99999|down||||||||invalid_destination" \
+  "${output}"
 
 printf '%s\n' 'dab-tcp-ack-monitor tests passed'

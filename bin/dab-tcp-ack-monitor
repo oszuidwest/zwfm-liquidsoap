@@ -48,7 +48,7 @@ debug()
   fi
 }
 
-# Append a 10-field destination record; the argument is its optional error.
+# Append a 10-field destination record; the argument is its optional error code.
 append_record()
 {
   records="${records}${records:+${nl}}${destination}${tab}${endpoint_status}${tab}${tcp_state}${tab}${ack_age}${tab}${bytes_sent}${tab}${bytes_acked}${tab}${send_queue}${tab}${unacked}${tab}${retrans}${tab}$1"
@@ -160,7 +160,7 @@ for destination in ${DESTINATIONS}; do
       ;;
     *)
       endpoint_status=unmonitored
-      append_record "not TCP"
+      append_record not_tcp
       continue
       ;;
   esac
@@ -176,7 +176,7 @@ for destination in ${DESTINATIONS}; do
   if [ -z "${host}" ] || ! is_uint "${port}" || [ "${port}" -gt 65535 ]; then
     down_count=$((down_count + 1))
     endpoint_status=down
-    append_record "invalid TCP destination"
+    append_record invalid_destination
     continue
   fi
 
@@ -226,7 +226,7 @@ for destination in ${DESTINATIONS}; do
 
   if [ -z "${socket_line}" ]; then
     disconnected_status
-    append_record "no AudioEnc TCP socket"
+    append_record no_socket
   else
     IFS="${wsp}"
     # shellcheck disable=SC2086
@@ -236,7 +236,7 @@ for destination in ${DESTINATIONS}; do
     tcp_state=${1:-}
     if [ "${tcp_state}" != "ESTAB" ]; then
       disconnected_status
-      append_record "TCP ${tcp_state}"
+      append_record tcp_not_established
     else
       send_queue=${3:-0}
       connection="${4:-?}>${5:-?}"

@@ -99,3 +99,4 @@ let STREAM_METADATA_PORT =
   int_of_string(environment.get("STREAM_METADATA_PORT", default="7000"))
 let STREAM_METADATA_BEARER_TOKEN =
   environment.get("STREAM_METADATA_BEARER_TOKEN", default="")
+let STATUS_BEARER_TOKEN = environment.get("STATUS_BEARER_TOKEN", default="")

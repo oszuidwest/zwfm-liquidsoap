@@ -1,4 +1,4 @@
-# Runtime status and authenticated now-playing HTTP endpoints.
+# Authenticated runtime status and now-playing HTTP endpoints.
 
 let STREAM_METADATA_MAX_BODY_BYTES = 16_384
 
@@ -24,18 +24,14 @@ def read_stream_metadata_body(req) =
 end
 
 # Harbor lowercases request header names.
-def request_authorized(req) =
-  STREAM_METADATA_BEARER_TOKEN != ""
+def request_authorized(req, token) =
+  token != ""
   and req.headers["authorization"] ==
-    "Bearer #{STREAM_METADATA_BEARER_TOKEN}"
+    "Bearer #{token}"
 end
 
-def status_snapshot(
-  radio_source,
-  active_source,
-  ~sources,
-  ~include_sensitive=false
-) =
+# Every field is always present; unavailable values are null.
+def status_snapshot(radio_source, active_source, ~sources) =
   let radio_ready = radio_source.is_ready()
   let active_source = active_source()
   let icecast_state = icecast_health()
@@ -72,20 +68,10 @@ def status_snapshot(
       ),
     studio_inputs =
       list.map(
-        fun (get_status) -> get_status(include_peer=include_sensitive),
+        fun (get_status) -> get_status(),
         studio_input_status_providers()
       ),
-    outputs =
-      {
-        icecast = icecast_state,
-        dab =
-          {
-            ...dab_state,
-            destinations =
-              if include_sensitive then dab_state.destinations else [] end
-          },
-        hls = hls_state
-      }
+    outputs = {icecast = icecast_state, dab = dab_state, hls = hls_state}
   }
 end
 
@@ -102,35 +88,47 @@ def register_http_endpoints(radio_source, active_source, ~sources) =
     )
   end
 
-  # Degraded is on air (200); only down is 503. Register HEAD for probes.
-  def status_handler(req, res) =
-    let snapshot =
-      status_snapshot(
-        radio_source,
-        active_source,
-        sources=sources,
-        include_sensitive=request_authorized(req)
-      )
-    res.header("Cache-Control", "no-store")
-    if snapshot.status == "down" then res.status_code(503) end
-    res.json(compact=true, snapshot)
-  end
+  if
+    STATUS_BEARER_TOKEN == ""
+  then
+    log(
+      label="status",
+      "Status endpoint disabled - STATUS_BEARER_TOKEN not configured",
+      level=3
+    )
+  else
+    # Degraded is on air (200); only down is 503.
+    def status_handler(req, res) =
+      res.header("Cache-Control", "no-store")
+      if
+        not request_authorized(req, STATUS_BEARER_TOKEN)
+      then
+        res.header(
+          "WWW-Authenticate",
+          "Bearer realm=\"status\""
+        )
+        res.status_code(401)
+        res.data("Unauthorized\n")
+      else
+        let snapshot =
+          status_snapshot(radio_source, active_source, sources=sources)
+        if snapshot.status == "down" then res.status_code(503) end
+        res.json(compact=true, snapshot)
+      end
+    end
 
-  list.iter(
-    fun (method) ->
-      harbor.http.register(
-        port=STREAM_METADATA_PORT,
-        method=method,
-        "/status",
-        status_handler
-      ),
-    ["GET", "HEAD"]
-  )
-  log(
-    label="status",
-    "Status endpoint enabled on port #{STREAM_METADATA_PORT}",
-    level=3
-  )
+    harbor.http.register(
+      port=STREAM_METADATA_PORT,
+      method="GET",
+      "/status",
+      status_handler
+    )
+    log(
+      label="status",
+      "Status endpoint enabled on port #{STREAM_METADATA_PORT}",
+      level=3
+    )
+  end
 
   if
     STREAM_METADATA_BEARER_TOKEN == ""
@@ -156,7 +154,7 @@ def register_http_endpoints(radio_source, active_source, ~sources) =
       end
 
       if
-        not request_authorized(req)
+        not request_authorized(req, STREAM_METADATA_BEARER_TOKEN)
       then
         res.header(
           "WWW-Authenticate",

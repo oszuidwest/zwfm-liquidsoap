@@ -46,8 +46,7 @@ assert(null.get(without_statistics.peer) == "192.0.2.1")
 assert(not null.defined(without_statistics.latency_ms))
 assert(not null.defined(without_statistics.dropped_packets_total))
 assert(
-  null.get(without_statistics.statistics_error) ==
-    "statistics unavailable"
+  null.get(without_statistics.statistics_error) == "statistics_unavailable"
 )
 
 shutdown()
