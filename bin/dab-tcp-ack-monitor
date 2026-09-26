@@ -48,7 +48,7 @@ debug()
   fi
 }
 
-# Append a 10-field destination record; the argument is its optional error code.
+# Append a 10-field destination record; $1 is its optional error code.
 append_record()
 {
   records="${records}${records:+${nl}}${destination}${tab}${endpoint_status}${tab}${tcp_state}${tab}${ack_age}${tab}${bytes_sent}${tab}${bytes_acked}${tab}${send_queue}${tab}${unacked}${tab}${retrans}${tab}$1"

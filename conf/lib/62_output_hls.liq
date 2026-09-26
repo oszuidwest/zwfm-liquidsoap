@@ -21,8 +21,7 @@ let hls_endpoint_host =
 let hls_remote_dir_url =
   "https://#{hls_endpoint_host}/#{HLS_BUNNY_STORAGE_ZONE}/#{STATION_ID}/"
 
-# Independent error codes prevent one HLS component from masking the other;
-# the full reasons go to the log.
+# Store stable API codes per component; log full failure details.
 let hls_local_error = ref("")
 let hls_mirror_error = ref("")
 let hls_local_file_names = ref([])

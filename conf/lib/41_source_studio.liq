@@ -136,7 +136,7 @@ def create_studio_input(~id, ~port) =
     )
   output.dummy(id="drain_#{id}", fallible=true, register_telnet=false, buffered)
 
-  # Shared by GET /status and the local server commands.
+  # Reused by GET /status and the local server command.
   def status() =
     let sockets = studio.sockets()
     let connections =

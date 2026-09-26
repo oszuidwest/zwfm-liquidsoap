@@ -1,4 +1,4 @@
-# Authenticated runtime status and now-playing HTTP endpoints.
+# Bearer-authenticated runtime status and now-playing endpoints.
 
 let STREAM_METADATA_MAX_BODY_BYTES = 16_384
 
@@ -44,7 +44,7 @@ def reject_unauthorized(res, realm) =
   res.data("Unauthorized\n")
 end
 
-# Every field is always present; unavailable values are null.
+# Keep the schema stable by representing unavailable values as null.
 def status_snapshot(radio_source, active_source, ~sources) =
   let radio_ready = radio_source.is_ready()
   let active_source = active_source()

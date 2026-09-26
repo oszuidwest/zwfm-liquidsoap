@@ -144,8 +144,7 @@ radio_sink.on_start(
         )
       )
 
-      # Only the status bearer token opens the endpoint. A failed assertion in
-      # this thread must stop the process instead of leaving it running.
+      # Verify token isolation and fail the process on test-thread errors.
       thread.run(
         delay=1.0,
         fun () ->
@@ -210,7 +209,7 @@ radio_sink.on_start(
               )
             )
 
-            # The status token must not write metadata either.
+            # Endpoint tokens are not interchangeable.
             let metadata_response =
               http.post(
                 timeout=2.0,

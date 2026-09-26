@@ -81,7 +81,7 @@ assert(
   )
 )
 
-# Configured destinations stand in for failures outside any destination.
+# Non-destination failures retain configured destination records.
 dab_set_ack_status(
   "down",
   "DAB+ encoder error: exited",
@@ -99,7 +99,7 @@ assert(
 )
 assert(list.for_all(fun (d) -> not null.defined(d.tcp_state), placeholders))
 
-# Destination errors do not duplicate into the aggregate error.
+# Per-destination errors leave the aggregate error null.
 dab_set_ack_status(
   ack_snapshot.status,
   ack_snapshot.detail,
