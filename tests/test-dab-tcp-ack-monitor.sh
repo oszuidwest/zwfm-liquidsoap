@@ -95,6 +95,9 @@ assert_record "${DESTINATION}|ok|ESTAB|0|100|101|0|0|0|" "${output}"
 
 output=$(monitor 106 "${DESTINATION}")
 assert_status degraded "${output}"
+assert_record \
+  "${DESTINATION}|degraded|ESTAB|6|100|101|0|0|0|no acknowledgement progress for 6s" \
+  "${output}"
 
 output=$(monitor 116 "${DESTINATION}")
 assert_status down "${output}"
@@ -148,5 +151,13 @@ assert_status degraded "${output}"
 rm -rf -- "${STATE_DIR}"
 output=$(monitor 120 udp://192.0.2.10:9171)
 assert_status unmonitored "${output}"
+assert_record "udp://192.0.2.10:9171|unmonitored||||||||not TCP" "${output}"
+
+output=$(monitor 121 "")
+if [ "${output}" != unmonitored ]; then
+  printf 'Expected only the unmonitored status line, got:\n%s\n' \
+    "${output}" >&2
+  exit 1
+fi
 
 printf '%s\n' 'dab-tcp-ack-monitor tests passed'

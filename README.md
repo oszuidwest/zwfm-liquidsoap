@@ -311,10 +311,11 @@ connected. Authorized responses include one object per EDI destination in
 `outputs.dab.destinations`; without the matching bearer token, this is `[]` even
 when destinations are configured. Each object reports its TCP state, ACK age,
 byte counters, send queue, unacknowledged segments, and retransmissions;
-unavailable metrics are `null`. Its nullable `error` explains an unhealthy
-destination; `outputs.dab.error` covers failures such as a crashed encoder or
-monitor. `outputs.hls` separates
-the local writer and remote mirror health. The local state reports playlist and
+unavailable metrics are `null`. On each destination and on `outputs.dab`, a
+nullable `error` explains an unhealthy status and a nullable `reason` explains a
+healthy one, such as `not TCP` or a startup wait. `outputs.dab.error` reports
+failures that no destination explains, such as a crashed encoder or monitor.
+`outputs.hls` separates the local writer and remote mirror health. The local state reports playlist and
 segment counts plus the age of the latest playlist update. The mirror state
 identifies the storage host and zone, reports the age of its most recent
 successful sync, and counts pending playlists and segments. Each HLS
@@ -446,6 +447,8 @@ ok
 tcp://primary.example.com:9001 ok (TCP ESTAB, ack_age=0s, bytes_sent=123456, bytes_acked=123457, send_queue=0, unacked=0, retrans=0)
 ```
 
+The first line is the overall state. If the state has an explanation, the line reads `<state>: <explanation>`, for example `down: DAB+ encoder error: …` or `unmonitored: TCP ACK monitoring is disabled`. Each following line describes one destination. The part in parentheses is the error or reason, or the TCP counters if there is nothing to explain. `GET /status` reports the same state as `outputs.dab`.
+
 On Linux, `bytes_acked` can be exactly one greater than `bytes_sent` because the ACK counter follows TCP sequence-space progress, including the SYN, while the sent counter contains data bytes only.
 
 Possible overall states are:
@@ -454,7 +457,7 @@ Possible overall states are:
 - `starting`: all configured TCP destinations are within the startup grace period and have not produced acknowledgement progress yet.
 - `ok`: every TCP destination has recent acknowledgement progress.
 - `degraded`: the TCP destinations have mixed health, including when one is down while another remains healthy, or at least one has exceeded `DAB_ACK_WARN_SECONDS` without acknowledgement progress.
-- `down`: all configured TCP destinations are down, which includes the case where AudioEnc is not running. A single destination exceeding `DAB_ACK_DOWN_SECONDS` while another remains healthy produces `degraded`.
+- `down`: all configured TCP destinations are down, which includes the case where AudioEnc is not running. A single destination exceeding `DAB_ACK_DOWN_SECONDS` while another remains healthy produces `degraded`. After an AudioEnc crash, the state stays `down` with the encoder error until 30 seconds pass without a new crash, even when TCP acknowledgement monitoring is disabled, so a crash loop stays visible between restarts.
 - `unmonitored`: monitoring is disabled or no TCP EDI destination is configured.
 
 TCP acknowledgements confirm that the remote TCP stack accepted the byte stream. They do not confirm that the remote DabMux application processed the audio. UDP destinations cannot provide this signal and are listed as unmonitored.

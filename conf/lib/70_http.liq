@@ -39,7 +39,7 @@ def status_snapshot(
   let radio_ready = radio_source.is_ready()
   let active_source = active_source()
   let icecast_state = icecast_health()
-  let dab_state = dab_ack_status()
+  let dab_state = dab_health()
   let hls_state = hls_health()
   let status =
     if

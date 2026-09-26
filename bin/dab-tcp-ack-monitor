@@ -48,7 +48,7 @@ debug()
   fi
 }
 
-# Append a 10-field destination record; the argument is its optional error.
+# Append a 10-field destination record; the argument explains a non-ok status.
 append_record()
 {
   records="${records}${records:+${nl}}${destination}${tab}${endpoint_status}${tab}${tcp_state}${tab}${ack_age}${tab}${bytes_sent}${tab}${bytes_acked}${tab}${send_queue}${tab}${unacked}${tab}${retrans}${tab}$1"
@@ -289,7 +289,12 @@ for destination in ${DESTINATIONS}; do
         endpoint_status=down
       fi
 
-      append_record ""
+      case ${endpoint_status} in
+        degraded|down)
+          append_record "no acknowledgement progress for ${ack_age}s"
+          ;;
+        *) append_record "" ;;
+      esac
       previous_connection=${connection}
       previous_acked=${bytes_acked}
     fi
@@ -317,4 +322,5 @@ else
   overall_status=degraded
 fi
 
-printf '%s\n' "${overall_status}" "${records:-No TCP EDI destinations configured}"
+printf '%s\n' "${overall_status}"
+[ -z "${records}" ] || printf '%s\n' "${records}"

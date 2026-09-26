@@ -48,7 +48,7 @@ let dab_fixture =
   )
 dab_set_ack_status(
   dab_fixture.status,
-  dab_fixture.detail,
+  message=dab_fixture.error,
   destinations=dab_fixture.destinations
 )
 
