@@ -46,11 +46,27 @@ def studio_srt_connection(~input_id, peer, read_stats) =
       "Unable to read SRT statistics for #{input_id}: #{error.message(err)}",
       level=2
     )
-    {
-      ...unavailable,
-      statistics_error =
-        "statistics unavailable"
-    }
+    {...unavailable, statistics_error = "statistics_unavailable"}
+  end
+end
+
+# Disconnection outranks silence; a connected input whose buffer is not yet
+# ready is still filling.
+def studio_input_health(~connected, ~silent, ~ready) =
+  if
+    not connected
+  then
+    {status = "down", error = "disconnected"}
+  elsif
+    silent
+  then
+    {status = "degraded", error = "silent"}
+  elsif
+    not ready
+  then
+    {status = "starting", error = null}
+  else
+    {status = "ok", error = null}
   end
 end
 
@@ -140,8 +156,8 @@ def create_studio_input(~id, ~port) =
     )
   output.dummy(id="drain_#{id}", fallible=true, register_telnet=false, buffered)
 
-  # Public HTTP snapshots redact peers; local server commands include them.
-  def status(~include_peer) =
+  # Reused by GET /status and the local server command.
+  def status() =
     let sockets = studio.sockets()
     let connections =
       list.map(
@@ -150,7 +166,7 @@ def create_studio_input(~id, ~port) =
             let (peer, raw_socket) = connection
             studio_srt_connection(
               input_id=id,
-              if include_peer then peer else null end,
+              peer,
               fun () -> srt.socket(raw_socket).bistats()
             )
           end,
@@ -158,8 +174,18 @@ def create_studio_input(~id, ~port) =
       )
     let connected = not list.is_empty(sockets)
 
+    # The detector is only pulled while silence detection is enabled.
+    let health =
+      studio_input_health(
+        connected=connected,
+        silent=is_silence_detection_enabled() and detected.is_blank(),
+        ready=source.is_ready(buffered)
+      )
+
     {
       name = id,
+      status = health.status,
+      error = health.error,
       buffer_seconds = seconds_of_main(buffered.buffer_length()),
       audio =
         {
@@ -188,7 +214,7 @@ def create_studio_input(~id, ~port) =
     "#{id}.srt",
     fun (_) ->
       begin
-        let snapshot = status(include_peer=true)
+        let snapshot = status()
         let details =
           string.concat(
             separator="; ",

@@ -22,7 +22,7 @@ end
 # Public states: disabled, unmonitored, starting, ok, degraded or down.
 let dab_ack_status = ref({status = "disabled", destinations = [], error = null})
 
-# dab.status keeps full detail; GET /status keeps only unmatched failures.
+# Human-readable dab.status detail; GET /status exposes stable error codes.
 let dab_ack_detail =
   ref(
     "DAB+ output is disabled"
@@ -32,32 +32,6 @@ let dab_ack_detail =
 # logs a misleading startup warning.
 let dab_ack_monitor_running = ref(false)
 on_shutdown(fun () -> dab_ack_monitor_running := false)
-
-def dab_set_ack_status(status, detail, ~destinations=[]) =
-  let previous = dab_ack_status().status
-  if
-    status != previous
-  then
-    log(
-      label="dab",
-      "TCP ACK monitor: #{previous} -> #{status}",
-      level=if status_healthy(status) then 3 else 2 end
-    )
-  end
-  dab_ack_detail := detail
-
-  # Keep destination errors nested; aggregate only unmatched failures.
-  let aggregate_error =
-    if
-      status_healthy(status) or not list.is_empty(destinations)
-    then
-      null
-    else
-      detail
-    end
-  dab_ack_status :=
-    {status = status, destinations = destinations, error = aggregate_error}
-end
 
 # The monitor matches AudioEnc's EDI sockets by process name in ss output.
 let dab_ack_monitor_command =
@@ -75,12 +49,15 @@ let dab_ack_monitor_command =
     ]
   )
 
+def dab_destination_urls(destinations) =
+  list.map(
+    fun (destination) -> string.trim(destination),
+    string.split(separator=",", destinations)
+  )
+end
+
 def dab_edi_args(destinations) =
-  let destinations =
-    list.map(
-      fun (destination) -> string.trim(destination),
-      string.split(separator=",", destinations)
-    )
+  let destinations = dab_destination_urls(destinations)
   if
     list.exists(fun (destination) -> destination == "", destinations)
   then
@@ -118,21 +95,25 @@ def dab_parse_ack_line(line) =
     ] = fields
     let detail =
       if
-        reason != ""
+        reason == ""
       then
-        reason
-      else
         "TCP #{tcp_state}, ack_age=#{ack_age}s, bytes_sent=#{bytes_sent}, \
          bytes_acked=#{bytes_acked}, send_queue=#{send_queue}, unacked=#{
           unacked
         }, retrans=#{retrans}"
+      elsif
+        tcp_state == ""
+      then
+        reason
+      else
+        "#{reason}, TCP #{tcp_state}"
       end
     (
       "#{destination} #{status} (#{detail})",
       {
         destination = destination,
         status = status,
-        tcp_state = tcp_state,
+        tcp_state = if tcp_state == "" then null else tcp_state end,
         ack_age_seconds = dab_optional_int(ack_age),
         bytes_sent = dab_optional_int(bytes_sent),
         bytes_acked = dab_optional_int(bytes_acked),
@@ -150,11 +131,31 @@ def dab_parse_ack_line(line) =
           then
             reason
           else
-            "No acknowledgement progress for #{ack_age}s"
+            "ack_stalled"
           end
       }
     )
   end
+end
+
+# Preserve configured destinations when monitor records are unavailable.
+def dab_configured_destinations(status, failure) =
+  list.map(
+    fun (destination) ->
+      {
+        destination = destination,
+        status = status,
+        tcp_state = null,
+        ack_age_seconds = null,
+        bytes_sent = null,
+        bytes_acked = null,
+        send_queue_bytes = null,
+        unacked_segments = null,
+        retransmissions = null,
+        error = failure
+      },
+    dab_destination_urls(DAB_EDI_DESTINATIONS)
+  )
 end
 
 # Preserve a connected final record's empty error field.
@@ -172,6 +173,59 @@ def dab_parse_ack_monitor(monitor_output) =
   }
 end
 
+# Unhealthy destinations with their error codes, as one log line.
+def dab_destination_problems(destinations) =
+  string.concat(
+    separator="; ",
+    list.filter_map(
+      fun (d) ->
+        null.map(
+          fun (error) ->
+            "#{d.destination} #{d.status} (#{error})",
+          d.error
+        ),
+      destinations
+    )
+  )
+end
+
+def dab_set_ack_status(status, detail, ~failure=null, ~destinations=null) =
+  # Reserve the aggregate error for failures not tied to one destination.
+  let failure = if status_healthy(status) then null else failure end
+  let destinations =
+    destinations ?? dab_configured_destinations(status, failure)
+
+  # GET /status exposes only codes, so log what is unhealthy when it changes.
+  let previous = dab_ack_status()
+  let problems = dab_destination_problems(destinations)
+  if
+    status != previous.status
+    or failure != previous.error
+    or problems != dab_destination_problems(previous.destinations)
+  then
+    let reason =
+      if
+        null.defined(failure)
+      then
+        " (#{detail})"
+      elsif
+        problems != ""
+      then
+        " (#{problems})"
+      else
+        ""
+      end
+    log(
+      label="dab",
+      "TCP ACK monitor: #{previous.status} -> #{status}#{reason}",
+      level=if status_healthy(status) then 3 else 2 end
+    )
+  end
+  dab_ack_detail := detail
+  dab_ack_status :=
+    {status = status, destinations = destinations, error = failure}
+end
+
 # Poll and apply the monitor snapshot.
 def dab_ack_monitor_tick() =
   if
@@ -187,7 +241,17 @@ def dab_ack_monitor_tick() =
       then
         dab_set_ack_status(
           "down",
-          "TCP ACK monitor returned no status"
+          "TCP ACK monitor returned no status",
+          failure="monitor_failed"
+        )
+      elsif
+        # Monitor-level errors carry no destination records.
+        list.is_empty(snapshot.destinations)
+      then
+        dab_set_ack_status(
+          snapshot.status,
+          snapshot.detail,
+          failure="monitor_failed"
         )
       else
         dab_set_ack_status(
@@ -199,7 +263,8 @@ def dab_ack_monitor_tick() =
     catch err do
       dab_set_ack_status(
         "down",
-        "TCP ACK monitor error: #{err.kind}: #{err.message}"
+        "TCP ACK monitor error: #{err.kind}: #{err.message}",
+        failure="monitor_failed"
       )
     end
   end
@@ -268,10 +333,11 @@ def output_dab_stream(audio_source) =
           begin
             dab_set_ack_status(
               "down",
-              "DAB+ encoder error: #{err}"
+              "DAB+ encoder error: #{err}",
+              failure="encoder_error"
             )
             log(
-              "DAB+ encoder error: #{err} - restarting ODR-AudioEnc in 5s",
+              "Restarting ODR-AudioEnc in 5s",
               level=2
             )
             5.0

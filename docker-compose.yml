@@ -15,10 +15,15 @@ services:
       # mappings, so a shell override cannot diverge from env_file
       - SRT_PORT_PRIMARY=${SRT_PORT_PRIMARY:-8888}
       - SRT_PORT_SECONDARY=${SRT_PORT_SECONDARY:-9999}
-      - STREAM_METADATA_PORT=${STREAM_METADATA_PORT:-7000}
+      - HTTP_PORT=${HTTP_PORT:-7000}
     env_file:
       - .env
     ports:
+      # HTTP API (status and stream metadata)
+      - target: ${HTTP_PORT:-7000}
+        published: ${HTTP_PORT:-7000}
+        host_ip: ${HTTP_BIND:-127.0.0.1}
+        protocol: tcp
       # SRT Input 1
       - target: ${SRT_PORT_PRIMARY:-8888}
         published: ${SRT_PORT_PRIMARY:-8888}
@@ -33,11 +38,6 @@ services:
       - target: 8080
         published: ${STEREOTOOL_WEB_PORT:-8080}
         host_ip: ${STEREOTOOL_WEB_BIND:-0.0.0.0}
-        protocol: tcp
-      # Status and stream metadata API
-      - target: ${STREAM_METADATA_PORT:-7000}
-        published: ${STREAM_METADATA_PORT:-7000}
-        host_ip: ${STREAM_METADATA_BIND:-127.0.0.1}
         protocol: tcp
     command: /scripts/radio.liq
     restart: unless-stopped

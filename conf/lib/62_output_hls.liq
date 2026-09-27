@@ -21,7 +21,7 @@ let hls_endpoint_host =
 let hls_remote_dir_url =
   "https://#{hls_endpoint_host}/#{HLS_BUNNY_STORAGE_ZONE}/#{STATION_ID}/"
 
-# Independent errors prevent one HLS component from masking the other.
+# Store stable API codes per component; log full failure details.
 let hls_local_error = ref("")
 let hls_mirror_error = ref("")
 let hls_local_file_names = ref([])
@@ -40,9 +40,9 @@ let hls_stale_after_seconds = max(15.0, HLS_SEGMENT_DURATION * 4.0)
 # Track failures so only a complete pass with content clears mirror errors.
 let hls_mirror_tick_failed = ref(false)
 
-def hls_mark_mirror_degraded(reason) =
+def hls_mark_mirror_degraded(code, reason) =
   hls_mirror_tick_failed := true
-  hls_mirror_error := reason
+  hls_mirror_error := code
   log(label="hls", reason, level=2)
 end
 
@@ -54,13 +54,13 @@ def hls_progress_age(last_progress_at) =
 end
 
 # Explicit failures outrank stalls; missing progress starts the same grace.
-def hls_component_health(label, failure, age) =
+def hls_component_health(failure, age) =
   let observed_age = age ?? max(0.0, time() - hls_started_at())
   let failure =
     if
       hls_enabled and failure == "" and observed_age > hls_stale_after_seconds
     then
-      "#{label} has not advanced for #{int_of_float(observed_age)}s"
+      "stalled"
     else
       failure
     end
@@ -152,6 +152,7 @@ def hls_put_data(remote_name, data) =
       true
     else
       hls_mark_mirror_degraded(
+        "upload_failed",
         "HLS mirror upload failed for #{remote_name}: HTTP #{
           response.status_code
         } #{response.status_message}"
@@ -160,6 +161,7 @@ def hls_put_data(remote_name, data) =
     end
   catch err do
     hls_mark_mirror_degraded(
+      "upload_failed",
       "HLS mirror upload exception for #{remote_name}: #{err.kind}: #{
         err.message
       }"
@@ -174,6 +176,7 @@ def hls_put_file(local_path) =
     not file.exists(local_path)
   then
     hls_mark_mirror_degraded(
+      "local_file_missing",
       "HLS mirror upload skipped; local file disappeared: #{remote_name}"
     )
     false
@@ -182,6 +185,7 @@ def hls_put_file(local_path) =
       hls_put_data(remote_name, file.contents(local_path))
     catch err do
       hls_mark_mirror_degraded(
+        "read_failed",
         "HLS upload read exception for #{remote_name}: #{err.kind}: #{
           err.message
         }"
@@ -206,6 +210,7 @@ def hls_delete_file(remote_name) =
       true
     else
       hls_mark_mirror_degraded(
+        "delete_failed",
         "HLS mirror delete failed for #{remote_name}: HTTP #{
           response.status_code
         } #{response.status_message}"
@@ -214,6 +219,7 @@ def hls_delete_file(remote_name) =
     end
   catch err do
     hls_mark_mirror_degraded(
+      "delete_failed",
       "HLS mirror delete exception for #{remote_name}: #{err.kind}: #{
         err.message
       }"
@@ -250,7 +256,6 @@ def hls_health() =
     if hls_dir_present then hls_local_file_names() else [] end
   let local =
     hls_component_health(
-      "HLS local playlists",
       if
         hls_local_error() != ""
       then
@@ -258,18 +263,13 @@ def hls_health() =
       elsif
         hls_enabled and not hls_dir_present
       then
-        "HLS_DIR #{HLS_DIR} is missing"
+        "dir_missing"
       else
         ""
       end,
       local_age
     )
-  let mirror =
-    hls_component_health(
-      "HLS mirror",
-      hls_mirror_error(),
-      mirror_age
-    )
+  let mirror = hls_component_health(hls_mirror_error(), mirror_age)
   let statuses = [local.status, mirror.status]
   let status =
     if
@@ -302,8 +302,8 @@ def hls_health() =
     mirror =
       {
         ...mirror,
-        host = hls_endpoint_host,
-        storage_zone = HLS_BUNNY_STORAGE_ZONE,
+        host = if hls_enabled then hls_endpoint_host else null end,
+        storage_zone = if hls_enabled then HLS_BUNNY_STORAGE_ZONE else null end,
         sync_age_seconds = mirror_age,
         pending_segments = hls_mirror_pending().segments,
         pending_playlists = hls_mirror_pending().playlists
@@ -382,6 +382,7 @@ def hls_remote_listing() =
       {ok = true, names = []}
     else
       hls_mark_mirror_degraded(
+        "listing_failed",
         "HLS mirror listing failed: HTTP #{response.status_code} #{
           response.status_message
         }"
@@ -390,6 +391,7 @@ def hls_remote_listing() =
     end
   catch err do
     hls_mark_mirror_degraded(
+      "listing_failed",
       "HLS mirror listing exception: #{err.kind}: #{err.message}"
     )
     {ok = false, names = []}
@@ -687,11 +689,11 @@ def output_hls_stream(audio_source) =
     end
 
     # Record the failure and schedule the next attempt.
-    def hls_mark_degraded(reason) =
+    def hls_mark_degraded(code, reason) =
       let retry_in = hls_retry_delay()
       hls_retry_at := time() + retry_in
       hls_retry_delay := min(retry_in * 2.0, hls_retry_delay_max)
-      hls_local_error := reason
+      hls_local_error := code
       log(
         label="hls",
         "HLS output degraded (primary outputs unaffected): #{reason}; next \
@@ -704,6 +706,7 @@ def output_hls_stream(audio_source) =
       id="hls_clock",
       on_error=fun (err) ->
         hls_mark_degraded(
+          "clock_error",
           "#{error.kind(err)}: #{error.message(err)}"
         ),
       [hls_source]
@@ -772,18 +775,16 @@ def output_hls_stream(audio_source) =
         )
         true
       else
+        hls_mark_degraded(
+          "dir_not_writable",
+          "HLS_DIR #{HLS_DIR} is not writable"
+        )
         false
       end
     end
 
     # Start degraded when HLS_DIR is unwritable; the watchdog retries.
-    if
-      not try_start_hls_output()
-    then
-      hls_mark_degraded(
-        "HLS_DIR #{HLS_DIR} is not writable"
-      )
-    end
+    ignore(try_start_hls_output())
 
     def hls_watchdog() =
       if
@@ -797,8 +798,6 @@ def output_hls_stream(audio_source) =
             "HLS output recovered",
             level=2
           )
-        else
-          hls_mark_degraded(hls_local_error())
         end
       elsif
         not hls_degraded()
@@ -854,7 +853,10 @@ def output_hls_stream(audio_source) =
             separator="; ",
             list.filter_map(
               fun (reason) -> reason,
-              [health.local.error, health.mirror.error]
+              [
+                null.map(fun (code) -> "local=#{code}", health.local.error),
+                null.map(fun (code) -> "mirror=#{code}", health.mirror.error)
+              ]
             )
           )
         if
