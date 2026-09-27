@@ -138,7 +138,10 @@ def dab_parse_ack_monitor(monitor_output) =
       if
         list.is_empty(destinations)
       then
-        string.concat(separator="; ", body)
+        string.concat(
+          separator="; ",
+          body
+        )
       else
         ""
       end,
@@ -262,14 +265,13 @@ def dab_ack_monitor_tick() =
         dab_set_ack_status(
           "down",
           failure="monitor_failed",
-          detail=
-            if
-              snapshot.detail == ""
-            then
-              "TCP ACK monitor returned no output"
-            else
-              snapshot.detail
-            end
+          detail=if
+            snapshot.detail == ""
+          then
+            "TCP ACK monitor returned no output"
+          else
+            snapshot.detail
+          end
         )
       else
         dab_set_ack_status(snapshot.status, destinations=snapshot.destinations)
