@@ -74,7 +74,6 @@ studio_input_status_providers :=
         buffer_seconds = 1.03,
         audio =
           {
-            window_seconds = 0.5,
             rms_dbfs = {left = -18.4, right = -17.9},
             peak_dbfs = {left = -6.2, right = -5.8}
           },
@@ -127,10 +126,6 @@ radio_sink.on_start(
       assert(icecast.host == "127.0.0.1")
       assert(icecast.port == 65534)
       assert(icecast.mount == "/test.mp3")
-      assert(
-        icecast.description ==
-          "Test stream"
-      )
       assert(not icecast.connected)
       let studio = list.hd(snapshot.studio_inputs)
       assert(studio.status == "ok")
@@ -154,11 +149,6 @@ radio_sink.on_start(
         delay=1.0,
         fun () ->
           try
-            # Started does not mean connected: Icecast connects lazily.
-            let started_stream = list.hd(icecast_health().streams)
-            assert(started_stream.started)
-            assert(not started_stream.connected)
-
             def bearer(token) =
               [
                 (

@@ -189,7 +189,6 @@ def create_studio_input(~id, ~port) =
       buffer_seconds = seconds_of_main(buffered.buffer_length()),
       audio =
         {
-          window_seconds = studio_level_window_seconds,
           rms_dbfs = studio_levels_dbfs(connected, rms_meter.rms()),
           peak_dbfs = studio_levels_dbfs(connected, peak_meter.peak())
         },

@@ -54,8 +54,6 @@ def output_icecast_stream(
       host = actual_host,
       port = actual_port,
       mount = mount,
-      description = description,
-      started = icecast_output.is_started(),
       connected = connected()
     }
   end
