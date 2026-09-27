@@ -23,6 +23,7 @@ flowchart LR
     subgraph outputs [" Outputs "]
         MICROMPX["MICROMPX"]
         ICECAST["ICECAST"]
+        DME["DME"]
         HLS["HLS"]
         BUNNY["BUNNY CDN"]
         ODR["ODR-AUDIOENC"]
@@ -40,6 +41,7 @@ flowchart LR
 
     LIQUIDSOAP --> MICROMPX
     LIQUIDSOAP --> ICECAST
+    LIQUIDSOAP --> DME
     LIQUIDSOAP --> HLS
     HLS --> BUNNY
     LIQUIDSOAP --> ODR
@@ -49,15 +51,20 @@ flowchart LR
     ZWFM -->|POST /metadata| LIQUIDSOAP
     ZWFM -->|PAD metadata| PADAPI
     ZWFM -->|StereoTool API| MICROMPX
+    LIQUIDSOAP -. stream metadata .-> ICECAST
+    LIQUIDSOAP -. stream metadata .-> DME
+    LIQUIDSOAP -. timed ID3 .-> HLS
 
     classDef blue fill:#2196F3,stroke:#1565C0,color:#fff
     classDef metadataFlow fill:#E91E8A,stroke:#AD1457,color:#fff
 
-    class SRT1,SRT2,FALLBACK,LIQUIDSOAP,MICROMPX,ICECAST,HLS,BUNNY,ODR blue
+    class SRT1,SRT2,FALLBACK,LIQUIDSOAP,MICROMPX,ICECAST,DME,HLS,BUNNY,ODR blue
     class PADENC,PADAPI,ZWFM metadataFlow
     style metadata fill:#FFF0F6,stroke:#E91E8A,stroke-width:2px
-    linkStyle 8,9,10,11,12 stroke:#E91E8A,stroke-width:2px
+    linkStyle 9,10,11,12,13,14,15,16 stroke:#E91E8A,stroke-width:2px
 ```
+
+Blue paths carry audio. Pink paths carry stream metadata, DAB+ PAD, or StereoTool/RDS metadata; dashed paths are metadata distributed by Liquidsoap.
 
 ## Architecture
 
