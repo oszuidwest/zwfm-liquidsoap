@@ -282,14 +282,14 @@ The JSON schema is stable: unavailable scalar values are `null`, collections rem
 
 Possible error codes are:
 
-| Field                                                | Codes                                                                                                            |
-| ---------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| `studio_inputs[].error`                              | `disconnected`, `silent`                                                                                         |
-| `studio_inputs[].srt.connections[].statistics_error` | `statistics_unavailable`                                                                                         |
-| `outputs.dab.error`                                  | `encoder_error`, `monitor_failed`                                                                                |
-| `outputs.dab.destinations[].error`                   | `ack_stalled`, `no_socket`, `tcp_not_established`, `invalid_destination`, `not_tcp`, or the aggregate code above |
-| `outputs.hls.local.error`                            | `dir_missing`, `dir_not_writable`, `clock_error`, `stalled`                                                      |
-| `outputs.hls.mirror.error`                           | `listing_failed`, `upload_failed`, `delete_failed`, `read_failed`, `local_file_missing`, `stalled`               |
+| Field                                                | Codes                                                                                                                   |
+| ---------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `studio_inputs[].error`                              | `disconnected`, `silent`                                                                                                |
+| `studio_inputs[].srt.connections[].statistics_error` | `statistics_unavailable`                                                                                                |
+| `outputs.dab.error`                                  | `encoder_error` (ODR-AudioEnc crashed in the last 30 seconds), `monitor_failed` (the ACK monitor gave no usable result) |
+| `outputs.dab.destinations[].error`                   | `ack_stalled`, `no_socket`, `tcp_not_established`, `invalid_destination`, `monitor_failed`                              |
+| `outputs.hls.local.error`                            | `dir_missing`, `dir_not_writable`, `clock_error`, `stalled`                                                             |
+| `outputs.hls.mirror.error`                           | `listing_failed`, `upload_failed`, `delete_failed`, `read_failed`, `local_file_missing`, `stalled`                      |
 
 The top-level status becomes `degraded` when the emergency source is active or an enabled output is unhealthy. It becomes `down` when the radio source is unavailable. HTTP responses use `200` for `ok` and `degraded`, `503` for `down`, and `401` for a missing or invalid token.
 
@@ -367,6 +367,20 @@ TCP acknowledgement monitoring is enabled by default. It checks Linux TCP metric
 | `unmonitored` | Monitoring is disabled or no TCP destination is configured               |
 
 TCP ACKs confirm receipt by the remote TCP stack, not processing by ODR-DabMux. UDP destinations cannot provide this signal. Tune the monitor with `DAB_ACK_POLL_SECONDS`, `DAB_ACK_WARN_SECONDS`, `DAB_ACK_DOWN_SECONDS`, and `DAB_ACK_STARTUP_GRACE_SECONDS`, or disable it with `DAB_ACK_MONITOR_ENABLED=false`.
+
+`dab.status` renders the same structured state as `GET /status`. Its first line is the overall state, followed by `: <code>` for an aggregate error. Each destination line shows its status, its error code when present, and the counters of a connected socket:
+
+```text
+ok
+tcp://primary.example.com:9001 ok ack_age=0s bytes_sent=123456 bytes_acked=123457 send_queue=0 unacked=0 retrans=0
+```
+
+After an encoder failure, for example, it reports:
+
+```text
+down: encoder_error
+tcp://primary.example.com:9001 down no_socket
+```
 
 ### PAD metadata
 

@@ -47,11 +47,7 @@ let dab_fixture =
   dab_parse_ack_monitor(
     "ok\ntcp://192.0.2.10:9171\tok\tESTAB\t0\t100\t101\t1745\t1\t0\t"
   )
-dab_set_ack_status(
-  dab_fixture.status,
-  dab_fixture.detail,
-  destinations=dab_fixture.destinations
-)
+dab_set_ack_status(dab_fixture.status, destinations=dab_fixture.destinations)
 
 # Keep the Icecast stream disconnected.
 output_icecast_stream(
@@ -136,7 +132,7 @@ radio_sink.on_start(
       assert(not null.defined(snapshot.outputs.hls.mirror.host))
       assert(not null.defined(snapshot.outputs.hls.mirror.storage_zone))
 
-      # Structured output health must not be duplicated as detail text.
+      # The public schema excludes free-text detail.
       assert(
         not string.contains(
           substring="\"detail\"",
@@ -193,7 +189,7 @@ radio_sink.on_start(
               )
             )
 
-            # Endpoint tokens are not interchangeable.
+            # Reject the status token on the metadata endpoint.
             assert_unauthorized(
               http.post(
                 timeout=2.0,
