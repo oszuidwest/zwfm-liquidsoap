@@ -296,18 +296,18 @@ The response has a fixed schema: every field is always present with the same typ
 
 The response contains the overall state (`ok`, `degraded`, or `down`), the active source and mode, readiness for every source, detailed studio-input health, the silence-detection state, and structured health for Icecast, DAB+, and HLS outputs. Each item in `studio_inputs` has a `status` and an `error`. It is `down` while no encoder is connected over SRT, `degraded` while connected but silent (only when silence detection is on), `starting` while connected with a buffer that is still filling, and `ok` otherwise. Each item also reports its audio buffer in seconds, stereo RMS and peak levels in dBFS over a 0.5-second window, and an SRT object with its connection state. Left and right levels are separate. Digital silence is clamped to `-120.0` dBFS; levels are `null` when SRT is disconnected. Every active SRT connection includes the peer address, negotiated receive latency, receive buffer, round-trip time, and total dropped packets. If its statistics cannot be read, the connection stays listed and connected with `null` metrics and `statistics_error: "statistics_unavailable"`.
 
-`outputs.icecast` has an aggregate status and a `streams` array. Each stream identifies itself by a stable `id`, host, port, and mount and reports whether it is connected. `outputs.dab.destinations` has one object per configured EDI destination, in configuration order. Each object reports its TCP state, ACK age, byte counters, send queue, unacknowledged segments, and retransmissions; unavailable metrics and an unknown TCP state are `null`. Until the ACK monitor has reported, when monitoring is disabled, and after an encoder or monitor failure, destinations are listed with their configured URL and `null` metrics. `outputs.hls` separates the local writer and remote mirror health. The local state reports playlist and segment counts plus the age of the latest playlist update. The mirror state identifies the storage host and zone (`null` when HLS is disabled), reports the age of its most recent successful sync, and counts pending playlists and segments. Each HLS component is `starting` until its first progress unless it reports an error, which makes it `degraded` immediately. It also becomes `degraded` when progress stops for several segment intervals.
+`outputs.icecast` has an aggregate status and a `streams` array. Each stream identifies itself by a stable `id`, host, port, and mount and reports whether it is connected. `outputs.dab.destinations` has one object per configured EDI destination, in configuration order. Each object reports its TCP state, ACK age, byte counters, send queue, unacknowledged segments, and retransmissions; unavailable metrics and an unknown TCP state are `null`. Until the ACK monitor has reported, when monitoring is disabled, and after a monitor failure, destinations are listed with their configured URL and `null` metrics. `outputs.hls` separates the local writer and remote mirror health. The local state reports playlist and segment counts plus the age of the latest playlist update. The mirror state identifies the storage host and zone (`null` when HLS is disabled), reports the age of its most recent successful sync, and counts pending playlists and segments. Each HLS component is `starting` until its first progress unless it reports an error, which makes it `degraded` immediately. It also becomes `degraded` when progress stops for several segment intervals.
 
-Error codes are `null` unless they describe an active failure or why a destination is unmonitored:
+Error codes are `null` unless they describe an active failure:
 
-| Field                                                | Codes                                                                                                            |
-| ---------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| `studio_inputs[].error`                              | `disconnected` (no SRT connection), `silent` (silence detected)                                                  |
-| `studio_inputs[].srt.connections[].statistics_error` | `statistics_unavailable`                                                                                         |
-| `outputs.dab.error`                                  | `encoder_error` (ODR-AudioEnc crashed), `monitor_failed` (the ACK monitor gave no usable result)                 |
-| `outputs.dab.destinations[].error`                   | `ack_stalled`, `no_socket`, `tcp_not_established`, `invalid_destination`, `not_tcp`, or the aggregate code above |
-| `outputs.hls.local.error`                            | `dir_missing`, `dir_not_writable`, `clock_error`, `stalled`                                                      |
-| `outputs.hls.mirror.error`                           | `listing_failed`, `upload_failed`, `delete_failed`, `read_failed`, `local_file_missing`, `stalled`               |
+| Field                                                | Codes                                                                                                                   |
+| ---------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `studio_inputs[].error`                              | `disconnected` (no SRT connection), `silent` (silence detected)                                                         |
+| `studio_inputs[].srt.connections[].statistics_error` | `statistics_unavailable`                                                                                                |
+| `outputs.dab.error`                                  | `encoder_error` (ODR-AudioEnc crashed in the last 30 seconds), `monitor_failed` (the ACK monitor gave no usable result) |
+| `outputs.dab.destinations[].error`                   | `ack_stalled`, `no_socket`, `tcp_not_established`, `invalid_destination`, or `monitor_failed`                           |
+| `outputs.hls.local.error`                            | `dir_missing`, `dir_not_writable`, `clock_error`, `stalled`                                                             |
+| `outputs.hls.mirror.error`                           | `listing_failed`, `upload_failed`, `delete_failed`, `read_failed`, `local_file_missing`, `stalled`                      |
 
 Use the top-level `status` field for alerting. A switch to the emergency fallback, a disconnected Icecast output, or a degraded enabled DAB+/HLS output makes the overall state `degraded`; an unavailable radio source makes it `down`. Studio input status is informational and does not change the overall state, because an idle standby studio is normal. The HTTP status code follows the overall state: `200 OK` for `ok` and `degraded`, `503 Service Unavailable` for `down`, so a monitor that only checks the status code alerts when the station is off air.
 
@@ -423,7 +423,14 @@ A healthy response resembles:
 
 ```text
 ok
-tcp://primary.example.com:9001 ok (TCP ESTAB, ack_age=0s, bytes_sent=123456, bytes_acked=123457, send_queue=0, unacked=0, retrans=0)
+tcp://primary.example.com:9001 ok ack_age=0s bytes_sent=123456 bytes_acked=123457 send_queue=0 unacked=0 retrans=0
+```
+
+The first line is the overall state, followed by `: <code>` for an aggregate error such as `encoder_error`. Each destination line shows its status, its error code if it has one, and the counters of a connected socket:
+
+```text
+down: encoder_error
+tcp://primary.example.com:9001 down no_socket
 ```
 
 On Linux, `bytes_acked` can be exactly one greater than `bytes_sent` because the ACK counter follows TCP sequence-space progress, including the SYN, while the sent counter contains data bytes only.

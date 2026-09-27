@@ -289,7 +289,10 @@ for destination in ${DESTINATIONS}; do
         endpoint_status=down
       fi
 
-      append_record ""
+      case ${endpoint_status} in
+        degraded|down) append_record ack_stalled ;;
+        *) append_record "" ;;
+      esac
       previous_connection=${connection}
       previous_acked=${bytes_acked}
     fi
@@ -317,4 +320,5 @@ else
   overall_status=degraded
 fi
 
-printf '%s\n' "${overall_status}" "${records:-No TCP EDI destinations configured}"
+printf '%s\n' "${overall_status}"
+[ -z "${records}" ] || printf '%s\n' "${records}"

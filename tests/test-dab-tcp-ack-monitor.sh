@@ -95,6 +95,8 @@ assert_record "${DESTINATION}|ok|ESTAB|0|100|101|0|0|0|" "${output}"
 
 output=$(monitor 106 "${DESTINATION}")
 assert_status degraded "${output}"
+assert_record "${DESTINATION}|degraded|ESTAB|6|100|101|0|0|0|ack_stalled" \
+  "${output}"
 
 output=$(monitor 116 "${DESTINATION}")
 assert_status down "${output}"
