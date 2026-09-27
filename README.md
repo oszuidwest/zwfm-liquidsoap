@@ -12,65 +12,52 @@ A [Liquidsoap](https://www.liquidsoap.info)-based broadcast audio system for [Zu
 
 ```mermaid
 flowchart LR
-    subgraph studio [Studio sites]
-        ENCODER1[SRT encoder A]
-        ENCODER2[SRT encoder B]
+    subgraph inputs [" Inputs "]
+        SRT1["SRT INPUT 1"]
+        SRT2["SRT INPUT 2"]
+        FALLBACK["FALLBACK"]
     end
 
-    subgraph container [Liquidsoap container]
-        FALLBACK[Emergency audio]
-        LIQUIDSOAP[Liquidsoap]
-        HLSFILES[Local HLS window]
-        STEREOTOOL[StereoTool plugin]
-        AUDIOENC[ODR-AudioEnc]
-        ACKMON[DAB TCP ACK monitor]
+    LIQUIDSOAP["LIQUIDSOAP"]
+
+    subgraph outputs [" Outputs "]
+        MICROMPX["MICROMPX"]
+        ICECAST["ICECAST"]
+        HLS["HLS"]
+        BUNNY["BUNNY CDN"]
+        ODR["ODR-AUDIOENC"]
     end
 
-    subgraph distribution [Distribution]
-        ICECAST[Icecast]
-        DME1[DME primary]
-        DME2[DME secondary]
-        STORAGE[Bunny Storage]
-        BUNNY[Bunny CDN]
-        DABMUX[ODR-DabMux]
-        MICROMPX[MicroMPX receivers]
+    subgraph metadata [" Metadata "]
+        PADENC["ODR-PADENC"]
+        PADAPI["PADENC-API"]
+        ZWFM["ZWFM-METADATA"]
     end
 
-    subgraph metadata [Metadata services]
-        ZWFM[zwfm-metadata]
-        PADAPI[padenc-api]
-        PADENC[ODR-PadEnc]
-    end
-
-    subgraph operations [Operations]
-        MONITOR[Monitoring]
-        OPERATOR[Operator]
-    end
-
-    ENCODER1 -->|encrypted SRT| LIQUIDSOAP
-    ENCODER2 -->|encrypted SRT| LIQUIDSOAP
+    SRT1 --> LIQUIDSOAP
+    SRT2 --> LIQUIDSOAP
     FALLBACK --> LIQUIDSOAP
+
+    LIQUIDSOAP --> MICROMPX
     LIQUIDSOAP --> ICECAST
-    LIQUIDSOAP -. Rucphen / BredaNu .-> DME1
-    LIQUIDSOAP -. Rucphen / BredaNu .-> DME2
-    LIQUIDSOAP -. HLS .-> HLSFILES
-    HLSFILES -->|HTTPS mirror| STORAGE
-    STORAGE --> BUNNY
-    LIQUIDSOAP -. DAB+ .-> AUDIOENC
-    AUDIOENC -->|EDI| DABMUX
-    ACKMON -. TCP metrics .-> AUDIOENC
-    LIQUIDSOAP -. ZuidWest / BredaNu .-> STEREOTOOL
-    STEREOTOOL --> MICROMPX
+    LIQUIDSOAP --> HLS
+    HLS --> BUNNY
+    LIQUIDSOAP --> ODR
+
+    ODR <--> PADENC
+    PADAPI --> PADENC
     ZWFM -->|POST /metadata| LIQUIDSOAP
     ZWFM -->|PAD metadata| PADAPI
-    PADAPI --> PADENC
-    PADENC <--> AUDIOENC
-    ZWFM -->|StereoTool API| STEREOTOOL
-    MONITOR -->|GET /status| LIQUIDSOAP
-    OPERATOR -->|Unix socket| LIQUIDSOAP
-```
+    ZWFM -->|StereoTool API| MICROMPX
 
-Solid lines show the main audio or metadata flow. Dotted lines show station-specific or optional branches controlled by configuration.
+    classDef blue fill:#2196F3,stroke:#1565C0,color:#fff
+    classDef metadataFlow fill:#E91E8A,stroke:#AD1457,color:#fff
+
+    class SRT1,SRT2,FALLBACK,LIQUIDSOAP,MICROMPX,ICECAST,HLS,BUNNY,ODR blue
+    class PADENC,PADAPI,ZWFM metadataFlow
+    style metadata fill:#FFF0F6,stroke:#E91E8A,stroke-width:2px
+    linkStyle 8,9,10,11,12 stroke:#E91E8A,stroke-width:2px
+```
 
 ## Architecture
 
