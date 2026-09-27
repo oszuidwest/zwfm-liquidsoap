@@ -35,7 +35,7 @@ end
 assert_invalid_destinations("tcp://one.example:9001,,tcp://two.example:9002")
 assert_invalid_destinations("tcp://one.example:9001,")
 
-# The connected record comes last, so its empty error field ends the output.
+# Preserve the trailing empty error field.
 let ack_snapshot =
   dab_parse_ack_monitor(
     "degraded\ntcp://192.0.2.20:9175\tdown\t\t\t\t\t\t\t\tno_socket\ntcp://192.0.2.30:9177\tdegraded\tESTAB\t7\t300\t200\t0\t0\t0\tack_stalled\ntcp://192.0.2.10:9171\tok\tESTAB\t0\t100\t101\t1745\t1\t0\t\n"
@@ -74,7 +74,7 @@ assert(
     "monitor error: ss is not available"
 )
 
-# Non-destination failures retain configured destination records.
+# Aggregate failures retain configured destinations.
 dab_set_ack_status(
   "down",
   failure="monitor_failed",
@@ -109,7 +109,7 @@ assert(
      bytes_acked=101 send_queue=1745 unacked=1 retrans=0"
 )
 
-# An encoder error survives monitor ticks until the hold expires.
+# Encoder failures override ACK health during the hold period.
 dab_encoder_error_at := time()
 dab_set_ack_status(ack_snapshot.status, destinations=ack_snapshot.destinations)
 assert(dab_health().status == "down")

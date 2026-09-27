@@ -1,7 +1,6 @@
 #!/bin/sh
 
-# Reports EDI health from AudioEnc TCP ACK progress in ss output. Sockets are
-# matched by process name; Liquidsoap reports dead encoders separately.
+# Reports EDI health from AudioEnc TCP ACK progress.
 
 set -eu
 set -f
@@ -48,8 +47,7 @@ debug()
   fi
 }
 
-# Append a 10-field destination record; $1 is its error code, which only a
-# degraded or down destination reports.
+# Error codes apply only to degraded or down records.
 append_record()
 {
   case ${endpoint_status} in
@@ -67,7 +65,7 @@ reset_destination_state()
   first_seen=${now}
 }
 
-# Keep never-connected endpoints starting until grace expires.
+# Apply startup grace before the first connection.
 disconnected_status()
 {
   if

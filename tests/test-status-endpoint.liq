@@ -132,7 +132,7 @@ radio_sink.on_start(
       assert(not null.defined(snapshot.outputs.hls.mirror.host))
       assert(not null.defined(snapshot.outputs.hls.mirror.storage_zone))
 
-      # Structured output health must not be duplicated as detail text.
+      # The public schema excludes free-text detail.
       assert(
         not string.contains(
           substring="\"detail\"",
@@ -189,7 +189,7 @@ radio_sink.on_start(
               )
             )
 
-            # Endpoint tokens are not interchangeable.
+            # Reject the status token on the metadata endpoint.
             assert_unauthorized(
               http.post(
                 timeout=2.0,

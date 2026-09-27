@@ -92,7 +92,7 @@ def register_bearer_endpoint(
   end
 end
 
-# Keep the schema stable by representing unavailable values as null.
+# Unavailable values are JSON null.
 def status_snapshot(radio_source, active_source, ~sources) =
   let radio_ready = radio_source.is_ready()
   let active_source = active_source()
