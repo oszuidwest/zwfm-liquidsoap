@@ -52,7 +52,6 @@ flowchart LR
     ZWFM -->|PAD metadata| PADAPI
     ZWFM -->|StereoTool API| MICROMPX
     LIQUIDSOAP -. stream metadata .-> ICECAST
-    LIQUIDSOAP -. stream metadata .-> DME
     LIQUIDSOAP -. timed ID3 .-> HLS
 
     classDef blue fill:#2196F3,stroke:#1565C0,color:#fff
@@ -61,7 +60,7 @@ flowchart LR
     class SRT1,SRT2,FALLBACK,LIQUIDSOAP,MICROMPX,ICECAST,DME,HLS,BUNNY,ODR blue
     class PADENC,PADAPI,ZWFM metadataFlow
     style metadata fill:#FFF0F6,stroke:#E91E8A,stroke-width:2px
-    linkStyle 9,10,11,12,13,14,15,16 stroke:#E91E8A,stroke-width:2px
+    linkStyle 9,10,11,12,13,14,15 stroke:#E91E8A,stroke-width:2px
 ```
 
 Blue paths carry audio. Pink paths carry stream metadata, DAB+ PAD, or StereoTool/RDS metadata; dashed paths are metadata distributed by Liquidsoap.
@@ -322,7 +321,7 @@ For production studio links, see [rpi-audio-encoder](https://github.com/oszuidwe
 
 ## Icecast and DME
 
-The three Icecast outputs run independently. A failed mount is reported by `GET /status`, but does not stop the other mounts, the source-selection chain, or optional DAB+ and HLS outputs. All mounts carry the metadata received through `POST /metadata`.
+The three public Icecast outputs run independently. A failed mount is reported by `GET /status`, but does not stop the other mounts, the source-selection chain, or optional DAB+ and HLS outputs. These public mounts carry the metadata received through `POST /metadata`; the DME ingests ignore it.
 
 Radio Rucphen and BredaNu additionally send the high-bitrate AAC profile to two Dutch Media Exchange ingest points. These are separate Icecast-compatible outputs, not a failover pair managed by Liquidsoap: audio is sent to both continuously, and DME decides how the ingest points are used. Configure both sets of credentials and their shared mount:
 
@@ -380,7 +379,7 @@ ODR-PadEnc and `padenc-api` run outside this project. They must expose the socke
 
 ## Stream metadata
 
-`POST /metadata` inserts now-playing metadata before processing and output fan-out. It updates the Icecast and DME mounts and adds timed ID3 metadata to HLS. DAB+ PAD and StereoTool/RDS use their own integrations.
+`POST /metadata` inserts now-playing metadata before processing and output fan-out. It updates the public Icecast mounts and adds timed ID3 metadata to HLS. DME ignores the ICY updates; DAB+ PAD and StereoTool/RDS use their own integrations.
 
 The endpoint exists only when `STREAM_METADATA_BEARER_TOKEN` is set:
 
