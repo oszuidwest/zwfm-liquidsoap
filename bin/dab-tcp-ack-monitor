@@ -48,10 +48,15 @@ debug()
   fi
 }
 
-# Append a 10-field destination record; $1 is its optional error code.
+# Append a 10-field destination record; $1 is its error code, which only a
+# degraded or down destination reports.
 append_record()
 {
-  records="${records}${records:+${nl}}${destination}${tab}${endpoint_status}${tab}${tcp_state}${tab}${ack_age}${tab}${bytes_sent}${tab}${bytes_acked}${tab}${send_queue}${tab}${unacked}${tab}${retrans}${tab}$1"
+  case ${endpoint_status} in
+    degraded|down) code=$1 ;;
+    *) code='' ;;
+  esac
+  records="${records}${records:+${nl}}${destination}${tab}${endpoint_status}${tab}${tcp_state}${tab}${ack_age}${tab}${bytes_sent}${tab}${bytes_acked}${tab}${send_queue}${tab}${unacked}${tab}${retrans}${tab}${code}"
 }
 
 reset_destination_state()
@@ -160,7 +165,7 @@ for destination in ${DESTINATIONS}; do
       ;;
     *)
       endpoint_status=unmonitored
-      append_record not_tcp
+      append_record ""
       continue
       ;;
   esac
@@ -289,10 +294,7 @@ for destination in ${DESTINATIONS}; do
         endpoint_status=down
       fi
 
-      case ${endpoint_status} in
-        degraded|down) append_record ack_stalled ;;
-        *) append_record "" ;;
-      esac
+      append_record ack_stalled
       previous_connection=${connection}
       previous_acked=${bytes_acked}
     fi
@@ -320,5 +322,4 @@ else
   overall_status=degraded
 fi
 
-printf '%s\n' "${overall_status}"
-[ -z "${records}" ] || printf '%s\n' "${records}"
+printf '%s\n' "${overall_status}" "${records}"

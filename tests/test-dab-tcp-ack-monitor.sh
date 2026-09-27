@@ -118,6 +118,7 @@ rm -rf -- "${STATE_DIR}"
 write_socket 9171 100 1
 output=$(monitor 200 "${DESTINATION}" 5 15 2)
 assert_status starting "${output}"
+assert_record "${DESTINATION}|starting|ESTAB|0|100|1|0|0|0|" "${output}"
 output=$(monitor 203 "${DESTINATION}" 5 15 2)
 assert_status degraded "${output}"
 
@@ -150,12 +151,14 @@ assert_status degraded "${output}"
 rm -rf -- "${STATE_DIR}"
 output=$(monitor 120 udp://192.0.2.10:9171)
 assert_status unmonitored "${output}"
-assert_record "udp://192.0.2.10:9171|unmonitored||||||||not_tcp" "${output}"
+assert_record "udp://192.0.2.10:9171|unmonitored||||||||" "${output}"
 
 cat > "${FAKE_SS_DIR}/9171" <<EOF
 SYN-SENT 0 1 10.0.0.2:41000 192.0.2.10:9171 users:(("odr-audioenc",pid=4242,fd=5))
 EOF
 output=$(monitor 200 "${DESTINATION}" 5 15 2)
+assert_status starting "${output}"
+assert_record "${DESTINATION}|starting|SYN-SENT|||||||" "${output}"
 output=$(monitor 203 "${DESTINATION}" 5 15 2)
 assert_status down "${output}"
 assert_record "${DESTINATION}|down|SYN-SENT|||||||tcp_not_established" \

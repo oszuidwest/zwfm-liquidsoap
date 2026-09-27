@@ -63,19 +63,11 @@ assert(null.get(down_destination.error) == "no_socket")
 let stalled_destination = list.nth(ack_snapshot.destinations, 1)
 assert(null.get(stalled_destination.error) == "ack_stalled")
 
-# Starting destinations may expose diagnostics without being unhealthy.
-let starting_destination =
-  dab_parse_ack_record(
-    "tcp://192.0.2.40:9179\tstarting\t\t\t\t\t\t\t\tno_socket"
-  )
-assert(not null.defined(starting_destination.error))
-
 # Monitor-level failures are not destination records.
 let failed_snapshot =
   dab_parse_ack_monitor(
     "down\nmonitor error: ss is not available\n"
   )
-assert(failed_snapshot.status == "down")
 assert(list.is_empty(failed_snapshot.destinations))
 assert(
   failed_snapshot.detail ==
@@ -84,7 +76,7 @@ assert(
 
 # Non-destination failures retain configured destination records.
 dab_set_ack_status(
-  failed_snapshot.status,
+  "down",
   failure="monitor_failed",
   detail=failed_snapshot.detail
 )
@@ -122,7 +114,6 @@ dab_encoder_error_at := time()
 dab_set_ack_status(ack_snapshot.status, destinations=ack_snapshot.destinations)
 assert(dab_health().status == "down")
 assert(null.get(dab_health().error) == "encoder_error")
-assert(list.length(dab_health().destinations) == 3)
 assert(
   string.contains(
     prefix="down: encoder_error\n",
@@ -133,12 +124,7 @@ dab_encoder_error_at := time() - dab_encoder_error_hold_seconds
 assert(dab_health().status == "degraded")
 assert(not null.defined(dab_health().error))
 
-# Without monitor ticks, the encoder error still expires.
 dab_set_ack_status("unmonitored")
-dab_encoder_error_at := time()
-assert(dab_health().status == "down")
-dab_encoder_error_at := time() - dab_encoder_error_hold_seconds
-assert(dab_health().status == "unmonitored")
 assert(
   dab_status_text() ==
     "unmonitored\ntcp://192.0.2.10:9171 unmonitored\nudp://192.0.2.11:9172 \

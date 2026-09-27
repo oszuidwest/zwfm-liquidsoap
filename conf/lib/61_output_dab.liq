@@ -72,38 +72,40 @@ def dab_optional_int(value) =
   if value == "" then null else int_of_string(value) end
 end
 
-def dab_is_ack_record(line) =
-  list.length(string.split(separator="\t", line)) == 10
-end
-
-# Parse one monitor record; its last field is the destination's error code.
+# Parse one monitor record, or return null for a monitor failure line. The last
+# field is the destination's error code.
 def dab_parse_ack_record(line) =
-  let [
-    destination,
-    status,
-    tcp_state,
-    ack_age,
-    bytes_sent,
-    bytes_acked,
-    send_queue,
-    unacked,
-    retrans,
-    code
-  ] = string.split(separator="\t", line)
-  {
-    destination = destination,
-    status = status,
-    tcp_state = if tcp_state == "" then null else tcp_state end,
-    ack_age_seconds = dab_optional_int(ack_age),
-    bytes_sent = dab_optional_int(bytes_sent),
-    bytes_acked = dab_optional_int(bytes_acked),
-    send_queue_bytes = dab_optional_int(send_queue),
-    unacked_segments = dab_optional_int(unacked),
-    retransmissions = dab_optional_int(retrans),
-    error =
-      # Starting destinations may carry a diagnostic code without being unhealthy.
-      if status_healthy(status) or code == "" then null else code end
-  }
+  let fields = string.split(separator="\t", line)
+  if
+    list.length(fields) != 10
+  then
+    null
+  else
+    let [
+      destination,
+      status,
+      tcp_state,
+      ack_age,
+      bytes_sent,
+      bytes_acked,
+      send_queue,
+      unacked,
+      retrans,
+      code
+    ] = fields
+    {
+      destination = destination,
+      status = status,
+      tcp_state = if tcp_state == "" then null else tcp_state end,
+      ack_age_seconds = dab_optional_int(ack_age),
+      bytes_sent = dab_optional_int(bytes_sent),
+      bytes_acked = dab_optional_int(bytes_acked),
+      send_queue_bytes = dab_optional_int(send_queue),
+      unacked_segments = dab_optional_int(unacked),
+      retransmissions = dab_optional_int(retrans),
+      error = if code == "" then null else code end
+    }
+  end
 end
 
 # Preserve configured destinations when monitor records are unavailable.
@@ -126,8 +128,8 @@ def dab_configured_destinations(status, failure) =
   )
 end
 
-# Non-record lines are monitor failures. Splitting the untrimmed output keeps a
-# connected final record's empty error field.
+# Without records, the body explains the monitor failure. Splitting the
+# untrimmed output keeps a connected final record's empty error field.
 def dab_parse_ack_monitor(monitor_output) =
   let lines =
     list.filter(
@@ -135,15 +137,18 @@ def dab_parse_ack_monitor(monitor_output) =
       string.split(separator="\n", monitor_output)
     )
   let body = list.tl(lines)
+  let destinations = list.filter_map(dab_parse_ack_record, body)
   {
     status = string.trim(list.hd(default="", lines)),
     detail =
-      string.concat(
-        separator="; ",
-        list.filter(fun (line) -> not dab_is_ack_record(line), body)
-      ),
-    destinations =
-      list.map(dab_parse_ack_record, list.filter(dab_is_ack_record, body))
+      if
+        list.is_empty(destinations)
+      then
+        string.concat(separator="; ", body)
+      else
+        ""
+      end,
+    destinations = destinations
   }
 end
 
@@ -260,21 +265,20 @@ def dab_ack_monitor_tick() =
           process.read(timeout=5.0, log_errors=false, dab_ack_monitor_command)
         )
       if
-        snapshot.status == ""
-      then
-        dab_set_ack_status(
-          "down",
-          failure="monitor_failed",
-          detail="TCP ACK monitor returned no status"
-        )
-      elsif
         # Monitor-level errors carry no destination records.
         list.is_empty(snapshot.destinations)
       then
         dab_set_ack_status(
-          snapshot.status,
+          "down",
           failure="monitor_failed",
-          detail=snapshot.detail
+          detail=
+            if
+              snapshot.detail == ""
+            then
+              "TCP ACK monitor returned no output"
+            else
+              snapshot.detail
+            end
         )
       else
         dab_set_ack_status(snapshot.status, destinations=snapshot.destinations)
