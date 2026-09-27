@@ -1,40 +1,17 @@
 # Stub only the studio provider, which requires a live SRT listener; assigning
 # into the real registry type-checks the stub against the real provider.
-settings.frame.audio.channels := 2
-settings.frame.audio.samplerate := 48000
 
-let STATION_ID = "test"
-let SRT_PASSPHRASE = "test-passphrase"
-let SILENCE_SWITCH_SECONDS = 15.0
-let AUDIO_VALID_SECONDS = 15.0
-let SILENCE_THRESHOLD = -40.0
-let HTTP_PORT = 7000
-let STREAM_METADATA_BEARER_TOKEN = "test-metadata-token"
-let STATUS_BEARER_TOKEN = "test-status-token"
-let ICECAST_HOST = "127.0.0.1"
-let ICECAST_PORT = 65534
-let ICECAST_SOURCE_PASSWORD = "test"
-let STATION_NAME =
-  "Test Station"
-let DAB_ACK_POLL_SECONDS = 1.0
-let DAB_ACK_WARN_SECONDS = 5
-let DAB_ACK_DOWN_SECONDS = 15
-let DAB_ACK_STARTUP_GRACE_SECONDS = 10
-let DAB_ACK_MONITOR_ENABLED = true
-let DAB_BITRATE = ""
-let DAB_EDI_DESTINATIONS = ""
-let DAB_METADATA_SOCKET = ""
-let DAB_METADATA_SIZE = ""
-let HLS_BUNNY_STORAGE_ZONE = ""
-let HLS_BUNNY_ACCESS_KEY = ""
-let HLS_BUNNY_ENDPOINT = "storage.example.test"
-let HLS_DIR = "/hls"
-let HLS_BITRATE_MID = 96
-let HLS_BITRATE_HIGH = 192
-let HLS_SEGMENT_DURATION = 4.0
-let HLS_SEGMENTS = 10
-let HLS_SEGMENTS_OVERHEAD = 5
+# Load the real settings; set only required and test-specific values.
+environment.set("STATION_ID", "test")
+environment.set("STATION_NAME", "Test Station")
+environment.set("ICECAST_HOST", "127.0.0.1")
+environment.set("ICECAST_PORT", "65534")
+environment.set("ICECAST_SOURCE_PASSWORD", "test")
+environment.set("SRT_PASSPHRASE", "test-passphrase")
+environment.set("STREAM_METADATA_BEARER_TOKEN", "test-metadata-token")
+environment.set("STATUS_BEARER_TOKEN", "test-status-token")
 
+%include "../conf/lib/00_settings.liq"
 %include "../conf/lib/10_logging.liq"
 %include "../conf/lib/20_state.liq"
 %include "../conf/lib/30_silence.liq"
