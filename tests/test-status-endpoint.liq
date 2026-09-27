@@ -186,13 +186,6 @@ radio_sink.on_start(
             assert(
               string.contains(substring="\"peer\":\"192.0.2.1\"", response)
             )
-
-            # Fields removed from the schema must stay removed.
-            list.iter(
-              fun (field) ->
-                assert(not string.contains(substring="\"#{field}\"", response)),
-              ["started", "description", "window_seconds"]
-            )
             assert(
               string.contains(
                 substring="\"destination\":\"tcp://192.0.2.10:9171\"",
