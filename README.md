@@ -3,16 +3,12 @@
 [![CI](https://github.com/oszuidwest/zwfm-liquidsoap/actions/workflows/ci.yml/badge.svg)](https://github.com/oszuidwest/zwfm-liquidsoap/actions/workflows/ci.yml)
 [![Docker Image](https://github.com/oszuidwest/zwfm-liquidsoap/actions/workflows/docker.yml/badge.svg)](https://github.com/oszuidwest/zwfm-liquidsoap/actions/workflows/docker.yml)
 
-This repository contains an audio streaming system for radio broadcast. We made it for [ZuidWest FM](https://www.zuidwestfm.nl/), [Radio Rucphen](https://www.rucphenrtv.nl/), and [BredaNu](https://www.bredanu.nl/) in the Netherlands. The system uses [Liquidsoap](https://www.liquidsoap.info) as its core.
+A [Liquidsoap](https://www.liquidsoap.info)-based broadcast audio system for [ZuidWest FM](https://www.zuidwestfm.nl/), [Radio Rucphen](https://www.rucphenrtv.nl/), and [BredaNu](https://www.bredanu.nl/).
 
-The system has these functions:
-
-- **High availability**: automatic failover between two studio inputs and an emergency source
-- **Audio processing**: StereoTool processes the audio (optional)
-- **Many output formats**: Icecast (MP3/AAC), HLS, DAB+, and MicroMPX for FM transmitters
-- **Docker deployment**: easy installation and management in one container
-
-The system is not limited to these three stations. You can configure it for your own station.
+- Redundant encrypted SRT studio inputs with silence-based failover
+- Icecast, HLS, DAB+, and MicroMPX outputs
+- Optional StereoTool processing
+- Single-container deployment on AMD64 and ARM64
 
 ```mermaid
 flowchart LR
@@ -27,6 +23,7 @@ flowchart LR
     subgraph outputs [" Outputs "]
         MICROMPX["MICROMPX"]
         ICECAST["ICECAST"]
+        DME["DME"]
         HLS["HLS"]
         BUNNY["BUNNY CDN"]
         ODR["ODR-AUDIOENC"]
@@ -34,7 +31,6 @@ flowchart LR
 
     subgraph metadata [" Metadata "]
         PADENC["ODR-PADENC"]
-        PADAPI["PADENC-API"]
         ZWFM["ZWFM-METADATA"]
     end
 
@@ -44,416 +40,345 @@ flowchart LR
 
     LIQUIDSOAP --> MICROMPX
     LIQUIDSOAP --> ICECAST
+    LIQUIDSOAP --> DME
     LIQUIDSOAP --> HLS
     HLS --> BUNNY
     LIQUIDSOAP --> ODR
 
     ODR <--> PADENC
-    PADAPI --> PADENC
     ZWFM -->|POST /metadata| LIQUIDSOAP
-    ZWFM -->|PAD metadata| PADAPI
+    ZWFM -->|DL Plus file| PADENC
     ZWFM -->|StereoTool API| MICROMPX
+    LIQUIDSOAP -. stream metadata .-> ICECAST
+    LIQUIDSOAP -. timed ID3 .-> HLS
 
     classDef blue fill:#2196F3,stroke:#1565C0,color:#fff
-    classDef gray fill:#757575,stroke:#424242,color:#fff
-    classDef pink fill:#E91E8A,stroke:#AD1457,color:#fff
+    classDef metadataFlow fill:#E91E8A,stroke:#AD1457,color:#fff
 
-    class SRT1,SRT2,FALLBACK,LIQUIDSOAP,MICROMPX,ICECAST,HLS,BUNNY,ODR blue
-    class PADENC,PADAPI gray
-    class ZWFM pink
+    class SRT1,SRT2,FALLBACK,LIQUIDSOAP,MICROMPX,ICECAST,DME,HLS,BUNNY,ODR blue
+    class PADENC,ZWFM metadataFlow
+    style metadata fill:#FFF0F6,stroke:#E91E8A,stroke-width:2px
+    linkStyle 9,10,11,12,13,14 stroke:#E91E8A,stroke-width:2px
 ```
 
-## System Design
+Blue paths carry audio. Pink paths carry stream metadata, DAB+ PAD, or StereoTool/RDS metadata; dashed paths are metadata distributed by Liquidsoap.
 
-The system receives audio on two redundant inputs. Liquidsoap uses the main input (SRT 1) first. If SRT 1 stops or becomes silent, the system changes to SRT 2 automatically. If the two inputs fail, the system plays an emergency audio file. The variable `EMERGENCY_AUDIO_PATH` sets the location of this file. For maximum reliability, send the same broadcast to the two inputs through different network paths.
+## Architecture
 
-The emergency audio file is mandatory in production. At startup, Liquidsoap makes sure that the file exists and that it can decode the file. If this check fails, Liquidsoap does not start. This behavior prevents a deployment that has no safety net. For development or tests without an audio file, set `EMERGENCY_ALLOW_BLANK=true`. This setting permits a silent fallback.
+Liquidsoap selects sources in this order: Studio A, Studio B, emergency audio. A studio becomes unavailable after `SILENCE_SWITCH_SECONDS` of silence or when its SRT connection closes. It must then provide `AUDIO_VALID_SECONDS` of continuous audio before it becomes available again.
 
-### Components
+`EMERGENCY_AUDIO_PATH` must point to decodable audio. Liquidsoap exits during startup when the file is unusable, unless `EMERGENCY_ALLOW_BLANK=true` explicitly permits a silent fallback for development or tests.
 
-1. **Liquidsoap**: the core audio engine. It switches the inputs, controls the fallback logic, and encodes the audio.
-2. **Icecast**: the public stream server. It sends the MP3 and AAC streams to the listeners.
-3. **HLS**: optional HTTP Live Streaming output. The system copies it to Bunny Edge Storage, and Bunny CDN serves it.
-4. **StereoTool**: audio processor and [MicroMPX](https://www.thimeo.com/micrompx/) encoder for FM transmitters (optional, a license is necessary).
-5. **ODR-AudioEnc**: DAB+ audio encoder for digital radio (optional).
+Each station routes audio differently:
 
-### Related Projects
+| Station       | Icecast, DAB+, and HLS source | Other outputs                                      |
+| ------------- | ----------------------------- | -------------------------------------------------- |
+| ZuidWest      | Direct studio/fallback audio  | StereoTool generates MicroMPX                      |
+| Radio Rucphen | Direct studio/fallback audio  | Two DME Icecast outputs; no StereoTool             |
+| BredaNu       | StereoTool-processed audio    | Two DME Icecast outputs; StereoTool emits MicroMPX |
 
-1. **[rpi-audio-encoder](https://github.com/oszuidwest/rpi-audio-encoder)**: makes a Raspberry Pi an SRT audio encoder for studio connections
-2. **[rpi-umpx-decoder](https://github.com/oszuidwest/rpi-umpx-decoder)**: makes a Raspberry Pi a MicroMPX decoder for FM transmitter sites
-3. **[ODR-PadEnc](https://github.com/Opendigitalradio/ODR-PadEnc)**: encoder for DAB+ Programme Associated Data (PAD)
-4. **[padenc-api](https://github.com/oszuidwest/padenc-api)**: REST API server that controls DAB+ metadata
-5. **[zwfm-metadata](https://github.com/oszuidwest/zwfm-metadata)**: middleware that routes now-playing metadata
+Each Icecast output and DAB+ use a buffered safe source on an independent clock. HLS adds a dedicated clock error handler and restart watchdog, so an optional output failure does not stop the main program audio.
+
+### Components and boundaries
+
+| Component                  | Location            | Responsibility                                                      |
+| -------------------------- | ------------------- | ------------------------------------------------------------------- |
+| Liquidsoap                 | Main container      | Source selection, silence detection, encoding, APIs, and outputs     |
+| StereoTool plugin          | Main container      | BredaNu audio processing and MicroMPX for BredaNu and ZuidWest       |
+| ODR-AudioEnc               | Main container      | PCM-to-DAB+ encoding and EDI transport                               |
+| DAB TCP ACK monitor        | Main container      | Reads Linux TCP metrics for every AudioEnc TCP destination           |
+| Studio SRT encoders        | Studio sites        | Send the redundant encrypted studio feeds                           |
+| Icecast and DME            | External services   | Listener streams and Dutch Media Exchange ingestion                  |
+| Bunny Storage and CDN      | External services   | Store and distribute the mirrored HLS live window                    |
+| ODR-PadEnc                 | External service    | Encodes DAB+ DLS and MOT data for ODR-AudioEnc                       |
+| zwfm-metadata              | External service    | Route now-playing data to Liquidsoap, PAD, and StereoTool            |
+| MicroMPX receivers         | Transmitter sites   | Decode the FM composite transport generated by StereoTool            |
+
+Icecast, Bunny, DME, ODR-DabMux, PAD, and metadata services are not bundled into the Compose service. The container only includes the producers and clients needed to connect to them.
+
+### Related projects
+
+- [rpi-audio-encoder](https://github.com/oszuidwest/rpi-audio-encoder): SRT studio encoder for Raspberry Pi
+- [rpi-umpx-decoder](https://github.com/oszuidwest/rpi-umpx-decoder): MicroMPX receiver for Raspberry Pi
+- [ODR-PadEnc](https://github.com/Opendigitalradio/ODR-PadEnc): DAB+ Programme Associated Data encoder
+- [zwfm-metadata](https://github.com/oszuidwest/zwfm-metadata): now-playing metadata router
 
 ## Installation
 
 ### Requirements
 
-- Linux server (we recommend Ubuntu 24.04 or Debian 13)
-- Docker and Docker Compose
-- x86_64 or ARM64 architecture
-- A minimum of 2 GB RAM and 10 GB disk space
-- Network connectivity for the SRT streams
-- `socat` for runtime control through the server socket (the installer installs it)
+- A 64-bit Debian-based host on AMD64 or ARM64; Debian 13 and Ubuntu 24.04 are recommended
+- Root access
+- Docker with Docker Compose, `curl`, and `dpkg`
 
-### Quick Install
+The installer adds `socat` and `unzip`, downloads the selected station configuration and fallback audio, installs the StereoTool plugin, and writes the deployment to `/opt/liquidsoap`.
 
 ```bash
-# Install Liquidsoap
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/oszuidwest/zwfm-liquidsoap/main/install.sh)"
+sudo /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/oszuidwest/zwfm-liquidsoap/main/install.sh)"
 ```
 
-### Configuration
-
-After the installation, edit the environment file `/opt/liquidsoap/.env`. This file contains the station settings. These example files are available:
-
-- `.env.zuidwest.example` - basic configuration without DME
-- `.env.rucphen.example` - configuration with DME output
-- `.env.bredanu.example` - configuration with DME output
-
-Copy the applicable example file to `.env`. Then change the values for your station. The file `conf/lib/00_settings.liq` reads almost all variables. The station files contain only the DME configuration (for Rucphen and BredaNu).
-
-## Host Settings
-
-The installer configures these host settings:
-
-- Timezone and time synchronization
-- systemd journal size
-- CPU performance (optional)
-
-### CPU performance
-
-On a dedicated audio server, answer `y` when the installer asks about CPU performance. This sets the CPU governor to `performance` and reduces delays when a CPU leaves its low-power state. It also increases power use and heat.
-
-The installer writes `/etc/tmpfiles.d/cpu-performance.conf` to apply this setting after every reboot. It skips this step when CPU frequency scaling is not available, which is common on virtual machines.
-
-To check the setting, run `cat /sys/devices/system/cpu/cpufreq/policy*/scaling_governor`. Every line must show `performance`. To disable it, remove `/etc/tmpfiles.d/cpu-performance.conf` and reboot.
-
-## Environment Variables Reference
-
-This table shows all environment variables in the system. You must set each variable that shows _(required)_. If you do not set one of these variables, Liquidsoap does not start. The DME variables are necessary only for Rucphen and BredaNu. A variable that shows _(none)_ is optional. Set it only if you use the related function.
-
-| Variable                          | Description                                                                                   | Default                           | Example                                                         | Used In                                | Station          |
-| --------------------------------- | --------------------------------------------------------------------------------------------- | --------------------------------- | --------------------------------------------------------------- | -------------------------------------- | ---------------- |
-| **Station Configuration**         |                                                                                               |                                   |                                                                 |                                        |                  |
-| `STATION_ID`                      | Unique station identifier (lowercase, no spaces)                                              | _(required)_                      | `zuidwest`                                                      | `conf/lib/00_settings.liq`             | All              |
-| `STATION_NAME`                    | Full station name for metadata                                                                | _(required)_                      | `ZuidWest FM`                                                   | `conf/lib/00_settings.liq`             | All              |
-| **Icecast Configuration**         |                                                                                               |                                   |                                                                 |                                        |                  |
-| `ICECAST_HOST`                    | Icecast server hostname                                                                       | _(required)_                      | `icecast.zuidwest.cloud`                                        | `conf/lib/00_settings.liq`             | All              |
-| `ICECAST_PORT`                    | Icecast server port                                                                           | _(required)_                      | `8000`                                                          | `conf/lib/00_settings.liq`             | All              |
-| `ICECAST_SOURCE_PASSWORD`         | Icecast source password                                                                       | _(required)_                      | `s3cur3p4ss`                                                    | `conf/lib/00_settings.liq`             | All              |
-| `ICECAST_MOUNT_BASE`              | Base mount point name                                                                         | `STATION_ID`                      | `zuidwest`                                                      | `conf/lib/00_settings.liq`             | All              |
-| **Stream Mount Points**           |                                                                                               |                                   |                                                                 |                                        |                  |
-| `ICECAST_MOUNT_MP3`               | MP3 stream mount                                                                              | `/#{ICECAST_MOUNT_BASE}.mp3`      | `/zuidwest.mp3`                                                 | `conf/lib/00_settings.liq`             | All              |
-| `ICECAST_MOUNT_AAC_LOW`           | AAC mobile stream mount                                                                       | `/#{ICECAST_MOUNT_BASE}.aac`      | `/zuidwest.aac`                                                 | `conf/lib/00_settings.liq`             | All              |
-| `ICECAST_MOUNT_AAC_HIGH`          | AAC STL stream mount                                                                          | `/#{ICECAST_MOUNT_BASE}.stl`      | `/zuidwest.stl`                                                 | `conf/lib/00_settings.liq`             | All              |
-| **Stream Bitrates**               |                                                                                               |                                   |                                                                 |                                        |                  |
-| `ICECAST_BITRATE_MP3`             | MP3 stream bitrate (kbps)                                                                     | `192`                             | `256`                                                           | `conf/lib/00_settings.liq`             | All              |
-| `ICECAST_BITRATE_AAC_LOW`         | Low AAC bitrate (kbps)                                                                        | `96`                              | `64`                                                            | `conf/lib/00_settings.liq`             | All              |
-| `ICECAST_BITRATE_AAC_HIGH`        | High AAC bitrate (kbps)                                                                       | `576`                             | `320`                                                           | `conf/lib/00_settings.liq`             | All              |
-| **SRT Studio Inputs**             |                                                                                               |                                   |                                                                 |                                        |                  |
-| `SRT_PASSPHRASE`                  | SRT encryption passphrase                                                                     | _(required)_                      | `alpha-bravo-charlie-delta`                                     | `conf/lib/00_settings.liq`             | All              |
-| `SRT_BIND`                        | Host address for the two SRT inputs                                                           | `0.0.0.0`                         | `192.0.2.10`                                                    | `docker-compose.yml`                   | All              |
-| `SRT_PORT_PRIMARY`                | Port for the primary SRT input                                                                | `8888`                            | `8888`                                                          | Liquidsoap and Compose                 | All              |
-| `SRT_PORT_SECONDARY`              | Port for the secondary SRT input                                                              | `9999`                            | `9999`                                                          | Liquidsoap and Compose                 | All              |
-| **Audio Processing**              |                                                                                               |                                   |                                                                 |                                        |                  |
-| `STEREOTOOL_LICENSE`              | StereoTool license key (MicroMPX for ZuidWest and BredaNu; also audio processing for BredaNu) | _(none)_                          | `ABC123DEF456...`                                               | `conf/lib/50_processing.liq`           | ZuidWest/BredaNu |
-| `STEREOTOOL_WEB_BIND`             | Host address for the StereoTool web interface                                                 | `0.0.0.0`                         | `127.0.0.1`                                                     | `docker-compose.yml`                   | ZuidWest/BredaNu |
-| `STEREOTOOL_WEB_PORT`             | Host port for the StereoTool web interface                                                    | `8080`                            | `8080`                                                          | `docker-compose.yml`                   | ZuidWest/BredaNu |
-| **Fallback & Control**            |                                                                                               |                                   |                                                                 |                                        |                  |
-| `SERVER_SOCKET_ENABLED`           | Unix socket for runtime control (on/off)                                                      | `true`                            | `true`                                                          | `conf/lib/80_server.liq`               | All              |
-| `SERVER_SOCKET_PATH`              | Unix socket file path                                                                         | `/tmp/liquidsoap/liquidsoap.sock` | `/tmp/liquidsoap/liquidsoap.sock`                               | `conf/lib/80_server.liq`               | All              |
-| `EMERGENCY_AUDIO_PATH`            | Emergency audio file if all inputs fail                                                       | `/audio/fallback.ogg`             | `/audio/noodband.mp3`                                           | `conf/lib/00_settings.liq`             | All              |
-| `EMERGENCY_ALLOW_BLANK`           | Permits a silent fallback (development and tests only)                                        | `false`                           | `true`                                                          | `conf/lib/00_settings.liq`             | All              |
-| `SILENCE_SWITCH_SECONDS`          | Maximum silence duration (seconds)                                                            | `15.0`                            | `20.0`                                                          | `conf/lib/00_settings.liq`             | All              |
-| `AUDIO_VALID_SECONDS`             | Minimum duration of continuous audio (seconds)                                                | `15.0`                            | `10.0`                                                          | `conf/lib/00_settings.liq`             | All              |
-| `SILENCE_THRESHOLD`               | Silence limit; audio below this level (dB) is silence                                         | `-40.0`                           | `-45.0`                                                         | `conf/lib/00_settings.liq`             | All              |
-| **DAB+ Configuration (Optional)** |                                                                                               |                                   |                                                                 |                                        |                  |
-| `DAB_BITRATE`                     | DAB+ encoder bitrate                                                                          | _(none)_                          | `128`                                                           | `conf/lib/00_settings.liq`             | All              |
-| `DAB_EDI_DESTINATIONS`            | DAB+ EDI destination(s)                                                                       | _(none)_                          | `tcp://dab-mux.local:9001` or `tcp://dab1:9001,tcp://dab2:9002` | `conf/lib/00_settings.liq`             | All              |
-| `DAB_METADATA_SIZE`               | PAD size in bytes (0-196)                                                                     | `8` when socket is set            | `16`                                                            | `conf/lib/00_settings.liq`             | All              |
-| `DAB_METADATA_SOCKET`             | PAD metadata socket path                                                                      | _(none)_                          | `padenc.sock`                                                   | `conf/lib/00_settings.liq`             | All              |
-| `DAB_ACK_MONITOR_ENABLED`         | Monitors TCP acknowledgement progress                                                         | `true`                            | `false`                                                         | `conf/lib/00_settings.liq`             | All              |
-| `DAB_ACK_POLL_SECONDS`            | Positive interval between TCP ACK checks                                                      | `1.0`                             | `2.0`                                                           | `conf/lib/00_settings.liq`             | All              |
-| `DAB_ACK_WARN_SECONDS`            | No-ACK interval before a destination becomes degraded                                         | `5`                               | `10`                                                            | `conf/lib/00_settings.liq`             | All              |
-| `DAB_ACK_DOWN_SECONDS`            | No-ACK interval before a destination becomes down                                             | `15`                              | `30`                                                            | `conf/lib/00_settings.liq`             | All              |
-| `DAB_ACK_STARTUP_GRACE_SECONDS`   | Grace period for AudioEnc and each new TCP session                                            | `10`                              | `20`                                                            | `conf/lib/00_settings.liq`             | All              |
-| **HLS Configuration (Optional)**  |                                                                                               |                                   |                                                                 |                                        |                  |
-| `HLS_BUNNY_STORAGE_ZONE`          | Bunny Edge Storage zone name                                                                  | _(none)_                          | `zwfm-hls`                                                      | `conf/lib/00_settings.liq`             | All              |
-| `HLS_BUNNY_ACCESS_KEY`            | Bunny Edge Storage read/write password                                                        | _(none)_                          | `secret-storage-password`                                       | `conf/lib/00_settings.liq`             | All              |
-| `HLS_BUNNY_ENDPOINT`              | Bunny Edge Storage API endpoint                                                               | `storage.bunnycdn.com`            | `storage.bunnycdn.com`                                          | `conf/lib/00_settings.liq`             | All              |
-| `HLS_DIR`                         | Local HLS output directory (tmpfs mount)                                                      | `/hls`                            | `/hls`                                                          | `conf/lib/00_settings.liq`             | All              |
-| `HLS_BITRATE_MID`                 | Mid HLS AAC bitrate in kbps                                                                   | `96`                              | `96`                                                            | `conf/lib/00_settings.liq`             | All              |
-| `HLS_BITRATE_HIGH`                | High HLS AAC bitrate in kbps                                                                  | `192`                             | `192`                                                           | `conf/lib/00_settings.liq`             | All              |
-| `HLS_SEGMENT_DURATION`            | HLS segment duration in seconds                                                               | `4.0`                             | `4.0`                                                           | `conf/lib/00_settings.liq`             | All              |
-| `HLS_SEGMENTS`                    | Segments per live playlist                                                                    | `10`                              | `10`                                                            | `conf/lib/00_settings.liq`             | All              |
-| `HLS_SEGMENTS_OVERHEAD`           | Extra old segments kept locally                                                               | `5`                               | `5`                                                             | `conf/lib/00_settings.liq`             | All              |
-| **HTTP API**                      |                                                                                               |                                   |                                                                 |                                        |                  |
-| `HTTP_BIND`                       | Host address for the HTTP API (status and metadata)                                           | `127.0.0.1`                       | `0.0.0.0`                                                       | `docker-compose.yml`                   | All              |
-| `HTTP_PORT`                       | Port for the HTTP API (status and metadata)                                                   | `7000`                            | `7000`                                                          | Liquidsoap and Compose                 | All              |
-| `STREAM_METADATA_BEARER_TOKEN`    | Bearer token that sets the metadata API to on                                                 | _(none)_                          | `long-random-token`                                             | `conf/lib/00_settings.liq`             | All              |
-| `STATUS_BEARER_TOKEN`             | Bearer token that sets the status API to on                                                   | _(none)_                          | `other-long-random-token`                                       | `conf/lib/00_settings.liq`             | All              |
-| **DME Configuration**             |                                                                                               |                                   |                                                                 |                                        |                  |
-| `DME_PRIMARY_HOST`                | Primary DME server                                                                            | _(required)_                      | `ingest1.dme.nl`                                                | `conf/rucphen.liq`, `conf/bredanu.liq` | Rucphen/BredaNu  |
-| `DME_PRIMARY_PORT`                | Primary DME port                                                                              | _(required)_                      | `8010`                                                          | `conf/rucphen.liq`, `conf/bredanu.liq` | Rucphen/BredaNu  |
-| `DME_PRIMARY_USER`                | Primary DME username                                                                          | _(required)_                      | `rucphen-live`                                                  | `conf/rucphen.liq`, `conf/bredanu.liq` | Rucphen/BredaNu  |
-| `DME_PRIMARY_PASSWORD`            | Primary DME password                                                                          | _(required)_                      | `dme123pass`                                                    | `conf/rucphen.liq`, `conf/bredanu.liq` | Rucphen/BredaNu  |
-| `DME_SECONDARY_HOST`              | Secondary DME server                                                                          | _(required)_                      | `ingest2.dme.nl`                                                | `conf/rucphen.liq`, `conf/bredanu.liq` | Rucphen/BredaNu  |
-| `DME_SECONDARY_PORT`              | Secondary DME port                                                                            | _(required)_                      | `8020`                                                          | `conf/rucphen.liq`, `conf/bredanu.liq` | Rucphen/BredaNu  |
-| `DME_SECONDARY_USER`              | Secondary DME username                                                                        | _(required)_                      | `bredanu-backup`                                                | `conf/rucphen.liq`, `conf/bredanu.liq` | Rucphen/BredaNu  |
-| `DME_SECONDARY_PASSWORD`          | Secondary DME password                                                                        | _(required)_                      | `backup456pwd`                                                  | `conf/rucphen.liq`, `conf/bredanu.liq` | Rucphen/BredaNu  |
-| `DME_MOUNT_POINT`                 | DME mount point                                                                               | _(required)_                      | `/live-stream`                                                  | `conf/rucphen.liq`, `conf/bredanu.liq` | Rucphen/BredaNu  |
-| **Docker Configuration**          |                                                                                               |                                   |                                                                 |                                        |                  |
-| `CONTAINER_TIMEZONE`              | Container timezone                                                                            | `Europe/Amsterdam`                | `Europe/Amsterdam`                                              | `docker-compose.yml`                   | All              |
-
-### Notes
-
-- **Required variables**: set each variable that shows _(required)_ in the `.env` file. If you do not set one of them, Liquidsoap does not start. The DME variables apply only to Rucphen and BredaNu.
-- **Optional outputs**: DAB+ output is off until you set `DAB_BITRATE` and `DAB_EDI_DESTINATIONS`. HLS output is off until you set `HLS_BUNNY_STORAGE_ZONE` and `HLS_BUNNY_ACCESS_KEY`. PAD metadata is off until you set `DAB_METADATA_SOCKET`.
-- **More than one EDI output**: `DAB_EDI_DESTINATIONS` accepts a comma-separated list. The system then sends DAB+ to all destinations at the same time.
-- **Station column**: "All" applies to all stations. "Rucphen/BredaNu" applies only to the stations with DME.
-- **Default values**: `#{VARIABLE}` means that the value comes from a different variable.
-- **PAD size**: the permitted range is 0-196 bytes. Use the smallest possible `DAB_METADATA_SIZE`. A size of 8 bytes can transmit a small logo in some seconds. Small files transmit faster than large files. If you transmit artwork, use a larger size.
-- **File locations**: the file `conf/lib/00_settings.liq` contains almost all variables.
-- **Station files**: these files contain only the DME configuration (for Rucphen and BredaNu) and station-specific logic.
-
-### Docker Commands
+The installer creates `/opt/liquidsoap/.env` from the selected station template. Replace every placeholder before starting the container:
 
 ```bash
 cd /opt/liquidsoap
-
-# Start the services
+nano .env
 docker compose up -d
-
-# Show the logs
 docker compose logs -f
+```
 
-# Stop the services
+Station templates are available for [ZuidWest](.env.zuidwest.example), [Radio Rucphen](.env.rucphen.example), and [BredaNu](.env.bredanu.example). The complete template [.env.example](.env.example) documents the shared options and defaults.
+
+### Deployment layout
+
+The deployment uses the following paths under `/opt/liquidsoap`:
+
+| Path                          | Purpose                                                        |
+| ----------------------------- | -------------------------------------------------------------- |
+| `.env`                        | Secrets and station configuration                              |
+| `docker-compose.yml`          | Container, published ports, mounts, and HLS tmpfs              |
+| `scripts/radio.liq`           | Selected station entry point                                   |
+| `scripts/lib/`                | Shared source, output, API, and monitoring modules             |
+| `audio/fallback.ogg`          | Emergency audio                                                |
+| `stereotool/`                 | StereoTool plugin, license state, and processor configuration  |
+| `socket/liquidsoap.sock`      | Runtime-control socket                                         |
+
+The HLS working set is not stored in this directory. Compose mounts a 64 MB tmpfs at `/hls` inside the container, so live segments disappear when the container stops and cannot fill the host filesystem.
+
+Common lifecycle commands:
+
+```bash
+cd /opt/liquidsoap
+docker compose pull
+docker compose up -d
+docker compose ps
+docker compose logs --tail=100 -f
 docker compose down
 ```
 
-### StereoTool GUI
+`docker compose down` stops the broadcast container. Use it only during an intentional outage; configuration-only changes can normally be applied with `docker compose up -d`.
 
-For ZuidWest and BredaNu, StereoTool is on if `STEREOTOOL_LICENSE` is set in the `.env` file. Both stations use StereoTool to generate the MicroMPX transport for their FM transmitters. ZuidWest's Liquidsoap stream outputs use the already processed incoming studio signal directly, while BredaNu uses the StereoTool-processed signal for its outputs. Radio Rucphen also receives an already processed studio signal, but does not use StereoTool or MicroMPX. Open the web interface at `http://localhost:8080`.
+### Host settings
 
-Set `STEREOTOOL_WEB_BIND=127.0.0.1` to limit the interface to the local host. You can also set a different host address. The default is `0.0.0.0` for backward compatibility.
+The installer configures the `Europe/Amsterdam` timezone, time synchronization, and journal limits. It can also set the CPU frequency governor to `performance`. This reduces frequency-scaling delays at the cost of higher power use and heat.
 
-### Audio Processing with StereoTool
+The governor setting is stored in `/etc/tmpfiles.d/cpu-performance.conf` and applied at boot. Verify it with:
 
-The installation always includes StereoTool. In station configurations that use StereoTool, setting `STEREOTOOL_LICENSE` makes two audio paths:
+```bash
+cat /sys/devices/system/cpu/cpufreq/policy*/scaling_governor
+```
 
-1. **Direct audio (`radio`)**: the incoming studio or fallback audio without local StereoTool processing
-2. **Processed audio (`radio_processed`)**: the audio after StereoTool processing (AGC, compression, limiter, and EQ). StereoTool also encodes MicroMPX for the FM transmitters through its own output.
+Remove that file and reboot to restore the host default.
 
-| Station       | Liquidsoap outputs                  | StereoTool purpose                                                                         |
-| ------------- | ----------------------------------- | ------------------------------------------------------------------------------------------ |
-| ZuidWest      | Direct `radio` source               | Generates the MicroMPX transport separately; it is not part of the Liquidsoap output chain |
-| Radio Rucphen | Direct `radio` source               | Not used; the incoming studio signal is already processed                                  |
-| BredaNu       | StereoTool `radio_processed` source | Processes the audio used by Icecast, DME, DAB+, and HLS, and generates MicroMPX            |
+## Configuration
 
-## Runtime Control
+These variables are required for every station:
 
-The Unix socket gives runtime control. A restart of the service is not necessary. The socket is on by default (`SERVER_SOCKET_ENABLED=true`).
+| Variable                  | Purpose                        |
+| ------------------------- | ------------------------------ |
+| `STATION_ID`              | Lowercase station identifier   |
+| `STATION_NAME`            | Public station name            |
+| `ICECAST_HOST`            | Icecast server                 |
+| `ICECAST_PORT`            | Icecast source port            |
+| `ICECAST_SOURCE_PASSWORD` | Icecast source password        |
+| `SRT_PASSPHRASE`          | Studio-input encryption secret |
 
-### Connect
+Optional features are enabled by their credentials or destination settings:
+
+| Feature          | Required variables                                         |
+| ---------------- | ---------------------------------------------------------- |
+| StereoTool       | `STEREOTOOL_LICENSE` (ZuidWest and BredaNu)                |
+| DAB+             | `DAB_BITRATE`, `DAB_EDI_DESTINATIONS`                      |
+| HLS              | `HLS_BUNNY_STORAGE_ZONE`, `HLS_BUNNY_ACCESS_KEY`           |
+| `GET /status`    | `STATUS_BEARER_TOKEN`                                      |
+| `POST /metadata` | `STREAM_METADATA_BEARER_TOKEN`                             |
+| DAB+ PAD         | `DAB_METADATA_SOCKET`; `DAB_METADATA_SIZE` defaults to `8` |
+
+Radio Rucphen and BredaNu also require `DME_PRIMARY_HOST`, `DME_PRIMARY_PORT`, `DME_PRIMARY_USER`, `DME_PRIMARY_PASSWORD`, the corresponding `DME_SECONDARY_*` variables, and `DME_MOUNT_POINT`.
+
+Important network defaults:
+
+| Variable              | Default            | Purpose                              |
+| --------------------- | ------------------ | ------------------------------------ |
+| `SRT_BIND`            | `0.0.0.0`          | Host interface for both SRT ports    |
+| `SRT_PORT_PRIMARY`    | `8888`             | Studio A UDP port                    |
+| `SRT_PORT_SECONDARY`  | `9999`             | Studio B UDP port                    |
+| `HTTP_BIND`           | `127.0.0.1`         | Host interface for the HTTP API      |
+| `HTTP_PORT`           | `7000`             | Status and metadata API port         |
+| `STEREOTOOL_WEB_BIND` | `0.0.0.0`          | Host interface for the StereoTool UI |
+| `STEREOTOOL_WEB_PORT` | `8080`             | StereoTool UI port                   |
+| `CONTAINER_TIMEZONE`  | `Europe/Amsterdam` | Container timezone                   |
+
+Keep `HLS_DIR=/hls` with the provided Compose file so HLS uses its isolated tmpfs mount. Keep the default `SERVER_SOCKET_PATH` to expose the control socket through `/opt/liquidsoap/socket` on the host.
+
+### Default stream profiles
+
+Every station publishes three listener or contribution streams to the configured Icecast server:
+
+| Stream ID  | Codec  | Default bitrate | Default mount                    |
+| ---------- | ------ | --------------- | -------------------------------- |
+| `mp3`      | MP3    | 192 kbps        | `/{ICECAST_MOUNT_BASE}.mp3`      |
+| `aac_low`  | AAC-LC | 96 kbps         | `/{ICECAST_MOUNT_BASE}.aac`      |
+| `aac_high` | AAC-LC | 576 kbps        | `/{ICECAST_MOUNT_BASE}.stl`      |
+
+`ICECAST_MOUNT_BASE` defaults to `STATION_ID`. Override individual mounts with `ICECAST_MOUNT_MP3`, `ICECAST_MOUNT_AAC_LOW`, and `ICECAST_MOUNT_AAC_HIGH`; override their bitrates with the corresponding `ICECAST_BITRATE_*` variables. Bitrate values are in kbps.
+
+### Failover defaults
+
+| Variable                 | Default               | Purpose                                           |
+| ------------------------ | --------------------- | ------------------------------------------------- |
+| `EMERGENCY_AUDIO_PATH`   | `/audio/fallback.ogg` | File used when both studio inputs are unavailable |
+| `EMERGENCY_ALLOW_BLANK`  | `false`               | Permit silence instead of a valid fallback file   |
+| `SILENCE_SWITCH_SECONDS` | `15.0`                | Silence required before removing a studio         |
+| `AUDIO_VALID_SECONDS`    | `15.0`                | Continuous audio required before restoring it     |
+| `SILENCE_THRESHOLD`      | `-40.0` dB            | Audio below this level is treated as silence      |
+| `SERVER_SOCKET_ENABLED`  | `true`                | Enable runtime control                            |
+
+Use `EMERGENCY_ALLOW_BLANK=true` only for development or tests: it explicitly accepts dead air when neither studio is usable.
+
+## Runtime control
+
+The server socket is enabled by default. Connect from the host with:
 
 ```bash
 socat - UNIX-CONNECT:/opt/liquidsoap/socket/liquidsoap.sock
 ```
 
-### Available Commands
+| Command                     | Result                                           |
+| --------------------------- | ------------------------------------------------ |
+| `radio_prod.status`         | Show automatic/forced mode and the active source |
+| `radio_prod.force studio_a` | Select Studio A                                  |
+| `radio_prod.force studio_b` | Select Studio B                                  |
+| `radio_prod.force fallback` | Select the emergency source                      |
+| `radio_prod.auto`           | Restore automatic source selection               |
+| `radio_prod.skip`           | Skip the current source                          |
+| `studio_a.buffer`           | Show Studio A readiness and buffered seconds     |
+| `studio_a.srt`              | Show Studio A SRT connection statistics          |
+| `studio_b.buffer`           | Show Studio B readiness and buffered seconds     |
+| `studio_b.srt`              | Show Studio B SRT connection statistics          |
+| `silence.enable`            | Enable silence-based failover                    |
+| `silence.disable`           | Disable silence-based failover                   |
+| `silence.status`            | Show the silence-detection state                  |
+| `dab.status`                | Show DAB+ TCP acknowledgement health             |
+| `hls.status`                | Show local HLS and Bunny mirror health           |
 
-| Command                     | Description                                                                                            |
-| --------------------------- | ------------------------------------------------------------------------------------------------------ |
-| `radio_prod.status`         | Shows the mode (auto/forced) and the active source                                                     |
-| `radio_prod.force studio_a` | Makes Studio A the active source                                                                       |
-| `radio_prod.force studio_b` | Makes Studio B the active source                                                                       |
-| `radio_prod.force fallback` | Makes the emergency fallback the active source                                                         |
-| `radio_prod.auto`           | Sets the system back to automatic fallback mode                                                        |
-| `radio_prod.skip`           | Goes to the next available source                                                                      |
-| `studio_a.buffer`           | Shows Studio A buffer health (`studio_b.buffer` for Studio B)                                          |
-| `studio_a.srt`              | Shows Studio A SRT latency and health (`studio_b.srt` for Studio B)                                    |
-| `silence.enable`            | Sets silence detection to on                                                                           |
-| `silence.disable`           | Sets silence detection to off                                                                          |
-| `silence.status`            | Shows the silence detection state                                                                      |
-| `dab.status`                | Shows acknowledgement progress for each DAB+ TCP destination                                           |
-| `hls.status`                | Shows the HLS output health (`starting`, `ok`, `degraded: local=<code>; mirror=<code>`, or `disabled`) |
+Forcing an unavailable source can take the radio source down. Use `radio_prod.auto` to restore the priority fallback chain.
 
-All commands have an immediate effect.
+### Status API
 
-### JSON Status Endpoint
-
-For monitoring systems, `GET /status` exposes the runtime state as JSON on `HTTP_PORT`. The endpoint is registered only when `STATUS_BEARER_TOKEN` is set, and every request must send that token. Use a different value than `STREAM_METADATA_BEARER_TOKEN`, so a monitoring system cannot write metadata. Compose binds this port to `127.0.0.1` by default.
+`GET /status` is registered only when `STATUS_BEARER_TOKEN` is set. Use a different token for `POST /metadata`.
 
 ```bash
-curl -s -H "Authorization: Bearer ${STATUS_BEARER_TOKEN}" \
+curl --fail-with-body --silent \
+  --header "Authorization: Bearer ${STATUS_BEARER_TOKEN}" \
   http://127.0.0.1:7000/status | jq
 ```
 
-A missing or wrong token returns `401 Unauthorized` with the `WWW-Authenticate: Bearer realm="status"` header. Only `GET` is registered.
+The JSON schema is stable: unavailable scalar values are `null`, collections remain arrays, and error fields contain codes instead of log text.
 
-The response has a fixed schema: every field is always present with the same type, and a value that is not available is `null` instead of being left out. Lists such as `outputs.icecast.streams` and `outputs.dab.destinations` are empty only when nothing of that kind is configured. Error fields contain a stable code, never free text; the log keeps the full reason.
+- `studio_inputs` reports connection state, buffered seconds, stereo RMS and peak levels over 0.5 seconds, and SRT latency, receive-buffer, round-trip, and drop statistics. Its status is `down` when disconnected, `degraded` when silent, `starting` while its buffer fills, and `ok` when ready.
+- `outputs.icecast.streams` reports the stable stream ID, host, port, mount, and connection state of every Icecast output.
+- `outputs.dab.destinations` reports the TCP state, ACK age, byte counters, send queue, unacknowledged segments, and retransmissions for each configured EDI destination.
+- `outputs.hls` separates local writer health from Bunny mirror health. An HLS component becomes `degraded` with `stalled` after `max(15.0, HLS_SEGMENT_DURATION * 4.0)` seconds without progress: 16 seconds with the defaults.
 
-The response contains the overall state (`ok`, `degraded`, or `down`), the active source and mode, readiness for every source, detailed studio-input health, the silence-detection state, and structured health for Icecast, DAB+, and HLS outputs. Each item in `studio_inputs` has a `status` and an `error`. It is `down` while no encoder is connected over SRT, `degraded` while connected but silent (only when silence detection is on), `starting` while connected with a buffer that is still filling, and `ok` otherwise. Each item also reports its audio buffer in seconds, stereo RMS and peak levels in dBFS over a 0.5-second window, and an SRT object with its connection state. Left and right levels are separate. Digital silence is clamped to `-120.0` dBFS; levels are `null` when SRT is disconnected. Every active SRT connection includes the peer address, negotiated receive latency, receive buffer, round-trip time, and total dropped packets. If its statistics cannot be read, the connection stays listed and connected with `null` metrics and `statistics_error: "statistics_unavailable"`.
-
-`outputs.icecast` has an aggregate status and a `streams` array. Each stream identifies itself by a stable `id`, host, port, and mount and reports whether it is connected. `outputs.dab.destinations` has one object per configured EDI destination, in configuration order. Each object reports its TCP state, ACK age, byte counters, send queue, unacknowledged segments, and retransmissions; unavailable metrics and an unknown TCP state are `null`. Until the ACK monitor has reported, when monitoring is disabled, and after an encoder or monitor failure, destinations are listed with their configured URL and `null` metrics. `outputs.hls` separates the local writer and remote mirror health. The local state reports playlist and segment counts plus the age of the latest playlist update. The mirror state identifies the storage host and zone (`null` when HLS is disabled), reports the age of its most recent successful sync, and counts pending playlists and segments. Each HLS component is `starting` until its first progress unless it reports an error, which makes it `degraded` immediately. It also becomes `degraded` when progress stops for several segment intervals.
-
-Error codes are `null` unless they describe an active failure or why a destination is unmonitored:
+Possible error codes are:
 
 | Field                                                | Codes                                                                                                            |
 | ---------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| `studio_inputs[].error`                              | `disconnected` (no SRT connection), `silent` (silence detected)                                                  |
+| `studio_inputs[].error`                              | `disconnected`, `silent`                                                                                         |
 | `studio_inputs[].srt.connections[].statistics_error` | `statistics_unavailable`                                                                                         |
-| `outputs.dab.error`                                  | `encoder_error` (ODR-AudioEnc crashed), `monitor_failed` (the ACK monitor gave no usable result)                 |
+| `outputs.dab.error`                                  | `encoder_error`, `monitor_failed`                                                                                |
 | `outputs.dab.destinations[].error`                   | `ack_stalled`, `no_socket`, `tcp_not_established`, `invalid_destination`, `not_tcp`, or the aggregate code above |
 | `outputs.hls.local.error`                            | `dir_missing`, `dir_not_writable`, `clock_error`, `stalled`                                                      |
 | `outputs.hls.mirror.error`                           | `listing_failed`, `upload_failed`, `delete_failed`, `read_failed`, `local_file_missing`, `stalled`               |
 
-Use the top-level `status` field for alerting. A switch to the emergency fallback, a disconnected Icecast output, or a degraded enabled DAB+/HLS output makes the overall state `degraded`; an unavailable radio source makes it `down`. Studio input status is informational and does not change the overall state, because an idle standby studio is normal. The HTTP status code follows the overall state: `200 OK` for `ok` and `degraded`, `503 Service Unavailable` for `down`, so a monitor that only checks the status code alerts when the station is off air.
+The top-level status becomes `degraded` when the emergency source is active or an enabled output is unhealthy. It becomes `down` when the radio source is unavailable. HTTP responses use `200` for `ok` and `degraded`, `503` for `down`, and `401` for a missing or invalid token.
 
-## Silence Detection
+## Studio inputs and failover
 
-The system has automatic silence detection. It monitors the studio inputs and controls the fallback. This function is **on by default**.
+Silence detection is enabled at startup. Below `SILENCE_THRESHOLD` (default `-40.0` dB), a studio is removed from the fallback chain after `SILENCE_SWITCH_SECONDS` (default `15.0`). It returns after `AUDIO_VALID_SECONDS` (default `15.0`) of continuous audio.
 
-### Operation
+Disabling silence detection bypasses silence stripping: connected studios remain available even when silent, while disconnect-based failover still works. The emergency branch emits silence in this mode.
 
-If silence detection is **on** (default):
+Each input has a continuously drained 1-second buffer with a 1.25-second maximum. This keeps standby audio current and lets disconnected inputs expire. All SRT callers must use the configured passphrase because the listeners enforce encryption.
 
-- If a studio input is silent for more than `SILENCE_SWITCH_SECONDS` (default: 15 seconds), the system changes to the next source.
-- If the two studios are silent or disconnected, the system plays the emergency file.
-- At startup, the system does a check of the emergency file (see [System Design](#system-design) and `EMERGENCY_ALLOW_BLANK`).
-- The station can operate without an operator.
+Default ports:
 
-If silence detection is **off**:
+- Studio A: UDP `8888`
+- Studio B: UDP `9999`
 
-- A silent studio input continues to play. The system changes only if the input disconnects.
-- The system does not change between sources automatically.
-- The system does not play the emergency file.
-- Use this mode for tests or for manual control.
-
-### Configuration
-
-Use the socket commands `silence.enable`, `silence.disable`, and `silence.status` to control silence detection at runtime (see [Runtime Control](#runtime-control)).
-
-### Silence Thresholds
-
-These environment variables set the silence detection parameters:
-
-- `SILENCE_SWITCH_SECONDS`: the maximum silence duration in seconds (default: 15.0)
-- `AUDIO_VALID_SECONDS`: the minimum duration of continuous audio before an input is valid (default: 15.0)
-- `SILENCE_THRESHOLD`: the silence limit in dB; audio below this level is silence (default: -40.0)
-
-## Send Audio to the SRT Inputs
-
-The system has two SRT inputs:
-
-- **Port 8888**: primary studio input (Studio A)
-- **Port 9999**: secondary studio input (Studio B)
-
-Encryption is mandatory for all connections. Set the passphrase in `SRT_PASSPHRASE`.
-
-### Example: Send a Stream from an Audio Device
+Example sender:
 
 ```bash
-# Send a stream from an ALSA audio device (Linux)
-ffmpeg -f alsa -channels 2 -sample_rate 48000 -i hw:0 \
-  -codec:a pcm_s16le -vn -f matroska \
-  "srt://liquidsoap.example.com:8888?passphrase=your_passphrase&mode=caller&transtype=live&latency=10000"
-
-# Send a stream from a file (for tests)
-ffmpeg -re -i input.mp3 -c copy -f mpegts \
-  "srt://liquidsoap.example.com:8888?passphrase=your_passphrase&mode=caller"
+ffmpeg -f alsa -ac 2 -ar 48000 -i hw:0 \
+  -c:a pcm_s16le -vn -f matroska \
+  "srt://liquidsoap.example.com:8888?mode=caller&transtype=live&passphrase=your_passphrase"
 ```
 
-For production, we recommend [rpi-audio-encoder](https://github.com/oszuidwest/rpi-audio-encoder) as a dedicated hardware encoder.
+For production studio links, see [rpi-audio-encoder](https://github.com/oszuidwest/rpi-audio-encoder).
 
-### SRT Port Configuration
+## Icecast and DME
 
-These environment variables set the SRT ports:
+The three public Icecast outputs run independently. A failed mount is reported by `GET /status`, but does not stop the other mounts, the source-selection chain, or optional DAB+ and HLS outputs. These public mounts carry the metadata received through `POST /metadata`; the DME ingests ignore it.
 
-- `SRT_BIND`: the host address for the two published SRT ports (default: 0.0.0.0)
-- `SRT_PORT_PRIMARY`: the port for the primary studio input (default: 8888)
-- `SRT_PORT_SECONDARY`: the port for the secondary studio input (default: 9999)
-
-Each studio input uses a continuously drained 1.0-second buffer (maximum: 1.25 seconds) between the SRT and radio clocks. This keeps standby audio current and makes disconnected inputs unavailable. Use `studio_a.buffer` or `studio_b.buffer` on the server socket to inspect buffer health. Use `studio_a.srt` or `studio_b.srt` to see the negotiated latency, receive buffer, round-trip time, and total dropped packets of the connected encoder.
-
-Set a specific address in `SRT_BIND` if studio traffic must enter on one host interface only. This variable controls the published host address in Docker. Liquidsoap continues to listen on the container ports.
-
-## DAB+ Digital Radio
-
-The system has an optional DAB+ output through ODR-AudioEnc. This output encodes the audio for digital radio transmission.
-
-### Configuration
-
-The DAB+ output is off until you set these environment variables:
+Radio Rucphen and BredaNu additionally send the high-bitrate AAC profile to two Dutch Media Exchange ingest points. These are separate Icecast-compatible outputs, not a failover pair managed by Liquidsoap: audio is sent to both continuously, and DME decides how the ingest points are used. Configure both sets of credentials and their shared mount:
 
 ```bash
-# Mandatory for the DAB+ output
-DAB_BITRATE=128                                    # Encoder bitrate in kbps
-DAB_EDI_DESTINATIONS=tcp://dab-mux.example.com:9001   # EDI output destination(s)
+DME_PRIMARY_HOST=ingest1.example.com
+DME_PRIMARY_PORT=8000
+DME_PRIMARY_USER=station-live
+DME_PRIMARY_PASSWORD=replace-me
 
-# Optional PAD metadata
-DAB_METADATA_SOCKET=padenc.sock                   # Socket for the PAD encoder
-DAB_METADATA_SIZE=8                               # PAD size (default: 8)
+DME_SECONDARY_HOST=ingest2.example.com
+DME_SECONDARY_PORT=8000
+DME_SECONDARY_USER=station-live
+DME_SECONDARY_PASSWORD=replace-me
 
-# Optional TCP acknowledgement thresholds
-DAB_ACK_WARN_SECONDS=5                            # Degraded after no ACK progress
-DAB_ACK_DOWN_SECONDS=15                           # Down after no ACK progress
+DME_MOUNT_POINT=/live
 ```
 
-### More Than One EDI Destination
+Radio Rucphen sends its direct source to DME. BredaNu sends its StereoTool-processed source. DME uses `ICECAST_BITRATE_AAC_HIGH`, so changing that value affects both the `.stl` Icecast mount and both DME outputs.
 
-To send the DAB+ stream to more than one destination, write a comma-separated list:
+## StereoTool and MicroMPX
+
+The installer includes the StereoTool plugin, but processing starts only when `STEREOTOOL_LICENSE` is set. ZuidWest uses it only for MicroMPX; BredaNu also sends the processed source to Icecast, DME, DAB+, and HLS. Radio Rucphen does not load StereoTool.
+
+The web interface listens on host port `8080` by default. Set `STEREOTOOL_WEB_BIND=127.0.0.1` unless remote access is required.
+
+## DAB+
+
+`output.external` sends 48 kHz stereo WAV to ODR-AudioEnc, which produces DAB+ EDI. `DAB_BITRATE` is in kbps and must be a multiple of 8 from 8 through 192. Multiple EDI targets are comma-separated:
 
 ```bash
+DAB_BITRATE=128
 DAB_EDI_DESTINATIONS=tcp://primary.example.com:9001,tcp://backup.example.com:9002
+DAB_METADATA_SOCKET=padenc.sock
+DAB_METADATA_SIZE=8
 ```
 
-### TCP Acknowledgement Monitoring
+TCP acknowledgement monitoring is enabled by default. It checks Linux TCP metrics for each ODR-AudioEnc destination:
 
-TCP acknowledgement monitoring is on by default. It reads the Linux TCP state for each AudioEnc destination. It checks that `bytes_acked` continues to increase while AudioEnc sends data. It also reports the TCP state, send queue, unacknowledged segments, and retransmissions.
+| Status        | Meaning                                                                  |
+| ------------- | ------------------------------------------------------------------------ |
+| `disabled`    | DAB+ is not configured                                                   |
+| `starting`    | All TCP destinations are within their startup grace period               |
+| `ok`          | Every TCP destination has recent ACK progress                            |
+| `degraded`    | Destinations have mixed health or an ACK warning threshold was exceeded  |
+| `down`        | Every TCP destination is down, including when ODR-AudioEnc is not running |
+| `unmonitored` | Monitoring is disabled or no TCP destination is configured               |
 
-Use the Liquidsoap server socket to see the current state:
+TCP ACKs confirm receipt by the remote TCP stack, not processing by ODR-DabMux. UDP destinations cannot provide this signal. Tune the monitor with `DAB_ACK_POLL_SECONDS`, `DAB_ACK_WARN_SECONDS`, `DAB_ACK_DOWN_SECONDS`, and `DAB_ACK_STARTUP_GRACE_SECONDS`, or disable it with `DAB_ACK_MONITOR_ENABLED=false`.
 
-```text
-dab.status
-```
+### PAD metadata
 
-A healthy response resembles:
+When `DAB_METADATA_SOCKET` is set, ODR-AudioEnc reads PAD data from the named socket and reserves `DAB_METADATA_SIZE` bytes per audio frame. The default size is 8 bytes; valid values are 0 through 196. A larger value sends slides faster but leaves less capacity for audio at the configured DAB+ bitrate.
 
-```text
-ok
-tcp://primary.example.com:9001 ok (TCP ESTAB, ack_age=0s, bytes_sent=123456, bytes_acked=123457, send_queue=0, unacked=0, retrans=0)
-```
+ODR-PadEnc runs outside this project and writes PAD data to the configured socket for ODR-AudioEnc. [zwfm-metadata](https://github.com/oszuidwest/zwfm-metadata) generates its ODR-PadEnc-compatible DL Plus file; ODR-PadEnc re-reads that file before each transmission. This route is independent of `POST /metadata`, which does not write DAB PAD.
 
-On Linux, `bytes_acked` can be exactly one greater than `bytes_sent` because the ACK counter follows TCP sequence-space progress, including the SYN, while the sent counter contains data bytes only.
+## Stream metadata
 
-Possible overall states are:
+`POST /metadata` inserts now-playing metadata before processing and output fan-out. It updates the public Icecast mounts and adds timed ID3 metadata to HLS. DME ignores the ICY updates; DAB+ PAD and StereoTool/RDS use their own integrations.
 
-- `disabled`: DAB+ output is not configured.
-- `starting`: all configured TCP destinations are within the startup grace period and have not produced acknowledgement progress yet.
-- `ok`: every TCP destination has recent acknowledgement progress.
-- `degraded`: the TCP destinations have mixed health, including when one is down while another remains healthy, or at least one has exceeded `DAB_ACK_WARN_SECONDS` without acknowledgement progress.
-- `down`: all configured TCP destinations are down, which includes the case where AudioEnc is not running. A single destination exceeding `DAB_ACK_DOWN_SECONDS` while another remains healthy produces `degraded`.
-- `unmonitored`: monitoring is disabled or no TCP EDI destination is configured.
-
-TCP acknowledgements confirm that the remote TCP stack accepted the byte stream. They do not confirm that the remote DabMux application processed the audio. UDP destinations cannot provide this signal and are listed as unmonitored.
-
-### PAD (Programme Associated Data)
-
-PAD sends metadata together with the audio. Examples are song titles and station logos. Use the smallest possible `DAB_METADATA_SIZE`. A size of 8 bytes can transmit a small logo in some seconds. Small files transmit faster than large files. If you transmit artwork, use a larger size.
-
-## Shared Stream Metadata
-
-If `STREAM_METADATA_BEARER_TOKEN` is set, Liquidsoap accepts now-playing updates. The endpoint is `POST /metadata` on `HTTP_PORT`. The system inserts the metadata into the main radio source. This point is before the processing and the output fan-out. As a result, one update goes to all compatible stream outputs:
-
-- the Icecast MP3 and AAC mounts
-- the DME Icecast mounts for Radio Rucphen and BredaNu
-- the HLS variants, as timed ID3 in each MPEG-TS segment
-
-DAB+ PAD and StereoTool/RDS stay protocol-specific metadata outputs. DAB uses the configured PAD socket. StereoTool receives its metadata through its API. These two outputs do not use the Liquidsoap source metadata.
-
-Each metadata producer can call the endpoint. Example:
+The endpoint exists only when `STREAM_METADATA_BEARER_TOKEN` is set:
 
 ```bash
 curl http://127.0.0.1:7000/metadata \
@@ -463,11 +388,9 @@ curl http://127.0.0.1:7000/metadata \
   --data '{"title":"Song title","artist":"Artist name"}'
 ```
 
-The rules are: a `title` that is not empty, an optional `artist`, and the correct bearer token.
+`title` is required and cannot be empty; `artist` is optional. Extra JSON fields are ignored. A valid update returns `204`. Invalid JSON or a missing title returns `400`, an invalid token returns `401`, and a body over 16 KiB or any `Transfer-Encoding` header returns `413`.
 
-The endpoint returns `204 No Content` if the update is correct. It returns `400 Bad Request` if the JSON body is invalid or `title` is missing. It returns `401 Unauthorized` if the bearer token is missing or wrong. The `401` response includes the `WWW-Authenticate: Bearer realm="metadata"` header. It returns `413 Payload Too Large` if the body is larger than 16 KiB or has a `Transfer-Encoding` header. Chunked bodies are not supported. If you do not send `artist`, the update contains only the title. If no bearer token is set, the metadata endpoint is not registered. `GET /status` has its own token, `STATUS_BEARER_TOKEN`; the metadata token does not open it. If the API does not respond, do a check of the container health, the bind address, the port, and the firewall rules.
-
-As an option, configure one URL output in [zwfm-metadata](https://github.com/oszuidwest/zwfm-metadata). Set the input priority, the filters, and the delay:
+One URL output in [zwfm-metadata](https://github.com/oszuidwest/zwfm-metadata) can update all compatible Icecast and HLS outputs:
 
 ```json
 {
@@ -484,207 +407,141 @@ As an option, configure one URL output in [zwfm-metadata](https://github.com/osz
 }
 ```
 
-The POST body contains the structured metadata JSON from `zwfm-metadata`. Liquidsoap reads the `title` and `artist` fields and ignores the other fields. With this integration, this one output can replace the direct Icecast metadata outputs for the mounts of this Liquidsoap instance.
+Keep the API on a private network. Compose binds it to `127.0.0.1` by default. Containers on the same Docker network can use `http://liquidsoap:7000`; access from another host should use a private network, VPN, or TLS reverse proxy with firewall restrictions.
 
-Keep the endpoint on a private network. The Compose configuration binds it to `127.0.0.1` by default. If the two applications operate in containers, attach them to the same Docker network. Then use the service name `liquidsoap`. For a metadata service on a different host, use a private network or a VPN. A TLS reverse proxy is also possible. If you bind to `0.0.0.0`, limit access to the port with a firewall. Do not make the HTTP endpoint available to an unsafe network.
+HLS clients must expose timed ID3 metadata to the player application. hls.js provides `Hls.Events.FRAG_PARSING_METADATA` for this purpose.
 
-For HLS playback, the players must read the timed ID3 data to show the values. For example, hls.js sends the `FRAG_PARSING_METADATA` event. The native Apple and Android HLS players have equivalent callbacks for timed metadata.
+## HLS through Bunny CDN
 
-## HLS Output Through Bunny CDN
+Liquidsoap writes an audio-only live window to a 64 MB tmpfs at `/hls` and mirrors it to Bunny Storage with `http.put` and `http.delete`.
 
-The system has an optional audio-only HLS output. Liquidsoap writes a local HLS live window to `/hls`. This directory is a 64 MB tmpfs mount in `docker-compose.yml`. Liquidsoap then copies the files to Bunny Edge Storage with the native `http.put` and `http.delete` calls. An external uploader or an extra Docker image is not necessary.
+The default ladder contains two AAC-LC MPEG-TS variants:
 
-The default HLS ladder is:
+- 96 kbps: `aac_96.m3u8`
+- 192 kbps: `aac_192.m3u8`
 
-- 96 kbps AAC-LC in MPEG-TS segments (`aac_96.m3u8`)
-- 192 kbps AAC-LC in MPEG-TS segments (`aac_192.m3u8`)
+`HLS_BITRATE_MID` and `HLS_BITRATE_HIGH` change the encoded bitrates; the playlist names stay fixed. The project pins Liquidsoap 2.4.5 and uses one AAC profile because mixed HE-AAC and AAC-LC variants can drift apart ([Liquidsoap issue #5319](https://github.com/savonet/liquidsoap/issues/5319)).
 
-The variables `HLS_BITRATE_MID` and `HLS_BITRATE_HIGH` set these bitrates. The 48 kbps HE-AAC variant is temporarily disabled because [Liquidsoap issue #5319](https://github.com/savonet/liquidsoap/issues/5319) causes mixed HE-AAC and AAC-LC HLS timelines to diverge.
+`live.m3u8` is the main playlist. Defaults are 4-second segments, 10 segments per media playlist, and 5 extra local segments for lagging clients. A playlist is uploaded only after all segments it references are present remotely. Failed uploads therefore leave the previous valid playlist online.
 
-The main playlist is `live.m3u8`. The default configuration has segments of 4 seconds and playlists of 10 segments. The usual listener latency is approximately 15 to 30 seconds with standard HLS client buffers.
+### Bunny setup
 
-The copy loop keeps the remote data consistent. A segment upload must be complete before the system publishes the playlist that points to it. If a Bunny upload fails, the listeners get an older playlist. The playlist becomes current again when the missing segment uploads or leaves the live window. The listeners do not get a new playlist with a segment that returns 404.
+1. Create a dedicated Bunny Storage zone and note its read/write password and regional API endpoint.
+2. Set `HLS_BUNNY_STORAGE_ZONE`, `HLS_BUNNY_ACCESS_KEY`, and `HLS_BUNNY_ENDPOINT`.
+3. Connect the storage zone to a Bunny CDN pull zone and configure its hostname.
+4. For cross-origin browser playback, enable CORS for the `m3u8` and `ts` extensions.
+5. Set a 1-2 second cache time for `*.m3u8` and a long cache time, such as one day, for `.ts` files.
+6. Leave Perma-Cache disabled because live playlists are overwritten in place.
 
-### Configuration
+Use a storage zone dedicated to HLS so its password grants access only to live-stream objects.
 
-The HLS output is off until you set the two Bunny variables:
-
-```bash
-HLS_BUNNY_STORAGE_ZONE=zwfm-hls
-HLS_BUNNY_ACCESS_KEY=storage-zone-read-write-password
-HLS_BUNNY_ENDPOINT=storage.bunnycdn.com
-```
-
-The access key is the read/write password of the storage zone. Use a storage zone that contains only HLS data. Then the credential gives access to the live-stream objects only.
-
-### Bunny Setup
-
-1. Make a Bunny Edge Storage zone, for example `zwfm-hls`. Falkenstein is a good main region for Dutch listeners.
-2. Copy the read/write password of the storage zone into `HLS_BUNNY_ACCESS_KEY`. Set `HLS_BUNNY_ENDPOINT` to the endpoint that Bunny shows.
-3. Make a Bunny CDN pull zone that is connected to the storage zone. Add the custom hostname.
-4. Set CORS to on for the pull zone. Include the `m3u8` and `ts` extensions.
-5. Add an edge rule for `*.m3u8` that sets the cache time to 1-2 seconds.
-6. Keep the default cache time for the `.ts` segments long, for example 1 day. The segment names contain a timestamp, and the system does not use a name again.
-7. Do not set Perma-Cache to on for this pull zone.
-
-If you change the names in the HLS ladder, clean the station prefix in Bunny Edge Storage one time. The runtime cleanup removes old segments. But it does not remove the variant playlists that have the old names.
-
-Player URL pattern:
+Player URL:
 
 ```text
 https://hls.example.com/{STATION_ID}/live.m3u8
 ```
 
-### Validation
-
-After you set HLS to on, do a check of the public URL:
+Validate the public stream and cache headers:
 
 ```bash
 ffprobe https://hls.example.com/zuidwest/live.m3u8
-curl -sI https://hls.example.com/zuidwest/live.m3u8
+curl --silent --head https://hls.example.com/zuidwest/live.m3u8
 ```
 
-The correct results are: two AAC-LC variants with the `mp4a.40.2` codec string, a playlist refresh after the edge-rule TTL, and `.ts` segments with a long cache lifetime.
+Expect two `mp4a.40.2` variants, changing media playlists, no segment `404` responses, and the configured cache lifetimes.
 
-### Failure Isolation
+### Failure isolation
 
-HLS is an optional CDN output. It must not stop the primary Icecast, DAB+, or DME outputs. Two layers make sure of this:
+- The `/hls` tmpfs prevents host filesystem capacity or permissions from stopping the writer.
+- The HLS clock error handler contains write failures.
+- The watchdog recreates a failed writer with exponential backoff from 5 seconds to 5 minutes.
+- Mirror errors do not stop the local writer or other outputs.
 
-- `/hls` is a dedicated tmpfs mount of 64 MB, owned by the container user. A full host disk, a read-only remount, or wrong ownership after deployment cannot touch the HLS writer. The live window uses approximately 2.5 MB. A host directory or a manual `chown` is not necessary.
-- The HLS chain operates on its own Liquidsoap clock with an error handler. If a write fails (for example, if the tmpfs is full), only the HLS output stops. The system writes the failure to the log at error level, and `hls.status` reports `degraded: local=<code>`. A watchdog makes the output again when `/hls` accepts writes. The watchdog uses exponential backoff, from 5 seconds to a maximum of 5 minutes. The primary outputs continue during this sequence, and a restart is not necessary.
-
-Older installations get the tmpfs mount when you do `install.sh` again. The script refreshes `docker-compose.yml`. The old `./hls` host directory then has no function, and you can remove it.
-
-Monitor `hls.status` through the server socket. Send an alert if the status is `degraded` for more than one backoff cycle.
-
-## DME Integration (Dutch Media Exchange)
-
-Radio Rucphen and BredaNu must have DME output. DME distributes their audio through the Dutch public broadcast system. The station configuration files contain the DME configuration.
-
-### Required Variables
-
-Set all DME variables for these stations:
-
-```bash
-# Primary ingest point
-DME_PRIMARY_HOST=ingest1.dme.nl
-DME_PRIMARY_PORT=8010
-DME_PRIMARY_USER=station-live
-DME_PRIMARY_PASSWORD=secret
-
-# Secondary ingest point
-DME_SECONDARY_HOST=ingest2.dme.nl
-DME_SECONDARY_PORT=8020
-DME_SECONDARY_USER=station-backup
-DME_SECONDARY_PASSWORD=secret
-
-# Stream mount point
-DME_MOUNT_POINT=/live
-```
-
-## Metadata Integration
-
-For now-playing information and metadata routes, see the [zwfm-metadata](https://github.com/oszuidwest/zwfm-metadata) project.
+Use `hls.status` or `outputs.hls` in `GET /status` to distinguish local writer failures from mirror failures.
 
 ## Troubleshooting
 
-### Common Problems
-
-**No audio output**
-
-- Make sure that the firewall permits the SRT ports (`SRT_PORT_PRIMARY` and `SRT_PORT_SECONDARY`; defaults: 8888/9999).
-- Make sure that `SRT_PASSPHRASE` is the same on the encoder and on Liquidsoap.
-- Examine the Docker logs: `docker compose logs -f`
-
-**The stream changes sources again and again**
-
-- Increase `SILENCE_SWITCH_SECONDS` if the connection is not stable.
-- Do a check of the network between the encoder and the server. `studio_a.srt` and `studio_b.srt` on the server socket show the SRT latency, round-trip time, and total dropped packets. A growing dropped-packet count between two calls points to the network.
-- Make sure that the encoder sends continuous audio.
-
-**Icecast connection failed**
-
-- Make sure that `ICECAST_HOST` and `ICECAST_PORT` are correct.
-- Make sure that `ICECAST_SOURCE_PASSWORD` is the same as on the server.
-- Make sure that the Icecast server operates and that you can connect to it.
-
-**The HLS playlist is old or segments are missing**
-
-- Make sure that `HLS_BUNNY_STORAGE_ZONE`, `HLS_BUNNY_ACCESS_KEY`, and `HLS_BUNNY_ENDPOINT` are correct.
-- Examine the Docker logs for `hls` upload, delete, or reconcile messages.
-- Make sure that the Bunny pull zone has a cache rule of 1-2 seconds for `*.m3u8`.
-- Make sure that CORS includes the `m3u8` and `ts` extensions.
-
-**The HLS output is degraded (`hls.status` reports `degraded`)**
-
-- The local HLS writer failed. The `/hls` directory is full or does not accept writes. The primary outputs continue.
-- Examine the Docker logs for `HLS output degraded` lines. These lines show the reason.
-- Make sure that the `/hls` tmpfs mount is present and not full: `docker exec liquidsoap df -h /hls`
-- The watchdog does new tries automatically. The log shows `HLS output recovered` after a good try.
-
-**StereoTool does not process the audio**
-
-- Make sure that `STEREOTOOL_LICENSE` is correct.
-- For ZuidWest, run `stereotool_driver.status` through the runtime-control socket and verify that it reports `on`.
-- Examine the web interface on port 8080.
-- Examine the Docker logs for license validation errors.
-
-### Debug Commands
+Start with the structured status API and container logs:
 
 ```bash
-# Show all logs
-docker compose logs -f
-
-# Show the service status
 docker compose ps
-
-# Restart the services
-docker compose restart
-
-# Do the syntax validation
-docker run --rm -v "$PWD:/app" -w /app savonet/liquidsoap:v2.4.5 liquidsoap -c conf/*.liq
+docker compose logs -f
 ```
+
+### Repeated source switching
+
+- Check `studio_a.buffer`, `studio_b.buffer`, and the active source.
+- Check `studio_a.srt` and `studio_b.srt` for round-trip time and increasing packet drops.
+- Adjust `SILENCE_THRESHOLD` or `SILENCE_SWITCH_SECONDS` only when valid audio is being classified as silence.
+
+### Icecast is disconnected
+
+- Check the affected entry in `outputs.icecast.streams`.
+- Verify `ICECAST_HOST`, `ICECAST_PORT`, `ICECAST_SOURCE_PASSWORD`, and server reachability.
+
+### HLS is stale or degraded
+
+- Check `hls.status`. `local=<code>` identifies writer or tmpfs failures; `mirror=<code>` identifies Bunny API failures.
+- Verify the Bunny credentials and endpoint.
+- Check the pull-zone playlist cache rule and CORS settings.
+- Inspect the tmpfs with `docker exec liquidsoap df -h /hls`.
+
+### DAB+ is degraded or down
+
+- Run `dab.status` and inspect each destination's TCP state and ACK age.
+- Verify the EDI URL and the warning/down thresholds.
+- Check the logs for ODR-AudioEnc restarts or monitor errors.
+
+### StereoTool is not active
+
+- Confirm that the station uses StereoTool and `STEREOTOOL_LICENSE` is set.
+- Check the web interface and container logs for license errors.
+- On ZuidWest, `stereotool_driver.status` confirms that the MicroMPX branch is being consumed; its Icecast, DAB+, and HLS outputs intentionally bypass StereoTool.
 
 ## Development
 
-### Build from Source
+The Dockerfile pins Liquidsoap 2.4.5. Validate each station entry point with the same image:
 
 ```bash
-# Clone the repository
-git clone https://github.com/oszuidwest/zwfm-liquidsoap.git
-cd zwfm-liquidsoap
+for file in conf/*.liq; do
+  docker run --rm -v "$PWD:/app" -w /app \
+    savonet/liquidsoap:v2.4.5 liquidsoap -c "$file"
+done
+```
 
-# Build the image for your platform. The --load option puts it in the local image store.
+Run the Liquidsoap and shell tests:
+
+```bash
+for test in tests/*.liq; do
+  docker run --rm -v "$PWD:/app" -w /app \
+    savonet/liquidsoap:v2.4.5 liquidsoap "$test"
+done
+./tests/test-dab-tcp-ack-monitor.sh
+```
+
+Also run `shellcheck install.sh` and, with a configured `.env`, `docker compose config --quiet` when changing shell or deployment files. Format Liquidsoap code with `liquidsoap-prettier -w "**/*.liq"`.
+
+Build a local image:
+
+```bash
 docker buildx build --load -t zwfm-liquidsoap:local .
 ```
 
-The Compose file points to the image on `ghcr.io`. To start the services with your local image, set the `image:` value in `docker-compose.yml` to `zwfm-liquidsoap:local`. Then start the services:
+The Compose file uses the published GHCR image. Set its `image` to `zwfm-liquidsoap:local` to run the local build. A multi-platform build check does not load an image:
 
 ```bash
-docker compose up -d
+docker buildx build \
+  --platform linux/amd64,linux/arm64 \
+  -t zwfm-liquidsoap:local .
 ```
-
-A multi-platform build is also possible. Use it only as a build test, because the result stays in the build cache. It does not go into the local image store:
-
-```bash
-docker buildx build --platform linux/amd64,linux/arm64 -t zwfm-liquidsoap:local .
-```
-
-### Contribute
-
-1. Fork the repository.
-2. Make a feature branch.
-3. Make your changes.
-4. Do the syntax validation: `docker run --rm -v "$PWD:/app" -w /app savonet/liquidsoap:v2.4.5 liquidsoap -c conf/*.liq`
-5. Send a pull request.
 
 ## License
 
-Copyright 2026 Omroepstichting ZuidWest & Stichting Streekomroep voor de Baronie. The license of this project is the MIT License. See the [LICENSE](LICENSE) file for the full text.
+Copyright 2026 Omroepstichting ZuidWest & Stichting Streekomroep voor de Baronie. Licensed under the [MIT License](LICENSE).
 
 ## Acknowledgments
 
-- [Liquidsoap](https://www.liquidsoap.info/) - the audio stream language at the core of this system
-- [Icecast](https://icecast.org/) - the stream server
-- [StereoTool](https://www.stereotool.com/) - audio processing and MicroMPX
-- [Opendigitalradio](https://www.opendigitalradio.org/) - DAB+ tools and community
+- [Liquidsoap](https://www.liquidsoap.info/)
+- [Icecast](https://icecast.org/)
+- [StereoTool](https://www.stereotool.com/)
+- [Opendigitalradio](https://github.com/Opendigitalradio)
