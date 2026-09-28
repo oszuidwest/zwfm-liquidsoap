@@ -3,7 +3,10 @@
 
 # Load the real settings; set only required and test-specific values.
 environment.set("STATION_ID", "test")
-environment.set("STATION_NAME", "Test Station")
+environment.set(
+  "STATION_NAME",
+  "Test Station"
+)
 environment.set("ICECAST_HOST", "127.0.0.1")
 environment.set("ICECAST_PORT", "65534")
 environment.set("ICECAST_SOURCE_PASSWORD", "test")
