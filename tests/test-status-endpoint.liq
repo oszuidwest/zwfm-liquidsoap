@@ -10,6 +10,9 @@ environment.set("ICECAST_SOURCE_PASSWORD", "test")
 environment.set("SRT_PASSPHRASE", "test-passphrase")
 environment.set("STREAM_METADATA_BEARER_TOKEN", "test-metadata-token")
 environment.set("STATUS_BEARER_TOKEN", "test-status-token")
+environment.set("HTTP_PORT", "7000")
+environment.set("HLS_BUNNY_STORAGE_ZONE", "")
+environment.set("HLS_BUNNY_ACCESS_KEY", "")
 
 %include "../conf/lib/00_settings.liq"
 %include "../conf/lib/10_logging.liq"
