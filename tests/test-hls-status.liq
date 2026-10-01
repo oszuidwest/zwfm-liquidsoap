@@ -12,6 +12,14 @@ let HLS_SEGMENTS_OVERHEAD = 5
 
 %include "../conf/lib/62_output_hls.liq"
 
+def mirror_worker(error_code, segments, playlists, synced_at) =
+  {
+    error = ref(error_code),
+    pending = ref({segments = segments, playlists = playlists}),
+    synced_at = ref(synced_at)
+  }
+end
+
 let starting = hls_health()
 assert(starting.status == "starting")
 assert(starting.local.status == "starting")
@@ -36,8 +44,26 @@ file.write(data="", "#{HLS_DIR}/aac_96_2.ts")
 hls_local_file_names :=
   ["aac_96.m3u8", "live.m3u8", "aac_96_1.ts", "aac_96_2.ts"]
 hls_local_last_update_at := time()
-hls_mirror_pending := {segments = 1, playlists = 0}
-hls_mirror_last_sync_at := time()
+
+let now = time()
+let cleanup_error = ref("listing_failed")
+let cleanup_worker = {error = cleanup_error}
+let oldest_worker = mirror_worker("upload_failed", 1, 0, now - 5.0)
+let newest_worker = mirror_worker("", 2, 1, now)
+hls_mirror_health_tick([oldest_worker, newest_worker], cleanup_worker)
+assert(hls_mirror_error() == "listing_failed")
+assert(hls_mirror_pending() == {segments = 3, playlists = 1})
+assert(hls_mirror_last_sync_at() == oldest_worker.synced_at())
+
+cleanup_error := ""
+hls_mirror_health_tick(
+  [oldest_worker, mirror_worker("", 0, 0, null)],
+  cleanup_worker
+)
+assert(hls_mirror_error() == "upload_failed")
+assert(not null.defined(hls_mirror_last_sync_at()))
+
+hls_mirror_health_tick([mirror_worker("", 1, 0, time())], cleanup_worker)
 
 let healthy = hls_health()
 assert(healthy.status == "ok")
