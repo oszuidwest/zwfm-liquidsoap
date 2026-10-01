@@ -9,17 +9,6 @@ let hls_main_playlist_name = "live.m3u8"
 let hls_enabled = HLS_BUNNY_STORAGE_ZONE != "" and HLS_BUNNY_ACCESS_KEY != ""
 
 let hls_endpoint_trimmed = string.trim(HLS_BUNNY_ENDPOINT)
-def hls_scheme_for_endpoint(endpoint) =
-  if
-    r/^http:\/\/(localhost|127\.0\.0\.1|\[::1\])(:[0-9]+)?\/?$/.test(endpoint)
-  then
-    "http"
-  else
-    "https"
-  end
-end
-
-let hls_endpoint_scheme = hls_scheme_for_endpoint(hls_endpoint_trimmed)
 let hls_endpoint_without_https =
   string.residual(prefix="https://", hls_endpoint_trimmed)
     ?? hls_endpoint_trimmed
@@ -30,9 +19,7 @@ let hls_endpoint_host =
   r/\/+$/.replace(fun (_) -> "", hls_endpoint_without_scheme)
 
 let hls_remote_dir_url =
-  "#{hls_endpoint_scheme}://#{hls_endpoint_host}/#{HLS_BUNNY_STORAGE_ZONE}/#{
-    STATION_ID
-  }/"
+  "https://#{hls_endpoint_host}/#{HLS_BUNNY_STORAGE_ZONE}/#{STATION_ID}/"
 
 # Store stable API codes per component; log full failure details.
 let hls_local_error = ref("")
@@ -337,7 +324,8 @@ def hls_playlist_segment_names(content) =
   )
 end
 
-def hls_remote_listing(~on_error) =
+# Failures are reported through on_error and list nothing, so nothing is deleted.
+def hls_remote_segments(~on_error) =
   try
     let response =
       http.get(timeout=10.0, headers=hls_bunny_headers, hls_remote_dir_url)
@@ -353,7 +341,7 @@ def hls_remote_listing(~on_error) =
           fun ({object_name}) -> path.basename(object_name),
           remote_entries
         )
-      {ok = true, names = list.filter(hls_is_sync_file_name, names)}
+      list.filter(hls_is_segment_name, names)
     elsif
       response.status_code == 404
     then
@@ -363,7 +351,7 @@ def hls_remote_listing(~on_error) =
          create it",
         level=3
       )
-      {ok = true, names = []}
+      []
     else
       on_error(
         "listing_failed",
@@ -371,14 +359,14 @@ def hls_remote_listing(~on_error) =
           response.status_message
         }"
       )
-      {ok = false, names = []}
+      []
     end
   catch err do
     on_error(
       "listing_failed",
       "HLS mirror listing exception: #{err.kind}: #{err.message}"
     )
-    {ok = false, names = []}
+    []
   end
 end
 
@@ -441,11 +429,12 @@ def hls_start_playlist_worker(name, ~ready=fun () -> true) =
   let desired_segments = ref([])
 
   def pass(on_error) =
+    let local_path = "#{HLS_DIR}/#{name}"
     let snapshot =
       if
-        ready()
+        ready() and file.exists(local_path)
       then
-        hls_read_playlist_snapshot("#{HLS_DIR}/#{name}")
+        hls_read_playlist_snapshot(local_path)
       else
         null
       end
@@ -499,33 +488,30 @@ def hls_variants_published(variant_workers) =
   list.for_all(fun (worker) -> worker.synced_playlist() != "", variant_workers)
 end
 
-def hls_mirror_protected_segments(variant_workers) =
-  list.fold(
-    fun (protected, worker) ->
-      hls_union(
-        hls_union(protected, worker.desired_segments()),
-        hls_playlist_segment_names(worker.synced_playlist())
-      ),
-    [],
-    variant_workers
-  )
-end
-
-# Cleanup is deliberately off the publication path. Protect both the currently
-# published window and each worker's in-flight desired window from deletion.
+# Cleanup is deliberately off the publication path. Keep every segment that is
+# still local, published, or being uploaded. Local files include the overhead
+# segments, which keep removed segments online for lagging clients (RFC 8216
+# section 6.2.2). List before protecting so new uploads are never candidates.
 def hls_mirror_cleanup_pass(variant_workers, on_error) =
   if
     hls_variants_published(variant_workers)
   then
-    let listing = hls_remote_listing(on_error=on_error)
-    let protected = hls_mirror_protected_segments(variant_workers)
+    let remote_segments = hls_remote_segments(on_error=on_error)
+    let protected =
+      list.fold(
+        fun (protected, worker) ->
+          hls_union(
+            hls_union(protected, worker.desired_segments()),
+            hls_playlist_segment_names(worker.synced_playlist())
+          ),
+        hls_local_file_names(),
+        variant_workers
+      )
     ignore(
       list.for_all(
         fun (name) ->
-          not hls_is_segment_name(name)
-          or list.mem(name, protected)
-          or hls_delete_file(name, on_error=on_error),
-        listing.names
+          list.mem(name, protected) or hls_delete_file(name, on_error=on_error),
+        remote_segments
       )
     )
   end

@@ -94,8 +94,14 @@ let HLS_BITRATE_HIGH =
 let HLS_SEGMENT_DURATION =
   float_of_string(environment.get("HLS_SEGMENT_DURATION", default="4.0"))
 let HLS_SEGMENTS = int_of_string(environment.get("HLS_SEGMENTS", default="10"))
+
+# RFC 8216 6.2.2: removed segments stay available for one segment plus one
+# playlist duration. The mirror keeps every local segment remotely; Liquidsoap
+# keeps overhead - 1 segments after removal, and +1 covers mirror lag.
 let HLS_SEGMENTS_OVERHEAD =
-  int_of_string(environment.get("HLS_SEGMENTS_OVERHEAD", default="5"))
+  int_of_string(
+    environment.get("HLS_SEGMENTS_OVERHEAD", default="#{HLS_SEGMENTS + 3}")
+  )
 
 # Shared HTTP listener for the status and stream metadata endpoints
 let HTTP_PORT = int_of_string(environment.get("HTTP_PORT", default="7000"))
