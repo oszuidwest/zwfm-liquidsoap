@@ -21,6 +21,14 @@ assert(starting.mirror.storage_zone == "test-zone")
 assert(not null.defined(starting.local.update_age_seconds))
 assert(not null.defined(starting.mirror.sync_age_seconds))
 
+# Cleanup must preserve both the remote window and a replacement being uploaded.
+let variant = hls_new_mirror_worker("aac_96.m3u8")
+variant.set_synced_playlist("#EXTM3U\naac_96_old.ts\n")
+variant.set_desired_segments(["aac_96_new.ts"])
+let protected = hls_mirror_protected_segments([variant])
+assert(list.mem("aac_96_old.ts", protected))
+assert(list.mem("aac_96_new.ts", protected))
+
 # No first progress degrades after the same grace as stalled progress.
 hls_started_at := time() - hls_stale_after_seconds - 1.0
 let never_started = hls_health()
