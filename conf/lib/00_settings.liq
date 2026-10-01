@@ -7,7 +7,7 @@ settings.clock.max_latency := 60.0
 settings.frame.audio.channels := 2
 settings.frame.audio.samplerate := 48000
 
-# Reserve a queue for quick tasks so slow Bunny or DAB I/O cannot delay them.
+# Isolate quick tasks from blocking Bunny and DAB I/O.
 settings.scheduler.fast_queues := 1
 
 # Station identity (REQUIRED - no defaults)
@@ -95,9 +95,7 @@ let HLS_SEGMENT_DURATION =
   float_of_string(environment.get("HLS_SEGMENT_DURATION", default="4.0"))
 let HLS_SEGMENTS = int_of_string(environment.get("HLS_SEGMENTS", default="10"))
 
-# RFC 8216 6.2.2: removed segments stay available for one segment plus one
-# playlist duration. The mirror keeps every local segment remotely; Liquidsoap
-# keeps overhead - 1 segments after removal, and +1 covers mirror lag.
+# Cover RFC 8216 section 6.2.2 plus one segment of mirror lag.
 let HLS_SEGMENTS_OVERHEAD =
   int_of_string(
     environment.get("HLS_SEGMENTS_OVERHEAD", default="#{HLS_SEGMENTS + 3}")

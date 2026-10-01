@@ -31,7 +31,6 @@ let hls_local_last_update_at = ref(null)
 let hls_mirror_last_sync_at = ref(null)
 let hls_started_at = ref(time())
 
-# Files the playlist workers' last passes left unsynced.
 let hls_mirror_pending = ref({segments = 0, playlists = 0})
 
 # Allow at least four segment intervals for scheduling and upload jitter.
@@ -324,7 +323,7 @@ def hls_playlist_segment_names(content) =
   )
 end
 
-# Failures are reported through on_error and list nothing, so nothing is deleted.
+# An empty result prevents cleanup after a listing failure.
 def hls_remote_segments(~on_error) =
   try
     let response =
@@ -370,9 +369,7 @@ def hls_remote_segments(~on_error) =
   end
 end
 
-# Runs one recurring mirror pass. pass(on_error) returns pending counts; only a
-# clean pass refreshes synced_at, so a failing or hung worker surfaces as stalled.
-# Failed passes back off exponentially to limit requests and log noise.
+# Refresh progress only after a clean pass; retry failures with backoff.
 def hls_start_mirror_worker(what, ~every=1.0, pass) =
   let last_error = ref("")
   let pending = ref({segments = 0, playlists = 1})
@@ -390,7 +387,7 @@ def hls_start_mirror_worker(what, ~every=1.0, pass) =
         log(label="hls", reason, level=2)
       end
 
-      # An escaping exception would permanently stop the recurring task.
+      # Keep exceptions from stopping the recurring task.
       try
         pending := pass(on_error)
       catch err do
@@ -421,8 +418,7 @@ def hls_start_mirror_worker(what, ~every=1.0, pass) =
   {error = last_error, pending = pending, synced_at = synced_at}
 end
 
-# One worker per playlist, so a slow request cannot starve another variant.
-# A playlist is published only after every segment it references is mirrored.
+# Isolate each playlist and publish it only after its segments.
 def hls_start_playlist_worker(name, ~ready=fun () -> true) =
   let synced_segments = ref([])
   let synced_playlist = ref("")
@@ -473,7 +469,7 @@ def hls_start_playlist_worker(name, ~ready=fun () -> true) =
         playlists = if synced_playlist() == snapshot.content then 0 else 1 end
       }
     else
-      # Playlists do not exist until the HLS muxer has produced its first window.
+      # Stay pending until the muxer produces its first window.
       {segments = 0, playlists = 1}
     end
   end
@@ -488,10 +484,8 @@ def hls_variants_published(variant_workers) =
   list.for_all(fun (worker) -> worker.synced_playlist() != "", variant_workers)
 end
 
-# Cleanup is deliberately off the publication path. Keep every segment that is
-# still local, published, or being uploaded. Local files include the overhead
-# segments, which keep removed segments online for lagging clients (RFC 8216
-# section 6.2.2). List before protecting so new uploads are never candidates.
+# Local overhead protects lagging clients per RFC 8216 section 6.2.2.
+# List first so concurrent uploads cannot become deletion candidates.
 def hls_mirror_cleanup_pass(variant_workers, on_error) =
   if
     hls_variants_published(variant_workers)
@@ -539,7 +533,7 @@ def hls_mirror_health_tick(playlist_workers, cleanup_worker) =
       playlist_workers
     )
 
-  # The mirror is only as fresh as its stalest playlist worker.
+  # Mirror freshness follows the stalest playlist.
   let stamps = list.map(fun (worker) -> worker.synced_at(), playlist_workers)
   hls_mirror_last_sync_at :=
     if
@@ -559,7 +553,6 @@ def hls_segment_name(segment_metadata) =
   }"
 end
 
-# Exponential restart backoff.
 let hls_retry_delay_initial = 5.0
 let hls_retry_delay_max = 300.0
 let hls_backoff_reset_seconds = 120.0
@@ -575,7 +568,7 @@ def hls_dir_writable() =
   end
 end
 
-# A fresh timeline makes old local output disposable; the mirror prunes segments.
+# Remote cleanup makes old local timelines disposable.
 def hls_remove_stale_local_files() =
   hls_local_file_names := []
 
@@ -634,7 +627,6 @@ def output_hls_stream(audio_source) =
       hls_local_error() != ""
     end
 
-    # Record the failure and schedule the next attempt.
     def hls_mark_degraded(code, reason) =
       let retry_in = hls_retry_delay()
       hls_retry_at := time() + retry_in
@@ -732,7 +724,6 @@ def output_hls_stream(audio_source) =
       end
     end
 
-    # Start degraded when HLS_DIR is unwritable; the watchdog retries.
     ignore(try_start_hls_output())
 
     def hls_watchdog() =
@@ -753,7 +744,6 @@ def output_hls_stream(audio_source) =
         and hls_retry_delay() != hls_retry_delay_initial
         and time() - hls_retry_at() > hls_backoff_reset_seconds
       then
-        # Restore fast retries after sustained health.
         hls_retry_delay := hls_retry_delay_initial
       end
     end

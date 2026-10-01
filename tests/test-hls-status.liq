@@ -21,14 +21,14 @@ assert(starting.mirror.storage_zone == "test-zone")
 assert(not null.defined(starting.local.update_age_seconds))
 assert(not null.defined(starting.mirror.sync_age_seconds))
 
-# No first progress degrades after the same grace as stalled progress.
+# Apply the stall grace before initial progress.
 hls_started_at := time() - hls_stale_after_seconds - 1.0
 let never_started = hls_health()
 assert(never_started.local.status == "degraded")
 assert(never_started.mirror.status == "degraded")
 hls_started_at := time()
 
-# Simulate local output plus a complete, successful mirror pass.
+# Seed fresh local and mirror progress.
 file.write(data="#EXTM3U", "#{HLS_DIR}/aac_96.m3u8")
 file.write(data="#EXTM3U", "#{HLS_DIR}/live.m3u8")
 file.write(data="", "#{HLS_DIR}/aac_96_1.ts")
@@ -52,7 +52,7 @@ assert(healthy.mirror.pending_segments == 1)
 assert(healthy.mirror.pending_playlists == 0)
 assert(not null.defined(healthy.mirror.error))
 
-# Guard record-spread serialization.
+# Preserve null errors when spreading health records.
 let encoded = json.stringify(compact=true, healthy)
 assert(string.contains(substring="\"error\":null", encoded))
 assert(string.contains(substring="\"pending_segments\":1", encoded))
