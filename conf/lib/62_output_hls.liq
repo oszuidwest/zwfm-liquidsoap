@@ -698,6 +698,7 @@ def output_hls_stream(audio_source) =
         let hls_output =
           output.file.hls(
             id="hls",
+            register_telnet=false,
             playlist=hls_main_playlist_name,
             segment_duration=HLS_SEGMENT_DURATION,
             segments=HLS_SEGMENTS,
