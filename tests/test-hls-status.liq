@@ -12,6 +12,14 @@ let HLS_SEGMENTS_OVERHEAD = 5
 
 %include "../conf/lib/62_output_hls.liq"
 
+def mirror_worker(error_code, segments, playlists, synced_at) =
+  {
+    error = ref(error_code),
+    pending = ref({segments = segments, playlists = playlists}),
+    synced_at = ref(synced_at)
+  }
+end
+
 let starting = hls_health()
 assert(starting.status == "starting")
 assert(starting.local.status == "starting")
@@ -21,14 +29,14 @@ assert(starting.mirror.storage_zone == "test-zone")
 assert(not null.defined(starting.local.update_age_seconds))
 assert(not null.defined(starting.mirror.sync_age_seconds))
 
-# No first progress degrades after the same grace as stalled progress.
+# Apply the stall grace before initial progress.
 hls_started_at := time() - hls_stale_after_seconds - 1.0
 let never_started = hls_health()
 assert(never_started.local.status == "degraded")
 assert(never_started.mirror.status == "degraded")
 hls_started_at := time()
 
-# Simulate local output plus a complete, successful mirror pass.
+# Seed fresh local and mirror progress.
 file.write(data="#EXTM3U", "#{HLS_DIR}/aac_96.m3u8")
 file.write(data="#EXTM3U", "#{HLS_DIR}/live.m3u8")
 file.write(data="", "#{HLS_DIR}/aac_96_1.ts")
@@ -36,8 +44,26 @@ file.write(data="", "#{HLS_DIR}/aac_96_2.ts")
 hls_local_file_names :=
   ["aac_96.m3u8", "live.m3u8", "aac_96_1.ts", "aac_96_2.ts"]
 hls_local_last_update_at := time()
-hls_mirror_pending := {segments = 1, playlists = 0}
-hls_mirror_last_sync_at := time()
+
+let now = time()
+let cleanup_error = ref("listing_failed")
+let cleanup_worker = {error = cleanup_error}
+let oldest_worker = mirror_worker("upload_failed", 1, 0, now - 5.0)
+let newest_worker = mirror_worker("", 2, 1, now)
+hls_mirror_health_tick([oldest_worker, newest_worker], cleanup_worker)
+assert(hls_mirror_error() == "listing_failed")
+assert(hls_mirror_pending() == {segments = 3, playlists = 1})
+assert(hls_mirror_last_sync_at() == oldest_worker.synced_at())
+
+cleanup_error := ""
+hls_mirror_health_tick(
+  [oldest_worker, mirror_worker("", 0, 0, null)],
+  cleanup_worker
+)
+assert(hls_mirror_error() == "upload_failed")
+assert(not null.defined(hls_mirror_last_sync_at()))
+
+hls_mirror_health_tick([mirror_worker("", 1, 0, time())], cleanup_worker)
 
 let healthy = hls_health()
 assert(healthy.status == "ok")
@@ -52,7 +78,7 @@ assert(healthy.mirror.pending_segments == 1)
 assert(healthy.mirror.pending_playlists == 0)
 assert(not null.defined(healthy.mirror.error))
 
-# Guard record-spread serialization.
+# Preserve null errors when spreading health records.
 let encoded = json.stringify(compact=true, healthy)
 assert(string.contains(substring="\"error\":null", encoded))
 assert(string.contains(substring="\"pending_segments\":1", encoded))
@@ -82,8 +108,13 @@ assert(missing.local.status == "degraded")
 assert(null.get(missing.local.error) == "dir_missing")
 assert(missing.local.playlist_count == 0)
 
-assert(not hls_put_file("#{HLS_DIR}/missing.ts"))
-assert(hls_mirror_tick_failed())
-assert(null.get(hls_health().mirror.error) == "local_file_missing")
+let upload_error = ref("")
+assert(
+  not hls_put_file(
+    on_error=fun (code, _) -> upload_error := code,
+    "#{HLS_DIR}/missing.ts"
+  )
+)
+assert(upload_error() == "local_file_missing")
 
 shutdown()

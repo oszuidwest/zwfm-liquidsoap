@@ -289,7 +289,7 @@ Possible error codes are:
 | `outputs.dab.error`                                  | `encoder_error` (ODR-AudioEnc crashed in the last 30 seconds), `monitor_failed` (the ACK monitor gave no usable result) |
 | `outputs.dab.destinations[].error`                   | `ack_stalled`, `no_socket`, `tcp_not_established`, `invalid_destination`, `monitor_failed`                              |
 | `outputs.hls.local.error`                            | `dir_missing`, `dir_not_writable`, `clock_error`, `stalled`                                                             |
-| `outputs.hls.mirror.error`                           | `listing_failed`, `upload_failed`, `delete_failed`, `read_failed`, `local_file_missing`, `stalled`                      |
+| `outputs.hls.mirror.error`                           | `listing_failed`, `upload_failed`, `delete_failed`, `read_failed`, `local_file_missing`, `worker_failed`, `stalled`     |
 
 The top-level status becomes `degraded` when the emergency source is active or an enabled output is unhealthy. It becomes `down` when the radio source is unavailable. HTTP responses use `200` for `ok` and `degraded`, `503` for `down`, and `401` for a missing or invalid token.
 
@@ -436,7 +436,7 @@ The default ladder contains two AAC-LC MPEG-TS variants:
 
 `HLS_BITRATE_MID` and `HLS_BITRATE_HIGH` change the encoded bitrates; the playlist names stay fixed. The project pins Liquidsoap 2.4.5 and uses one AAC profile because mixed HE-AAC and AAC-LC variants can drift apart ([Liquidsoap issue #5319](https://github.com/savonet/liquidsoap/issues/5319)).
 
-`live.m3u8` is the main playlist. Defaults are 4-second segments, 10 segments per media playlist, and 5 extra local segments for lagging clients. A playlist is uploaded only after all segments it references are present remotely. Failed uploads therefore leave the previous valid playlist online.
+`live.m3u8` is the main playlist. Defaults are 4-second segments, 10 segments per media playlist, and an `HLS_SEGMENTS_OVERHEAD` of `HLS_SEGMENTS + 3` (13), which keeps 12 removed segments locally for lagging clients. Each variant has an independent mirror worker, so a slow Bunny request cannot starve the other bitrate. A worker reads the newest playlist after every pass and uploads only its referenced segments; obsolete local backlog is skipped. A playlist is uploaded only after all segments it references are present remotely, so failed uploads leave the previous valid playlist online. Remote cleanup runs separately from publication and keeps every segment that is still local, published, or being uploaded, so while the mirror keeps up, a segment stays online for at least one segment plus one playlist duration after it leaves the playlist ([RFC 8216 section 6.2.2](https://www.rfc-editor.org/rfc/rfc8216#section-6.2.2)).
 
 ### Bunny setup
 
@@ -469,6 +469,7 @@ Expect two `mp4a.40.2` variants, changing media playlists, no segment `404` resp
 - The `/hls` tmpfs prevents host filesystem capacity or permissions from stopping the writer.
 - The HLS clock error handler contains write failures.
 - The watchdog recreates a failed writer with exponential backoff from 5 seconds to 5 minutes.
+- Mirror workers retry independently with exponential backoff from 1 to 30 seconds.
 - Mirror errors do not stop the local writer or other outputs.
 
 Use `hls.status` or `outputs.hls` in `GET /status` to distinguish local writer failures from mirror failures.

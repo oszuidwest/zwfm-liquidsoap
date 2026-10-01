@@ -7,6 +7,9 @@ settings.clock.max_latency := 60.0
 settings.frame.audio.channels := 2
 settings.frame.audio.samplerate := 48000
 
+# Isolate quick tasks from blocking Bunny and DAB I/O.
+settings.scheduler.fast_queues := 1
+
 # Station identity (REQUIRED - no defaults)
 let STATION_ID = string.case(environment.get("STATION_ID"), lower=true)
 let STATION_NAME = environment.get("STATION_NAME")
@@ -91,8 +94,12 @@ let HLS_BITRATE_HIGH =
 let HLS_SEGMENT_DURATION =
   float_of_string(environment.get("HLS_SEGMENT_DURATION", default="4.0"))
 let HLS_SEGMENTS = int_of_string(environment.get("HLS_SEGMENTS", default="10"))
+
+# Cover RFC 8216 section 6.2.2 plus one segment of mirror lag.
 let HLS_SEGMENTS_OVERHEAD =
-  int_of_string(environment.get("HLS_SEGMENTS_OVERHEAD", default="5"))
+  int_of_string(
+    environment.get("HLS_SEGMENTS_OVERHEAD", default="#{HLS_SEGMENTS + 3}")
+  )
 
 # Shared HTTP listener for the status and stream metadata endpoints
 let HTTP_PORT = int_of_string(environment.get("HTTP_PORT", default="7000"))
