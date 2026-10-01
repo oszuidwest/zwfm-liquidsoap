@@ -20,6 +20,9 @@ assert(starting.mirror.host == "storage.example.test")
 assert(starting.mirror.storage_zone == "test-zone")
 assert(not null.defined(starting.local.update_age_seconds))
 assert(not null.defined(starting.mirror.sync_age_seconds))
+assert(hls_scheme_for_endpoint("http://127.0.0.1:18080") == "http")
+assert(hls_scheme_for_endpoint("http://localhost:18080") == "http")
+assert(hls_scheme_for_endpoint("http://storage.example.test") == "https")
 
 # Cleanup must preserve both the remote window and a replacement being uploaded.
 let variant = hls_new_mirror_worker("aac_96.m3u8")

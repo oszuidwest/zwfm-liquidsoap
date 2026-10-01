@@ -10,8 +10,17 @@ let hls_variant_playlist_names = ["aac_96.m3u8", "aac_192.m3u8"]
 let hls_enabled = HLS_BUNNY_STORAGE_ZONE != "" and HLS_BUNNY_ACCESS_KEY != ""
 
 let hls_endpoint_trimmed = string.trim(HLS_BUNNY_ENDPOINT)
-let hls_endpoint_scheme =
-  if r/^http:\/\//.test(hls_endpoint_trimmed) then "http" else "https" end
+def hls_scheme_for_endpoint(endpoint) =
+  if
+    r/^http:\/\/(localhost|127\.0\.0\.1|\[::1\])(:[0-9]+)?\/?$/.test(endpoint)
+  then
+    "http"
+  else
+    "https"
+  end
+end
+
+let hls_endpoint_scheme = hls_scheme_for_endpoint(hls_endpoint_trimmed)
 let hls_endpoint_without_https =
   string.residual(prefix="https://", hls_endpoint_trimmed)
     ?? hls_endpoint_trimmed
