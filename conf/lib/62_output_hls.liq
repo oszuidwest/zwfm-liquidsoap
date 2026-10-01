@@ -5,7 +5,6 @@
 
 let hls_bunny_headers = [("AccessKey", HLS_BUNNY_ACCESS_KEY), ("Expect", "")]
 let hls_main_playlist_name = "live.m3u8"
-let hls_variant_playlist_names = ["aac_96.m3u8", "aac_192.m3u8"]
 
 let hls_enabled = HLS_BUNNY_STORAGE_ZONE != "" and HLS_BUNNY_ACCESS_KEY != ""
 
@@ -45,26 +44,15 @@ let hls_local_last_update_at = ref(null)
 let hls_mirror_last_sync_at = ref(null)
 let hls_started_at = ref(time())
 
-# Local files the last mirror pass left unsynced.
+# Files the playlist workers' last passes left unsynced.
 let hls_mirror_pending = ref({segments = 0, playlists = 0})
 
 # Allow at least four segment intervals for scheduling and upload jitter.
 let hls_stale_after_seconds = max(15.0, HLS_SEGMENT_DURATION * 4.0)
 
-# Compatibility helpers and direct-call tests use this failure flag. Runtime
-# workers keep independent failure state so one healthy variant cannot clear a
-# concurrent failure from the other variant.
-let hls_mirror_tick_failed = ref(false)
-
+let hls_mirror_cleanup_interval = 30.0
 let hls_mirror_retry_delay_initial = 1.0
 let hls_mirror_retry_delay_max = 30.0
-let hls_mirror_cleanup_interval = 30.0
-
-def hls_mark_mirror_degraded(code, reason) =
-  hls_mirror_tick_failed := true
-  hls_mirror_error := code
-  log(label="hls", reason, level=2)
-end
 
 def hls_progress_age(last_progress_at) =
   null.map(
@@ -152,7 +140,7 @@ def hls_union(names, extra_names) =
   list.fold(fun (acc, name) -> hls_add_unique(name, acc), names, extra_names)
 end
 
-def hls_put_data(remote_name, data, ~on_error=hls_mark_mirror_degraded) =
+def hls_put_data(remote_name, data, ~on_error) =
   try
     let response =
       http.put(
@@ -186,7 +174,7 @@ def hls_put_data(remote_name, data, ~on_error=hls_mark_mirror_degraded) =
   end
 end
 
-def hls_put_file(local_path, ~on_error=hls_mark_mirror_degraded) =
+def hls_put_file(local_path, ~on_error) =
   let remote_name = path.basename(local_path)
   if
     not file.exists(local_path)
@@ -211,7 +199,7 @@ def hls_put_file(local_path, ~on_error=hls_mark_mirror_degraded) =
   end
 end
 
-def hls_delete_file(remote_name, ~on_error=hls_mark_mirror_degraded) =
+def hls_delete_file(remote_name, ~on_error) =
   try
     let response =
       http.delete(
@@ -349,7 +337,7 @@ def hls_playlist_segment_names(content) =
   )
 end
 
-def hls_remote_listing(~on_error=hls_mark_mirror_degraded) =
+def hls_remote_listing(~on_error) =
   try
     let response =
       http.get(timeout=10.0, headers=hls_bunny_headers, hls_remote_dir_url)
@@ -394,216 +382,130 @@ def hls_remote_listing(~on_error=hls_mark_mirror_degraded) =
   end
 end
 
-def hls_new_mirror_worker(name) =
-  let synced_segments = ref([])
-  let synced_playlist = ref("")
-  let desired_segments = ref([])
-  let pending_segments = ref(0)
-  let pending_playlist = ref(1)
-  let worker_error = ref("")
+# Runs one recurring mirror pass. pass(on_error) returns pending counts; only a
+# clean pass refreshes synced_at, so a failing or hung worker surfaces as stalled.
+# Failed passes back off exponentially to limit requests and log noise.
+def hls_start_mirror_worker(what, ~every=1.0, pass) =
+  let last_error = ref("")
+  let pending = ref({segments = 0, playlists = 1})
+  let synced_at = ref(null)
   let retry_at = ref(0.0)
   let retry_delay = ref(hls_mirror_retry_delay_initial)
-  let busy = ref(false)
-  {
-    name = name,
-    synced_segments = synced_segments,
-    set_synced_segments = fun (value) -> synced_segments := value,
-    synced_playlist = synced_playlist,
-    set_synced_playlist = fun (value) -> synced_playlist := value,
-    desired_segments = desired_segments,
-    set_desired_segments = fun (value) -> desired_segments := value,
-    pending_segments = pending_segments,
-    set_pending_segments = fun (value) -> pending_segments := value,
-    pending_playlist = pending_playlist,
-    set_pending_playlist = fun (value) -> pending_playlist := value,
-    error = worker_error,
-    set_error = fun (value) -> worker_error := value,
-    retry_at = retry_at,
-    set_retry_at = fun (value) -> retry_at := value,
-    retry_delay = retry_delay,
-    set_retry_delay = fun (value) -> retry_delay := value,
-    busy = busy,
-    set_busy = fun (value) -> busy := value
-  }
-end
 
-def hls_schedule_mirror_retry(worker) =
-  let retry_in = worker.retry_delay()
-  worker.set_retry_at(time() + retry_in)
-  worker.set_retry_delay(min(retry_in * 2.0, hls_mirror_retry_delay_max))
-end
-
-def hls_reset_mirror_retry(worker) =
-  worker.set_retry_at(0.0)
-  worker.set_retry_delay(hls_mirror_retry_delay_initial)
-end
-
-# A variant worker owns its mutable state. Separate recurring tasks can therefore
-# upload both renditions concurrently without one rendition starving the other.
-def hls_mirror_variant_tick(worker) =
-  if
-    time() >= worker.retry_at()
-  then
-    worker.set_busy(true)
-    let snapshot = hls_read_playlist_snapshot("#{HLS_DIR}/#{worker.name}")
-
+  def run() =
     if
-      null.defined(snapshot)
+      time() >= retry_at()
     then
-      let snapshot = null.get(snapshot)
-      let required_segments = hls_playlist_segment_names(snapshot.content)
-      worker.set_desired_segments(required_segments)
-      worker.set_synced_segments(
-        list.filter(
-          fun (name) -> list.mem(name, required_segments),
-          worker.synced_segments()
-        )
-      )
-
       let pass_error = ref("")
       def on_error(code, reason) =
         pass_error := code
         log(label="hls", reason, level=2)
       end
 
-      let upload_ok = ref(true)
-      list.iter(
-        fun (segment_name) ->
-          begin
-            if
-              upload_ok()
-              and not list.mem(segment_name, worker.synced_segments())
-            then
-              if
-                hls_put_file("#{HLS_DIR}/#{segment_name}", on_error=on_error)
-              then
-                worker.set_synced_segments(
-                  hls_add_unique(segment_name, worker.synced_segments())
-                )
-              else
-                upload_ok := false
-              end
-            end
-          end,
-        required_segments
-      )
-
-      worker.set_pending_segments(
-        list.length(
-          list.filter(
-            fun (name) -> not list.mem(name, worker.synced_segments()),
-            required_segments
-          )
+      # An escaping exception would permanently stop the recurring task.
+      try
+        pending := pass(on_error)
+      catch err do
+        on_error(
+          "worker_failed",
+          "HLS #{what} error: #{err.kind}: #{err.message}"
         )
-      )
+      end
 
+      last_error := pass_error()
       if
-        upload_ok()
-        and worker.pending_segments() == 0
-        and worker.synced_playlist() != snapshot.content
+        pass_error() != ""
       then
+        retry_at := time() + retry_delay()
+        retry_delay := min(retry_delay() * 2.0, hls_mirror_retry_delay_max)
+      else
+        retry_delay := hls_mirror_retry_delay_initial
         if
-          hls_put_data(snapshot.name, snapshot.content, on_error=on_error)
+          pending().segments + pending().playlists == 0
         then
-          worker.set_synced_playlist(snapshot.content)
+          synced_at := time()
+        end
+      end
+    end
+  end
+
+  thread.run(fast=false, delay=every, every=every, run)
+  {error = last_error, pending = pending, synced_at = synced_at}
+end
+
+# One worker per playlist, so a slow request cannot starve another variant.
+# A playlist is published only after every segment it references is mirrored.
+def hls_start_playlist_worker(name, ~ready=fun () -> true) =
+  let synced_segments = ref([])
+  let synced_playlist = ref("")
+  let desired_segments = ref([])
+
+  def pass(on_error) =
+    let snapshot =
+      if
+        ready()
+      then
+        hls_read_playlist_snapshot("#{HLS_DIR}/#{name}")
+      else
+        null
+      end
+
+    if
+      null.defined(snapshot)
+    then
+      let snapshot = null.get(snapshot)
+      let required = hls_playlist_segment_names(snapshot.content)
+      desired_segments := required
+      synced_segments :=
+        list.filter(fun (s) -> list.mem(s, required), synced_segments())
+
+      def upload(segment) =
+        list.mem(segment, synced_segments())
+        or begin
+          let ok = hls_put_file("#{HLS_DIR}/#{segment}", on_error=on_error)
+          if ok then synced_segments := [segment, ...synced_segments()] end
+          ok
         end
       end
 
-      worker.set_pending_playlist(
-        if worker.synced_playlist() == snapshot.content then 0 else 1 end
-      )
-
       if
-        pass_error() == ""
-        and worker.pending_segments() == 0
-        and worker.pending_playlist() == 0
+        list.for_all(upload, required)
+        and synced_playlist() != snapshot.content
+        and hls_put_data(snapshot.name, snapshot.content, on_error=on_error)
       then
-        worker.set_error("")
-        hls_reset_mirror_retry(worker)
-      elsif
-        pass_error() != ""
-      then
-        worker.set_error(pass_error())
-        hls_schedule_mirror_retry(worker)
+        synced_playlist := snapshot.content
       end
+
+      {
+        segments =
+          list.length(
+            list.filter(fun (s) -> not list.mem(s, synced_segments()), required)
+          ),
+        playlists = if synced_playlist() == snapshot.content then 0 else 1 end
+      }
     else
       # Playlists do not exist until the HLS muxer has produced its first window.
-      worker.set_pending_playlist(1)
+      {segments = 0, playlists = 1}
     end
-    worker.set_busy(false)
   end
+
+  hls_start_mirror_worker(
+    "#{name} mirror",
+    pass
+  ).{synced_playlist = synced_playlist, desired_segments = desired_segments}
 end
 
 def hls_variants_published(variant_workers) =
   list.for_all(fun (worker) -> worker.synced_playlist() != "", variant_workers)
 end
 
-def hls_mirror_main_tick(worker, variant_workers) =
-  if
-    time() >= worker.retry_at() and hls_variants_published(variant_workers)
-  then
-    worker.set_busy(true)
-    let snapshot =
-      hls_read_playlist_snapshot("#{HLS_DIR}/#{hls_main_playlist_name}")
-
-    if
-      null.defined(snapshot)
-    then
-      let snapshot = null.get(snapshot)
-      let pass_error = ref("")
-      def on_error(code, reason) =
-        pass_error := code
-        log(label="hls", reason, level=2)
-      end
-
-      if
-        worker.synced_playlist() != snapshot.content
-      then
-        if
-          hls_put_data(snapshot.name, snapshot.content, on_error=on_error)
-        then
-          worker.set_synced_playlist(snapshot.content)
-        end
-      end
-
-      worker.set_pending_playlist(
-        if worker.synced_playlist() == snapshot.content then 0 else 1 end
-      )
-
-      if
-        pass_error() == "" and worker.pending_playlist() == 0
-      then
-        worker.set_error("")
-        hls_reset_mirror_retry(worker)
-      elsif
-        pass_error() != ""
-      then
-        worker.set_error(pass_error())
-        hls_schedule_mirror_retry(worker)
-      end
-    else
-      worker.set_pending_playlist(1)
-    end
-    worker.set_busy(false)
-  end
-end
-
 def hls_mirror_protected_segments(variant_workers) =
   list.fold(
     fun (protected, worker) ->
-      begin
-        let protected = hls_union(protected, worker.desired_segments())
-        if
-          worker.synced_playlist() == ""
-        then
-          protected
-        else
-          hls_union(
-            protected,
-            hls_playlist_segment_names(worker.synced_playlist())
-          )
-        end
-      end,
+      hls_union(
+        hls_union(protected, worker.desired_segments()),
+        hls_playlist_segment_names(worker.synced_playlist())
+      ),
     [],
     variant_workers
   )
@@ -611,96 +513,56 @@ end
 
 # Cleanup is deliberately off the publication path. Protect both the currently
 # published window and each worker's in-flight desired window from deletion.
-def hls_mirror_cleanup_tick(worker, variant_workers) =
+def hls_mirror_cleanup_pass(variant_workers, on_error) =
   if
-    time() >= worker.retry_at() and hls_variants_published(variant_workers)
+    hls_variants_published(variant_workers)
   then
-    worker.set_busy(true)
-    let pass_error = ref("")
-    def on_error(code, reason) =
-      pass_error := code
-      log(label="hls", reason, level=2)
-    end
-
     let listing = hls_remote_listing(on_error=on_error)
-    if
-      listing.ok
-    then
-      let protected_segments = hls_mirror_protected_segments(variant_workers)
-      let delete_ok = ref(true)
-      list.iter(
-        fun (remote_name) ->
-          begin
-            if
-              delete_ok()
-              and hls_is_segment_name(remote_name)
-              and not list.mem(remote_name, protected_segments)
-            then
-              if
-                not hls_delete_file(remote_name, on_error=on_error)
-              then
-                delete_ok := false
-              end
-            end
-          end,
+    let protected = hls_mirror_protected_segments(variant_workers)
+    ignore(
+      list.for_all(
+        fun (name) ->
+          not hls_is_segment_name(name)
+          or list.mem(name, protected)
+          or hls_delete_file(name, on_error=on_error),
         listing.names
       )
-    end
-
-    if
-      pass_error() == ""
-    then
-      worker.set_error("")
-      hls_reset_mirror_retry(worker)
-    else
-      worker.set_error(pass_error())
-      hls_schedule_mirror_retry(worker)
-    end
-    worker.set_busy(false)
+    )
   end
+  {segments = 0, playlists = 0}
 end
 
-def hls_mirror_health_tick(workers) =
-  let pending_segments =
-    list.fold(
-      fun (count, worker) -> count + worker.pending_segments(),
-      0,
-      workers
+def hls_mirror_health_tick(playlist_workers, cleanup_worker) =
+  hls_mirror_error :=
+    list.find(
+      default="",
+      fun (code) -> code != "",
+      [
+        cleanup_worker.error(),
+        ...list.map(fun (worker) -> worker.error(), playlist_workers)
+      ]
     )
-  let pending_playlists =
-    list.fold(
-      fun (count, worker) -> count + worker.pending_playlist(),
-      0,
-      workers
-    )
-  let mirror_error =
-    list.fold(
-      fun (code, worker) ->
-        if
-          code == "" and worker.error() != ""
-        then
-          worker.error()
-        else
-          code
-        end,
-      "",
-      workers
-    )
-  let busy =
-    list.fold(fun (busy, worker) -> busy or worker.busy(), false, workers)
-
   hls_mirror_pending :=
-    {segments = pending_segments, playlists = pending_playlists}
-  hls_mirror_error := mirror_error
+    list.fold(
+      fun (total, worker) ->
+        {
+          segments = total.segments + worker.pending().segments,
+          playlists = total.playlists + worker.pending().playlists
+        },
+      {segments = 0, playlists = 0},
+      playlist_workers
+    )
 
-  if
-    not busy
-    and mirror_error == ""
-    and pending_segments == 0
-    and pending_playlists == 0
-  then
-    hls_mirror_last_sync_at := time()
-  end
+  # The mirror is only as fresh as its stalest playlist worker.
+  let stamps = list.map(fun (worker) -> worker.synced_at(), playlist_workers)
+  hls_mirror_last_sync_at :=
+    if
+      list.for_all(null.defined, stamps)
+    then
+      list.fold(fun (oldest, s) -> min(oldest, null.get(s)), time(), stamps)
+    else
+      null
+    end
 end
 
 # Unique names allow long CDN caching without persisted resume state.
@@ -756,23 +618,6 @@ def hls_guard_task(what, task) =
     try
       task()
     catch err do
-      log(
-        label="hls",
-        "HLS #{what} error: #{err.kind}: #{err.message}",
-        level=2
-      )
-    end
-end
-
-# Unexpected worker exceptions must not leave health permanently marked busy.
-def hls_guard_mirror_worker(what, worker, task) =
-  fun () ->
-    try
-      task()
-    catch err do
-      worker.set_busy(false)
-      worker.set_error("worker_failed")
-      hls_schedule_mirror_retry(worker)
       log(
         label="hls",
         "HLS #{what} error: #{err.kind}: #{err.message}",
@@ -862,6 +707,9 @@ def output_hls_stream(audio_source) =
         extname = "ts"
       }
 
+    # Stream ids also name the variant playlists the mirror publishes.
+    let hls_streams = [("aac_96", aac_mid), ("aac_192", aac_high)]
+
     def try_start_hls_output() =
       if
         hls_dir_writable()
@@ -878,7 +726,7 @@ def output_hls_stream(audio_source) =
             segments_overhead=HLS_SEGMENTS_OVERHEAD,
             segment_name=hls_segment_name,
             HLS_DIR,
-            [("aac_96", aac_mid), ("aac_192", aac_high)],
+            hls_streams,
             hls_source
           )
         hls_output.on_file_change(synchronous=true, hls_track_local_progress)
@@ -925,64 +773,36 @@ def output_hls_stream(audio_source) =
     end
 
     thread.run(
-      fast=false,
       every=hls_retry_delay_initial,
       hls_guard_task("watchdog", hls_watchdog)
     )
 
     let hls_variant_workers =
-      list.map(hls_new_mirror_worker, hls_variant_playlist_names)
-    let hls_main_worker = hls_new_mirror_worker(hls_main_playlist_name)
-    let hls_cleanup_worker = hls_new_mirror_worker("cleanup")
-    hls_cleanup_worker.set_pending_playlist(0)
-
-    list.iter(
-      fun (worker) ->
-        thread.run(
-          fast=false,
-          delay=1.0,
-          every=1.0,
-          hls_guard_mirror_worker(
-            "#{worker.name} mirror worker",
-            worker,
-            fun () -> hls_mirror_variant_tick(worker)
-          )
-        ),
-      hls_variant_workers
-    )
-
-    thread.run(
-      fast=false,
-      delay=1.0,
-      every=1.0,
-      hls_guard_mirror_worker(
-        "main playlist mirror worker",
-        hls_main_worker,
-        fun () -> hls_mirror_main_tick(hls_main_worker, hls_variant_workers)
+      list.map(
+        fun (stream) -> hls_start_playlist_worker("#{fst(stream)}.m3u8"),
+        hls_streams
       )
-    )
-
-    thread.run(
-      fast=false,
-      delay=hls_mirror_cleanup_interval,
-      every=hls_mirror_cleanup_interval,
-      hls_guard_mirror_worker(
-        "mirror cleanup worker",
-        hls_cleanup_worker,
-        fun () ->
-          hls_mirror_cleanup_tick(hls_cleanup_worker, hls_variant_workers)
+    let hls_main_worker =
+      hls_start_playlist_worker(
+        hls_main_playlist_name,
+        ready=fun () -> hls_variants_published(hls_variant_workers)
       )
-    )
+    let hls_cleanup_worker =
+      hls_start_mirror_worker(
+        "mirror cleanup",
+        every=hls_mirror_cleanup_interval,
+        fun (on_error) -> hls_mirror_cleanup_pass(hls_variant_workers, on_error)
+      )
 
     thread.run(
-      fast=false,
       delay=1.0,
       every=1.0,
       hls_guard_task(
         "mirror health",
         fun () ->
           hls_mirror_health_tick(
-            [hls_main_worker, hls_cleanup_worker, ...hls_variant_workers]
+            [hls_main_worker, ...hls_variant_workers],
+            hls_cleanup_worker
           )
       )
     )

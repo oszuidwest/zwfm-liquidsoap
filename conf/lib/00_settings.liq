@@ -7,6 +7,9 @@ settings.clock.max_latency := 60.0
 settings.frame.audio.channels := 2
 settings.frame.audio.samplerate := 48000
 
+# Reserve a queue for quick tasks so slow Bunny or DAB I/O cannot delay them.
+settings.scheduler.fast_queues := 1
+
 # Station identity (REQUIRED - no defaults)
 let STATION_ID = string.case(environment.get("STATION_ID"), lower=true)
 let STATION_NAME = environment.get("STATION_NAME")

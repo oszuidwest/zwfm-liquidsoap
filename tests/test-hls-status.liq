@@ -25,9 +25,11 @@ assert(hls_scheme_for_endpoint("http://localhost:18080") == "http")
 assert(hls_scheme_for_endpoint("http://storage.example.test") == "https")
 
 # Cleanup must preserve both the remote window and a replacement being uploaded.
-let variant = hls_new_mirror_worker("aac_96.m3u8")
-variant.set_synced_playlist("#EXTM3U\naac_96_old.ts\n")
-variant.set_desired_segments(["aac_96_new.ts"])
+let variant =
+  {
+    synced_playlist = ref("#EXTM3U\naac_96_old.ts\n"),
+    desired_segments = ref(["aac_96_new.ts"])
+  }
 let protected = hls_mirror_protected_segments([variant])
 assert(list.mem("aac_96_old.ts", protected))
 assert(list.mem("aac_96_new.ts", protected))
@@ -93,8 +95,13 @@ assert(missing.local.status == "degraded")
 assert(null.get(missing.local.error) == "dir_missing")
 assert(missing.local.playlist_count == 0)
 
-assert(not hls_put_file("#{HLS_DIR}/missing.ts"))
-assert(hls_mirror_tick_failed())
-assert(null.get(hls_health().mirror.error) == "local_file_missing")
+let upload_error = ref("")
+assert(
+  not hls_put_file(
+    on_error=fun (code, _) -> upload_error := code,
+    "#{HLS_DIR}/missing.ts"
+  )
+)
+assert(upload_error() == "local_file_missing")
 
 shutdown()
