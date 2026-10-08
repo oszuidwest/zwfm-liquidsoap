@@ -283,7 +283,6 @@ The JSON schema is stable: unavailable scalar values are `null`, collections rem
 HLS mirror diagnostics describe publication to storage, not delivery through the public CDN:
 
 - `published_age_seconds` is the age, by generation time, of the newest acknowledged segment in the stalest variant playlist. It stays `null` until every variant has an acknowledged, timestamped publication. The static master playlist is excluded.
-- `sync_age_seconds` is the age of the oldest worker's last clean pass, including no-op passes; it is not proof of fresh published audio.
 - `pending_segments` and `pending_playlists` are sampled from the current local windows, including while uploads run.
 - `recovered_uploads` counts successful uploads after earlier failed attempts for the same object name; a playlist may have advanced in the meantime.
 - `expired_segments` counts observed, unconfirmed segments that left a worker's live window, including segments blocked behind another failed upload. Expiry means no confirmed upload, not proven remote data loss. Both counters reset when the process restarts.

@@ -26,9 +26,8 @@ let hls_local_error = ref("")
 let hls_mirror_error = ref("")
 let hls_local_file_names = ref([])
 
-# Null timestamps mean no local update or complete mirror pass yet.
+# Null timestamps mean no local update or acknowledged publication yet.
 let hls_local_last_update_at = ref(null)
-let hls_mirror_last_sync_at = ref(null)
 let hls_mirror_last_published_at = ref(null)
 let hls_mirror_recovered_uploads = ref(0)
 let hls_mirror_expired_segments = ref(0)
@@ -247,7 +246,6 @@ end
 
 def hls_health() =
   let local_age = hls_progress_age(hls_local_last_update_at())
-  let mirror_age = hls_progress_age(hls_mirror_last_sync_at())
   let published_age = hls_progress_age(hls_mirror_last_published_at())
   let hls_dir_present = file.is_directory(HLS_DIR)
   let local_file_names =
@@ -302,7 +300,6 @@ def hls_health() =
         ...mirror,
         host = if hls_enabled then hls_endpoint_host else null end,
         storage_zone = if hls_enabled then HLS_BUNNY_STORAGE_ZONE else null end,
-        sync_age_seconds = mirror_age,
         published_age_seconds = published_age,
         recovered_uploads = hls_mirror_recovered_uploads(),
         expired_segments = hls_mirror_expired_segments(),
@@ -392,7 +389,7 @@ def hls_remote_segments(~on_error) =
   end
 end
 
-# Refresh progress only after a clean pass; retry failures with backoff.
+# Retry failures with bounded exponential backoff.
 def hls_create_mirror_worker(
   what,
   ~retry_delay_max=hls_mirror_retry_delay_max,
@@ -401,7 +398,6 @@ def hls_create_mirror_worker(
   pass
 ) =
   let last_error = ref("")
-  let synced_at = ref(null)
   let retry_at = ref(0.0)
   let initial_delay = min(hls_mirror_retry_delay_initial, retry_delay_max)
   let retry_delay = ref(initial_delay)
@@ -417,16 +413,14 @@ def hls_create_mirror_worker(
       end
 
       # Keep exceptions from stopping the recurring task.
-      let clean =
-        try
-          pass(on_error)
-        catch err do
-          on_error(
-            "worker_failed",
-            "HLS #{what} error: #{err.kind}: #{err.message}"
-          )
-          false
-        end
+      try
+        pass(on_error)
+      catch err do
+        on_error(
+          "worker_failed",
+          "HLS #{what} error: #{err.kind}: #{err.message}"
+        )
+      end
 
       last_error := pass_error()
       if
@@ -436,12 +430,11 @@ def hls_create_mirror_worker(
         retry_delay := min(retry_delay() * 2.0, retry_delay_max)
       else
         retry_delay := initial_delay
-        if clean then synced_at := now() end
       end
     end
   end
 
-  {run = run, error = last_error, synced_at = synced_at}
+  {run = run, error = last_error}
 end
 
 def hls_start_worker(every, worker) =
@@ -588,11 +581,6 @@ def hls_create_playlist_worker(
         synced_playlist := snapshot.content
         published_at := hls_newest_segment_time(required)
       end
-
-      snapshot.content != "" and synced_playlist() == snapshot.content
-    else
-      # Not clean until the muxer produces its first window.
-      false
     end
   end
 
@@ -641,7 +629,6 @@ def hls_mirror_cleanup_pass(variant_workers, on_error) =
       )
     )
   end
-  true
 end
 
 # Null until every timestamp is known; otherwise the oldest.
@@ -692,10 +679,6 @@ def hls_mirror_health_tick(main_worker, variant_workers, cleanup_worker) =
   # Published audio follows the stalest variant; the master playlist is static.
   hls_mirror_last_published_at :=
     hls_oldest(list.map(fun (worker) -> worker.published_at(), variant_workers))
-
-  # Clean-pass age is retained for compatibility, not publication freshness.
-  hls_mirror_last_sync_at :=
-    hls_oldest(list.map(fun (worker) -> worker.synced_at(), workers))
 end
 
 # Unique names allow long CDN caching without persisted resume state.
