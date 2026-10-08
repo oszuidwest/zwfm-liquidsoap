@@ -693,7 +693,7 @@ def hls_mirror_health_tick(main_worker, variant_workers, cleanup_worker) =
   hls_mirror_last_published_at :=
     hls_oldest(list.map(fun (worker) -> worker.published_at(), variant_workers))
 
-  # Mirror freshness follows the stalest playlist.
+  # Clean-pass age is retained for compatibility, not publication freshness.
   hls_mirror_last_sync_at :=
     hls_oldest(list.map(fun (worker) -> worker.synced_at(), workers))
 end
@@ -934,9 +934,9 @@ def output_hls_stream(audio_source) =
         )
       )
 
-    # Health reads local playlists, so keep it off the fast queue.
+    # Keep health sampling independent of blocked upload and cleanup workers.
     thread.run(
-      fast=false,
+      fast=true,
       delay=1.0,
       every=1.0,
       hls_guard_task(

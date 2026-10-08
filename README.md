@@ -278,7 +278,7 @@ The JSON schema is stable: unavailable scalar values are `null`, collections rem
 - `studio_inputs` reports connection state, buffered seconds, stereo RMS and peak levels over 0.5 seconds, and SRT latency, receive-buffer, round-trip, and drop statistics. Its status is `down` when disconnected, `degraded` when silent, `starting` while its buffer fills, and `ok` when ready.
 - `outputs.icecast.streams` reports the stable stream ID, host, port, mount, and connection state of every Icecast output.
 - `outputs.dab.destinations` reports the TCP state, ACK age, byte counters, send queue, unacknowledged segments, and retransmissions for each configured EDI destination.
-- `outputs.hls` separates local writer health from Bunny mirror health. An HLS component becomes `degraded` with `stalled` after `max(15.0, HLS_SEGMENT_DURATION * 4.0)` seconds without progress: 16 seconds with the defaults. Mirror health follows `published_age_seconds`, so uploading stale audio does not make the mirror look fresh.
+- `outputs.hls` reports local writer health and Bunny publication health. The local writer becomes `degraded` with `stalled` after `max(15.0, HLS_SEGMENT_DURATION * 4.0)` seconds without playlist updates: 16 seconds with the defaults. The mirror uses the same threshold for `published_age_seconds`, so even successful uploads report `stalled` if the published audio is too old. A local writer stall also stalls the mirror; if both report `stalled`, start with the writer.
 
 HLS mirror diagnostics describe publication to storage, not delivery through the public CDN:
 
@@ -482,7 +482,7 @@ Expect two `mp4a.40.2` variants, changing media playlists, no segment `404` resp
 - Failed uploads log their attempt number; recovery and expiry are logged explicitly.
 - Mirror errors do not stop the local writer or other outputs.
 
-Use `hls.status` or `outputs.hls` in `GET /status` to distinguish local writer failures from mirror failures.
+Use `hls.status` or `outputs.hls` in `GET /status` to inspect writer and publication health together. Slow but successful PUTs can exceed the publication-age threshold; `mirror=stalled` signals stale audio, not necessarily a failed Bunny request. The threshold is deliberately not extended by upload timeouts.
 
 ## Troubleshooting
 
@@ -506,7 +506,7 @@ docker compose logs -f
 
 ### HLS is stale or degraded
 
-- Check `hls.status`. `local=<code>` identifies writer or tmpfs failures; `mirror=<code>` identifies Bunny API failures.
+- Check `hls.status`. `local=<code>` identifies writer or tmpfs failures; `mirror=<code>` identifies publication problems, including stale audio. If both show `stalled`, investigate the writer first; if only the mirror is stalled, inspect upload latency and the pending counts in `GET /status`.
 - Verify the Bunny credentials and endpoint.
 - Check the pull-zone playlist cache rule and CORS settings.
 - Inspect the tmpfs with `docker exec liquidsoap df -h /hls`.

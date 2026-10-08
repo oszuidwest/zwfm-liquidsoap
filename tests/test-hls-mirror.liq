@@ -93,6 +93,16 @@ assert(hls_newest_segment_time([]) == null)
 assert(hls_newest_segment_time(["legacy.ts"]) == null)
 assert(hls_newest_segment_time([a, b]) == 1004.0)
 
+# Keep the production filename format and timestamp units in sync with health.
+let before_name = float_of_int(int_of_float(time()))
+let generated_time =
+  hls_newest_segment_time(
+    [hls_segment_name({stream_name = "aac_96", position = 7, extname = "ts"})]
+  )
+assert(null.defined(generated_time))
+assert(null.get(generated_time) >= before_name)
+assert(null.get(generated_time) <= time())
+
 # Segment retries back off 1, 2, 4, 4 seconds. No playlist can be uploaded
 # before all required segments have acknowledged uploads.
 let first = write_playlist([a, b])
