@@ -278,7 +278,15 @@ The JSON schema is stable: unavailable scalar values are `null`, collections rem
 - `studio_inputs` reports connection state, buffered seconds, stereo RMS and peak levels over 0.5 seconds, and SRT latency, receive-buffer, round-trip, and drop statistics. Its status is `down` when disconnected, `degraded` when silent, `starting` while its buffer fills, and `ok` when ready.
 - `outputs.icecast.streams` reports the stable stream ID, host, port, mount, and connection state of every Icecast output.
 - `outputs.dab.destinations` reports the TCP state, ACK age, byte counters, send queue, unacknowledged segments, and retransmissions for each configured EDI destination.
-- `outputs.hls` separates local writer health from Bunny mirror health. An HLS component becomes `degraded` with `stalled` after `max(15.0, HLS_SEGMENT_DURATION * 4.0)` seconds without progress: 16 seconds with the defaults.
+- `outputs.hls` separates local writer health from Bunny mirror health. An HLS component becomes `degraded` with `stalled` after `max(15.0, HLS_SEGMENT_DURATION * 4.0)` seconds without progress: 16 seconds with the defaults. Mirror health follows `published_age_seconds`, so uploading stale audio does not make the mirror look fresh.
+
+HLS mirror diagnostics describe publication to storage, not delivery through the public CDN:
+
+- `published_age_seconds` is the age, by generation time, of the newest acknowledged segment in the stalest variant playlist. It stays `null` until every variant has an acknowledged, timestamped publication. The static master playlist is excluded.
+- `sync_age_seconds` is the age of the oldest worker's last clean pass, including no-op passes; it is not proof of fresh published audio.
+- `pending_segments` and `pending_playlists` are sampled from the current local windows, including while uploads run.
+- `recovered_uploads` counts successful uploads after earlier failed attempts for the same object name; a playlist may have advanced in the meantime.
+- `expired_segments` counts observed, unconfirmed segments that left a worker's live window, including segments blocked behind another failed upload. Expiry means no confirmed upload, not proven remote data loss. Both counters reset when the process restarts.
 
 Possible error codes are:
 
@@ -469,7 +477,9 @@ Expect two `mp4a.40.2` variants, changing media playlists, no segment `404` resp
 - The `/hls` tmpfs prevents host filesystem capacity or permissions from stopping the writer.
 - The HLS clock error handler contains write failures.
 - The watchdog recreates a failed writer with exponential backoff from 5 seconds to 5 minutes.
-- Mirror workers retry independently with exponential backoff from 1 to 30 seconds.
+- Publication workers retry independently with exponential backoff from 1 second to `max(0.1, min(4.0, HLS_SEGMENT_DURATION))` seconds (also capping the initial delay), re-reading the latest window on each pass. PUT timeouts are `max(0.1, min(10.0, HLS_SEGMENT_DURATION))` seconds: 4 seconds each with the defaults.
+- Cleanup keeps its 1-to-30-second retry backoff and 10-second request timeout.
+- Failed uploads log their attempt number; recovery and expiry are logged explicitly.
 - Mirror errors do not stop the local writer or other outputs.
 
 Use `hls.status` or `outputs.hls` in `GET /status` to distinguish local writer failures from mirror failures.
