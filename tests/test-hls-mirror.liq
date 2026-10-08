@@ -144,10 +144,9 @@ assert(
   )
 )
 
-# Clean no-op passes must not make the published audio look newer.
+# No-op passes must not make the published audio look newer.
 fake_now := 1020.0
 worker.run()
-assert(worker.synced_at() == 1020.0)
 assert(worker.published_at() == 1004.0)
 assert(list.length(calls()) == 7)
 
@@ -235,7 +234,7 @@ exception_worker.run()
 assert(exception_worker.error() == "")
 assert(exception_worker.published_at() == 1000.0)
 
-# Waiting for the writer is not a clean pass, even without a transport error.
+# Waiting for the writer leaves publication unknown and makes no requests.
 let ready = ref(false)
 let waiting =
   hls_create_playlist_worker(
@@ -249,13 +248,11 @@ let waiting =
 calls := []
 waiting.run()
 assert(waiting.error() == "")
-assert(waiting.synced_at() == null)
 assert(waiting.published_at() == null)
 assert(waiting.pending().playlists == 1)
 assert(calls() == [])
 ready := true
 waiting.run()
-assert(waiting.synced_at() == fake_now())
 assert(waiting.published_at() == 1000.0)
 assert(calls() == [a, playlist_name])
 
@@ -282,7 +279,6 @@ let short =
           "upload_failed",
           "simulated timeout"
         )
-        false
       end
   )
 short.run()

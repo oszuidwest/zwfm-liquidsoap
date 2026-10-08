@@ -12,18 +12,11 @@ let HLS_SEGMENTS_OVERHEAD = 5
 
 %include "../conf/lib/62_output_hls.liq"
 
-def mirror_worker(
-  error_code,
-  segments,
-  playlists,
-  synced_at,
-  ~published_at=null
-) =
+def mirror_worker(error_code, segments, playlists, published_at) =
   {
     error = ref(error_code),
-    synced_at = ref(synced_at),
     pending = fun () -> {segments = segments, playlists = playlists},
-    published_at = ref(published_at ?? synced_at),
+    published_at = ref(published_at),
     recovered_uploads = ref(0),
     expired_segments = ref(0)
   }
@@ -36,7 +29,7 @@ assert(starting.mirror.status == "starting")
 assert(starting.mirror.host == "storage.example.test")
 assert(starting.mirror.storage_zone == "test-zone")
 assert(not null.defined(starting.local.update_age_seconds))
-assert(not null.defined(starting.mirror.sync_age_seconds))
+assert(not null.defined(starting.mirror.published_age_seconds))
 
 # Apply the stall grace before initial progress.
 hls_started_at := time() - hls_stale_after_seconds - 1.0
@@ -62,8 +55,7 @@ let newest_worker = mirror_worker("", 2, 1, now)
 hls_mirror_health_tick(newest_worker, [oldest_worker], cleanup_worker)
 assert(hls_mirror_error() == "listing_failed")
 assert(hls_mirror_pending() == {segments = 3, playlists = 1})
-assert(hls_mirror_last_sync_at() == oldest_worker.synced_at())
-assert(hls_mirror_last_published_at() == oldest_worker.synced_at())
+assert(hls_mirror_last_published_at() == oldest_worker.published_at())
 
 cleanup_error := ""
 hls_mirror_health_tick(
@@ -72,7 +64,6 @@ hls_mirror_health_tick(
   cleanup_worker
 )
 assert(hls_mirror_error() == "upload_failed")
-assert(not null.defined(hls_mirror_last_sync_at()))
 assert(not null.defined(hls_mirror_last_published_at()))
 
 hls_mirror_health_tick(
@@ -89,7 +80,6 @@ assert(healthy.local.segment_count == 2)
 assert(null.get(healthy.local.update_age_seconds) < 1.0)
 assert(not null.defined(healthy.local.error))
 assert(healthy.mirror.status == "ok")
-assert(null.get(healthy.mirror.sync_age_seconds) < 1.0)
 assert(null.get(healthy.mirror.published_age_seconds) < 1.0)
 assert(healthy.mirror.recovered_uploads == 0)
 assert(healthy.mirror.expired_segments == 0)
@@ -101,26 +91,21 @@ assert(not null.defined(healthy.mirror.error))
 let encoded = json.stringify(compact=true, healthy)
 assert(string.contains(substring="\"error\":null", encoded))
 assert(string.contains(substring="\"pending_segments\":1", encoded))
+assert(not string.contains(substring="\"sync_age_seconds\":", encoded))
+assert(string.contains(substring="\"published_age_seconds\":", encoded))
 
-# A freshly completed pass can still have published stale audio. The worst
-# variant wins; the static master playlist must not affect media freshness.
+# The stalest published variant wins; the static master playlist must not
+# affect media freshness.
 hls_mirror_health_tick(
   mirror_worker("", 0, 0, time()),
   [
-    mirror_worker(
-      "",
-      0,
-      0,
-      time(),
-      published_at=time() - hls_stale_after_seconds - 1.0
-    ),
+    mirror_worker("", 0, 0, time() - hls_stale_after_seconds - 1.0),
     mirror_worker("", 0, 0, time())
   ],
   cleanup_worker
 )
 assert(hls_health().mirror.status == "degraded")
 assert(hls_health().mirror.error == "stalled")
-assert(null.get(hls_health().mirror.sync_age_seconds) < 1.0)
 hls_mirror_health_tick(
   mirror_worker("", 0, 0, null),
   [mirror_worker("", 0, 0, time())],
