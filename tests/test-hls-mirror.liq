@@ -1,4 +1,4 @@
-# Deterministic publication failures: no network calls or real backoff sleeps.
+# Mirror tests with simulated uploads and time.
 let STATION_ID = "test"
 let HLS_BUNNY_STORAGE_ZONE = "test-zone"
 let HLS_BUNNY_ACCESS_KEY = "test-key"
@@ -94,7 +94,7 @@ assert(hls_newest_segment_time([]) == null)
 assert(hls_newest_segment_time(["legacy.ts"]) == null)
 assert(hls_newest_segment_time([a, b]) == 1004.0)
 
-# Keep the production filename format and timestamp units in sync with health.
+# Segment filenames encode generation time in seconds.
 let before_name = float_of_int(int_of_float(time()))
 let generated_time =
   hls_newest_segment_time(
@@ -104,8 +104,7 @@ assert(null.defined(generated_time))
 assert(null.get(generated_time) >= before_name)
 assert(null.get(generated_time) <= time())
 
-# Segment retries back off 1, 2, 4, 4 seconds. No playlist can be uploaded
-# before all required segments have acknowledged uploads.
+# Retries back off 1, 2, 4, 4 seconds; segments must upload before the playlist.
 let first = write_playlist([a, b])
 let worker = create_worker()
 fail_files := true
@@ -145,14 +144,13 @@ assert(
   )
 )
 
-# No-op passes must not make the published audio look newer.
+# Idle passes preserve publication time.
 fake_now := 1020.0
 worker.run()
 assert(worker.published_at() == 1004.0)
 assert(list.length(calls()) == 7)
 
-# A failed playlist PUT preserves the old publication and retries the playlist
-# without re-uploading already acknowledged segments.
+# Failed playlist uploads preserve publication and reuse uploaded segments.
 ignore(write_playlist([b, c]))
 fail_playlist := true
 calls := []
@@ -163,8 +161,7 @@ assert(worker.pending() == {segments = 0, playlists = 1})
 fail_playlist := false
 fake_now := 1021.0
 
-# Simulate the writer advancing during a slow playlist PUT. Pending must see
-# the new window, not last pass's zero backlog.
+# Pending counts follow the live window during a slow playlist upload.
 upload_hook :=
   fun () ->
     begin
@@ -181,9 +178,8 @@ worker.run()
 assert(worker.pending() == {segments = 0, playlists = 0})
 assert(worker.published_at() == 1012.0)
 
-# A prolonged outage retains the last acknowledged playlist. Once the writer
-# has moved on, expired unconfirmed segments (even unattempted ones) are
-# explicitly counted, but never claimed to have failed delivery at storage.
+# Outages preserve the published playlist. Expiry counts unconfirmed segments,
+# including unattempted uploads; remote delivery remains unknown.
 fake_now := 2000.0
 let previous = write_playlist([a])
 let outage = create_worker()
@@ -222,7 +218,7 @@ list.iter(
 outage.run()
 assert(outage.expired_segments() == 2)
 
-# Transport exceptions are contained and remain retryable.
+# Transport exceptions remain retryable.
 ignore(write_playlist([a]))
 let exception_worker = create_worker()
 raise_exception := true
@@ -235,7 +231,7 @@ exception_worker.run()
 assert(exception_worker.error() == "")
 assert(exception_worker.published_at() == 1000.0)
 
-# Waiting for the writer leaves publication unknown and makes no requests.
+# No uploads or publication time until the writer is ready.
 let ready = ref(false)
 let waiting =
   hls_create_playlist_worker(
@@ -257,15 +253,14 @@ waiting.run()
 assert(waiting.published_at() == 1000.0)
 assert(calls() == [a, playlist_name])
 
-# Health totals include recovery/expiry across workers, excluding the static
-# master's null timestamp from published audio freshness.
+# Health sums worker counters; freshness excludes the static master playlist.
 let master = hls_create_playlist_worker(hls_main_playlist_name)
 hls_mirror_health_tick(master, [worker, outage], {error = fun () -> ""})
 assert(hls_health().mirror.recovered_uploads == 2)
 assert(hls_health().mirror.expired_segments == 2)
 assert(hls_mirror_last_published_at() == 1012.0)
 
-# The retry ceiling also bounds the first retry for sub-second segments.
+# The retry ceiling applies to the first retry too.
 let short_calls = ref(0)
 let short =
   hls_create_mirror_worker(

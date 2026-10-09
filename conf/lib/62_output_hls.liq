@@ -1,7 +1,4 @@
 # HLS writes locally and mirrors to Bunny Edge Storage.
-# The isolated clock contains filesystem failures; a watchdog replaces detached
-# outputs. Do not add persist_at: writing state while a failed output detaches
-# re-raises on the dead clock thread and stops the entire process.
 
 let hls_bunny_headers = [("AccessKey", HLS_BUNNY_ACCESS_KEY), ("Expect", "")]
 let hls_main_playlist_name = "live.m3u8"
@@ -57,7 +54,7 @@ def hls_progress_age(last_progress_at) =
   )
 end
 
-# Explicit failures outrank stalls; missing progress starts the same grace.
+# Explicit errors take precedence; startup uses the same stall threshold.
 def hls_component_health(failure, age) =
   let observed_age = age ?? max(0.0, time() - hls_started_at())
   let failure =
@@ -335,8 +332,7 @@ def hls_playlist_segment_names(content) =
   )
 end
 
-# hls_segment_name embeds generation time, independent of upload completion.
-# Return null without segments or for an unrecognized name, never a fresh time.
+# Read generation time from the last segment name; unknown times stay null.
 def hls_newest_segment_time(segments) =
   let match =
     r/_([0-9]+)_[0-9]+\.(aac|ts)$/.exec(list.last(default="", segments))
@@ -412,7 +408,7 @@ def hls_create_mirror_worker(
         report(2, reason)
       end
 
-      # Keep exceptions from stopping the recurring task.
+      # Uncaught exceptions stop the recurring task.
       try
         pass(on_error)
       catch err do
@@ -503,7 +499,7 @@ def hls_create_playlist_worker(
     ok
   end
 
-  # Read the current local window, even while an upload is in progress.
+  # Sample the live window even during uploads.
   def pending() =
     let content =
       null.map(fun (snapshot) -> snapshot.content, read_snapshot()) ?? ""
@@ -727,7 +723,7 @@ def hls_remove_stale_local_files() =
   )
 end
 
-# Catch errors because an escaping exception permanently stops a recurring task.
+# Keep recurring tasks alive after exceptions.
 def hls_guard_task(what, task) =
   fun () ->
     try
@@ -836,7 +832,7 @@ def output_hls_stream(audio_source) =
       then
         hls_remove_stale_local_files()
 
-        # Omit persist_at to preserve clock-error containment (see header).
+        # Omit persist_at: a state-write failure during detach can stop the process.
         let hls_output =
           output.file.hls(
             id="hls",

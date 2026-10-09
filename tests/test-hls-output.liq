@@ -1,5 +1,4 @@
-# Runs the real HLS output against a temporary directory. The storage endpoint
-# refuses connections, so the local writer runs while the mirror fails.
+# The local HLS writer stays healthy when storage refuses connections.
 settings.frame.audio.channels := 2
 settings.frame.audio.samplerate := 48000
 
@@ -19,7 +18,7 @@ let HLS_SEGMENTS_OVERHEAD = 1
 
 output_hls_stream(sine())
 
-# A separate timeout catches a crashed polling task and reports its last health.
+# An independent timeout catches polling failures.
 let last_health =
   ref(
     "no health recorded"
@@ -42,7 +41,6 @@ thread.run(
       let health = hls_health()
       last_health := json.stringify(health)
 
-      # Require writer progress plus the expected failed mirror pass.
       if
         health.local.status == "ok"
         and health.local.playlist_count == 4 # live.m3u8 + three variants
