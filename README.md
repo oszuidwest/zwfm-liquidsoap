@@ -62,7 +62,7 @@ flowchart LR
     linkStyle 9,10,11,12,13,14 stroke:#E91E8A,stroke-width:2px
 ```
 
-Blue lines carry audio. Pink lines carry now-playing metadata from zwfm-metadata. Dashed lines are metadata that Liquidsoap adds to its own streams.
+Blue lines carry audio. Pink lines carry now-playing metadata from zwfm-metadata. The dashed lines show where Liquidsoap passes that metadata on, as ICY updates to Icecast and as timed ID3 in HLS. Liquidsoap does not create metadata itself.
 
 ## Architecture
 
@@ -70,7 +70,7 @@ Liquidsoap selects the source in this order: Studio A, Studio B, emergency audio
 
 `EMERGENCY_AUDIO_PATH` must point to an audio file that Liquidsoap can decode. If the file is not usable, Liquidsoap stops during startup. Set `EMERGENCY_ALLOW_BLANK=true` to allow silence instead. Use this only for development or tests.
 
-When silence detection is disabled, a silent studio stays available as long as it is connected. Failover on disconnect still works. In this mode, the emergency source outputs silence.
+When silence detection is disabled, a silent studio stays available as long as it is connected, and only a disconnect triggers failover. In this mode, the emergency source outputs silence.
 
 Each station routes audio differently:
 
@@ -84,10 +84,12 @@ Each Icecast, DAB+, and HLS output runs on its own clock with a buffered safe so
 
 ### Related projects
 
-- [zwfm-encoder](https://github.com/oszuidwest/zwfm-encoder): SRT studio encoder for Raspberry Pi
-- [rpi-umpx-decoder](https://github.com/oszuidwest/rpi-umpx-decoder): MicroMPX receiver for Raspberry Pi
-- [zwfm-metadata](https://github.com/oszuidwest/zwfm-metadata): now-playing metadata router
-- [zwfm-odrbuilds](https://github.com/oszuidwest/zwfm-odrbuilds): prebuilt ODR-AudioEnc, ODR-PadEnc, and ODR-DabMux binaries used by the Dockerfile
+| Project                                                               | Purpose                                                                            |
+| --------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| [zwfm-encoder](https://github.com/oszuidwest/zwfm-encoder)           | SRT studio encoder for Raspberry Pi                                                |
+| [rpi-umpx-decoder](https://github.com/oszuidwest/rpi-umpx-decoder)   | MicroMPX receiver for Raspberry Pi                                                 |
+| [zwfm-metadata](https://github.com/oszuidwest/zwfm-metadata)         | Now-playing metadata router                                                        |
+| [zwfm-odrbuilds](https://github.com/oszuidwest/zwfm-odrbuilds)       | Prebuilt ODR-AudioEnc, ODR-PadEnc, and ODR-DabMux binaries used by the Dockerfile |
 
 ## Installation
 
@@ -200,7 +202,7 @@ The top-level status is `ok`, `degraded` (the emergency source is active or an e
 
 ### POST /metadata
 
-`POST /metadata` inserts now-playing metadata before processing and before the outputs. It updates the public Icecast mounts and adds timed ID3 metadata to HLS. DME ignores these ICY updates. DAB+ PAD and StereoTool RDS have their own integrations. The endpoint is registered only when `STREAM_METADATA_BEARER_TOKEN` is set. Use a different token than for `GET /status`.
+`POST /metadata` inserts now-playing metadata into the radio source, before processing and before the outputs. Liquidsoap only forwards what it receives here: the Icecast outputs send it as ICY updates, and HLS repeats it as timed ID3 in every segment. Liquidsoap generates no metadata of its own and drops the tags of the emergency audio file. DME ignores the ICY updates. DAB+ PAD and RDS do not pass through this endpoint, because zwfm-metadata sends them directly to ODR-PadEnc and to the StereoTool API. The endpoint is registered only when `STREAM_METADATA_BEARER_TOKEN` is set. Use a different token than for `GET /status`.
 
 ```bash
 curl http://127.0.0.1:7000/metadata \
@@ -218,13 +220,13 @@ Studio A listens on UDP `8888` and Studio B on UDP `9999` (`SRT_PORT_PRIMARY` an
 
 ## Icecast and DME
 
-Every station sends an MP3 stream and two AAC-LC streams to the configured Icecast server. The three outputs run independently. When one mount fails, `GET /status` reports it and the other outputs continue.
+Every station sends an MP3 stream and two AAC-LC streams to the configured Icecast server. The three outputs run independently, so when one mount fails, `GET /status` reports it and the other two continue.
 
-Radio Rucphen and BredaNu also send the high-bitrate AAC stream to two Dutch Media Exchange ingest points. These are two separate Icecast-compatible outputs. Liquidsoap sends audio to both at the same time, and DME decides how it uses them. Radio Rucphen sends the studio audio to DME without StereoTool. BredaNu sends its StereoTool output. DME uses `ICECAST_BITRATE_AAC_HIGH`, so changing that value also changes the `.stl` Icecast mount.
+Radio Rucphen and BredaNu also send the high-bitrate AAC stream to two Dutch Media Exchange ingest points, as two separate Icecast-compatible outputs that receive the same audio at the same time. DME decides how it uses them. Radio Rucphen sends the studio audio without StereoTool, while BredaNu sends its StereoTool output. Both DME outputs use `ICECAST_BITRATE_AAC_HIGH`, so changing that value also changes the `.stl` Icecast mount.
 
 ## StereoTool and MicroMPX
 
-The installer includes the StereoTool plugin. Processing starts only when `STEREOTOOL_LICENSE` is set. ZuidWest uses StereoTool only for MicroMPX. BredaNu also sends the StereoTool output to Icecast, DME, DAB+, and HLS. Radio Rucphen does not load StereoTool.
+The installer includes the StereoTool plugin, but processing starts only when `STEREOTOOL_LICENSE` is set. ZuidWest uses StereoTool for MicroMPX only, BredaNu also sends the StereoTool output to Icecast, DME, DAB+, and HLS, and Radio Rucphen does not load StereoTool at all.
 
 The web interface listens on host port `8080` by default. Set `STEREOTOOL_WEB_BIND=127.0.0.1` unless you need remote access.
 
@@ -232,9 +234,9 @@ The web interface listens on host port `8080` by default. Set `STEREOTOOL_WEB_BI
 
 `output.external` sends 48 kHz stereo WAV to ODR-AudioEnc, which produces DAB+ EDI. `DAB_BITRATE` is in kbps and must be a multiple of 8, from 8 to 192. Separate multiple EDI destinations with commas.
 
-A monitor checks the TCP acknowledgements of each `tcp://` destination and reports them in `GET /status` and `dab.status`. A TCP ACK shows that the remote TCP stack received the data. It does not show that ODR-DabMux processed the data. The status values and error codes are described in [docs/status-api.md](docs/status-api.md#outputsdab).
+A monitor checks the TCP acknowledgements of each `tcp://` destination and reports them in `GET /status` and `dab.status`. The status values, the error codes, and what an ACK does and does not prove are described in [docs/status-api.md](docs/status-api.md#outputsdab).
 
-When `DAB_METADATA_SOCKET` is set, ODR-AudioEnc reads PAD data from that socket and reserves `DAB_METADATA_SIZE` bytes per audio frame (default 8, valid 0 to 196). A larger value sends slides faster, but leaves less room for audio. ODR-PadEnc runs outside this project and writes the PAD data to that socket. zwfm-metadata sends DL Plus data directly to ODR-PadEnc. `POST /metadata` does not write DAB PAD.
+When `DAB_METADATA_SOCKET` is set, ODR-AudioEnc reads PAD data from that socket and reserves `DAB_METADATA_SIZE` bytes per audio frame (default 8, valid 0 to 196). A larger value sends slides faster, but leaves less room for audio. The PAD data comes from ODR-PadEnc, which runs outside this project and receives its DL Plus text directly from zwfm-metadata. `POST /metadata` does not write DAB PAD.
 
 ## HLS through Bunny CDN
 

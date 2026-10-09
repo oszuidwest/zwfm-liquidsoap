@@ -86,7 +86,7 @@ The status is `ok` when every output is connected, `degraded` when some are conn
 | `destinations[].send_queue_bytes`  | Unsent bytes in the socket send queue                    |
 | `destinations[].unacked_segments`  | Unacknowledged TCP segments                              |
 | `destinations[].retransmissions`   | TCP retransmissions                                      |
-| `destinations[].error`             | See below                                                |
+| `destinations[].error`             | See the codes below                                      |
 
 Per-destination error codes:
 
@@ -104,7 +104,7 @@ The monitor is a shell script in `bin/dab-tcp-ack-monitor`. Liquidsoap runs it e
 
 A destination makes ACK progress when `bytes_acked` grows between two polls. The destination is `starting` while it has no progress yet and the connection is younger than `DAB_ACK_STARTUP_GRACE_SECONDS`. It is `ok` when the last progress is at most `DAB_ACK_WARN_SECONDS` ago, `degraded` when it is at most `DAB_ACK_DOWN_SECONDS` ago, and `down` after that. The script keeps its state per destination in `/dev/shm/dab-ack-monitor/state`.
 
-A TCP ACK shows that the remote TCP stack received the data. It does not show that ODR-DabMux processed the data.
+A TCP ACK proves only that the remote TCP stack received the data, so it says nothing about whether ODR-DabMux processed it.
 
 ### dab.status
 
@@ -128,12 +128,12 @@ tcp://primary.example.com:9001 down no_socket
 | -------------------------------- | ------------------------------------------------------------------ |
 | `status`                         | `disabled`, `starting`, `ok`, or `degraded`                        |
 | `local.status`                   | Health of the local writer                                         |
-| `local.error`                    | See below                                                          |
+| `local.error`                    | See the error code summary                                         |
 | `local.playlist_count`           | Playlists in `HLS_DIR`                                             |
 | `local.segment_count`            | Segments in `HLS_DIR`                                              |
 | `local.update_age_seconds`       | Seconds since a local playlist was last written                    |
 | `mirror.status`                  | Health of the Bunny mirror                                         |
-| `mirror.error`                   | See below                                                          |
+| `mirror.error`                   | See the error code summary                                         |
 | `mirror.host`                    | Bunny Storage endpoint host                                        |
 | `mirror.storage_zone`            | `HLS_BUNNY_STORAGE_ZONE`                                           |
 | `mirror.published_age_seconds`   | Age of the published audio, see below                              |
@@ -146,25 +146,16 @@ tcp://primary.example.com:9001 down no_socket
 
 ### Stall detection
 
-The local writer becomes `degraded` with error `stalled` when no playlist is written for `max(15.0, HLS_SEGMENT_DURATION * 4.0)` seconds. With the defaults, this is 16 seconds. The mirror uses the same threshold for `published_age_seconds`. Uploads can succeed and the mirror can still report `stalled` when the published audio is too old. When the local writer stalls, the mirror also stalls. If both report `stalled`, check the writer first.
-
-A slow but successful upload can exceed the threshold. `mirror=stalled` means that the published audio is old. It does not always mean that a Bunny request failed. Upload timeouts do not extend the threshold.
+The writer and the mirror both report `stalled` after `max(15.0, HLS_SEGMENT_DURATION * 4.0)` seconds without progress, which is 16 seconds with the defaults. For the writer, progress is a written playlist. For the mirror, it is a `published_age_seconds` below the threshold, so a mirror stall means that the published audio is old, whether a Bunny request failed or an upload was slow. A writer stall always causes a mirror stall, so when both report `stalled`, check the writer first. [HLS operations](hls-operations.md#health) explains the threshold in detail.
 
 ### Mirror counters
 
 - `published_age_seconds` is the age of the newest confirmed segment of the variant that is furthest behind. The age is measured from the generation time in the segment name. The value is `null` until every variant has a published playlist with a known segment time. The static main playlist is not counted.
 - `pending_segments` and `pending_playlists` are counted from the current local playlists every second. Uploads that are running are included. The main playlist counts as one pending playlist until it is published.
 - `recovered_uploads` counts uploads that succeeded after one or more failed attempts for the same object name. The playlist may have moved on in the meantime.
-- `expired_segments` counts segments that left the live playlist of a worker without a confirmed upload. This includes segments that were never tried because an earlier segment in the same playlist failed. An expired segment has no confirmed upload. It is not proof that the segment is missing on the remote side.
+- `expired_segments` counts segments that left the live playlist of a worker without a confirmed upload. This includes segments that were never tried because an earlier segment in the same playlist failed. The counter records missing confirmations, so an expired segment may still exist on the remote side.
 
 Both counters reset when the process restarts.
-
-### Error codes
-
-| Field          | Codes                                                                                                             |
-| -------------- | ----------------------------------------------------------------------------------------------------------------- |
-| `local.error`  | `dir_missing`, `dir_not_writable`, `clock_error`, `stalled`                                                       |
-| `mirror.error` | `listing_failed`, `upload_failed`, `delete_failed`, `read_failed`, `local_file_missing`, `worker_failed`, `stalled` |
 
 ### hls.status
 
