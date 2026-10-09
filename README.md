@@ -44,11 +44,25 @@ Blue lines carry audio. Pink lines carry now-playing metadata from zwfm-metadata
 
 ## Architecture
 
-Liquidsoap selects the source in this order: Studio A, Studio B, emergency audio file. Audio below `SILENCE_THRESHOLD` (default `-40.0` dB) counts as silence. A studio is removed from the chain after `SILENCE_SWITCH_SECONDS` (default `15.0`) of silence, or when its SRT connection closes, and returns after `AUDIO_VALID_SECONDS` (default `15.0`) of continuous audio. When silence detection is disabled, a silent studio stays available as long as it is connected, and the emergency source outputs silence. `EMERGENCY_AUDIO_PATH` must point to an audio file that Liquidsoap can decode, otherwise Liquidsoap stops during startup. `EMERGENCY_ALLOW_BLANK=true` allows silence instead, for development and tests only.
+Liquidsoap selects the source in this order: Studio A, Studio B, emergency audio file. A studio leaves the chain when it is silent or when its SRT connection closes, and returns when it delivers continuous audio again.
+
+| Variable                 | Default | Meaning                                       |
+| ------------------------ | ------- | --------------------------------------------- |
+| `SILENCE_THRESHOLD`      | `-40.0` | Audio below this level (dB) counts as silence |
+| `SILENCE_SWITCH_SECONDS` | `15.0`  | Seconds of silence before a studio leaves     |
+| `AUDIO_VALID_SECONDS`    | `15.0`  | Seconds of audio before a studio returns      |
+
+`EMERGENCY_AUDIO_PATH` must point to an audio file that Liquidsoap can decode. If the file is not usable, Liquidsoap stops during startup. Set `EMERGENCY_ALLOW_BLANK=true` to allow silence instead, for development and tests only.
+
+When silence detection is disabled, a silent studio stays available as long as it is connected. Failover on disconnect still works. In this mode, the emergency source outputs silence.
+
+### Studio inputs
 
 Studio A listens on UDP `8888` and Studio B on UDP `9999` (`SRT_PORT_PRIMARY` and `SRT_PORT_SECONDARY`). The listeners enforce encryption, so every SRT caller must use `SRT_PASSPHRASE`. Each input has a 1-second buffer with a 1.25-second maximum. For the studio side, see [zwfm-encoder](https://github.com/oszuidwest/zwfm-encoder).
 
-Each station routes audio differently. The studio audio is already processed by an on-site Optimod, so "StereoTool" below means the StereoTool instance inside this container.
+### Audio routing
+
+The studio audio is already processed by an on-site Optimod. "StereoTool" below means the StereoTool instance inside this container.
 
 | Station       | Icecast, DAB+, and HLS | Other outputs                                      |
 | ------------- | ---------------------- | -------------------------------------------------- |
