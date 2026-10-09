@@ -74,8 +74,8 @@ Each station routes audio differently:
 
 | Station       | Source for Icecast, DAB+, and HLS | Other outputs                                      |
 | ------------- | --------------------------------- | -------------------------------------------------- |
-| ZuidWest      | Unprocessed audio                 | StereoTool generates MicroMPX                      |
-| Radio Rucphen | Unprocessed audio                 | Two DME Icecast outputs; no StereoTool             |
+| ZuidWest      | Studio audio, no StereoTool       | StereoTool generates MicroMPX                      |
+| Radio Rucphen | Studio audio, no StereoTool       | Two DME Icecast outputs; no StereoTool             |
 | BredaNu       | StereoTool output                 | Two DME Icecast outputs; StereoTool emits MicroMPX |
 
 Each Icecast output and the DAB+ output use a buffered safe source on its own clock. HLS also has a clock error handler and a restart watchdog. If an optional output fails, the main program audio continues.
@@ -344,7 +344,7 @@ DME_SECONDARY_PASSWORD=replace-me
 DME_MOUNT_POINT=/live
 ```
 
-Radio Rucphen sends its unprocessed source to DME. BredaNu sends its StereoTool output. DME uses `ICECAST_BITRATE_AAC_HIGH`. When you change that value, the `.stl` Icecast mount and both DME outputs change.
+Radio Rucphen sends the studio audio to DME without StereoTool. BredaNu sends its StereoTool output. DME uses `ICECAST_BITRATE_AAC_HIGH`. When you change that value, the `.stl` Icecast mount and both DME outputs change.
 
 ## StereoTool and MicroMPX
 
