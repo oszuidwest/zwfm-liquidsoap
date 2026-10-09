@@ -203,4 +203,11 @@ When you change shell or deployment files, also run `shellcheck install.sh` and 
 
 ## License
 
-Copyright 2026 Omroepstichting ZuidWest & Stichting Streekomroep voor de Baronie. Licensed under the [MIT License](LICENSE). Built with [Liquidsoap](https://www.liquidsoap.info/), [Icecast](https://icecast.org/), [StereoTool](https://www.stereotool.com/), and the [Opendigitalradio](https://github.com/Opendigitalradio) tools.
+Copyright 2026 Omroepstichting ZuidWest & Stichting Streekomroep voor de Baronie. Licensed under the [MIT License](LICENSE).
+
+## Acknowledgments
+
+- [Liquidsoap](https://www.liquidsoap.info/)
+- [Icecast](https://icecast.org/)
+- [StereoTool](https://www.stereotool.com/)
+- [Opendigitalradio](https://github.com/Opendigitalradio)
