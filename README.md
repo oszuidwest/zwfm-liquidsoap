@@ -69,13 +69,30 @@ Each Icecast, DAB+, and HLS output runs on its own clock with a buffered safe so
 
 ## Installation
 
-Requirements: a 64-bit Debian-based host on AMD64 or ARM64 (Debian 13 or Ubuntu 24.04 recommended), root access, Docker with Docker Compose, `curl`, and `dpkg`. The installer installs `socat` and `unzip`, downloads the configuration of the selected station and the emergency audio file, installs the StereoTool plugin, and writes everything to `/opt/liquidsoap`:
+Requirements:
+
+- A 64-bit Debian-based host on AMD64 or ARM64. Debian 13 and Ubuntu 24.04 are recommended.
+- Root access
+- Docker with Docker Compose, `curl`, and `dpkg`
+
+The installer installs `socat` and `unzip`, downloads the configuration of the selected station and the emergency audio file, installs the StereoTool plugin, and writes everything to `/opt/liquidsoap`:
 
 ```bash
 sudo /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/oszuidwest/zwfm-liquidsoap/main/install.sh)"
 ```
 
-The installer creates `/opt/liquidsoap/.env` from the template of the selected station. Replace every placeholder, then run `docker compose up -d` and watch `docker compose logs -f`. `docker compose down` stops the broadcast, so use it only during a planned outage. For configuration changes, `docker compose up -d` is enough. The deployment uses these paths under `/opt/liquidsoap`:
+The installer creates `/opt/liquidsoap/.env` from the template of the selected station. Replace every placeholder before you start the container:
+
+```bash
+cd /opt/liquidsoap
+nano .env
+docker compose up -d
+docker compose logs -f
+```
+
+`docker compose down` stops the broadcast. Use it only during a planned outage. For configuration changes, `docker compose up -d` is normally enough.
+
+The deployment uses these paths under `/opt/liquidsoap`:
 
 | Path                     | Purpose                                                       |
 | ------------------------ | ------------------------------------------------------------- |
@@ -87,7 +104,9 @@ The installer creates `/opt/liquidsoap/.env` from the template of the selected s
 | `stereotool/`            | StereoTool plugin, license state, and processor configuration |
 | `socket/liquidsoap.sock` | Control socket                                                |
 
-Keep `HLS_DIR=/hls` and the default `SERVER_SOCKET_PATH` with the provided Compose file, so that HLS uses its own tmpfs mount and the control socket is available at `/opt/liquidsoap/socket` on the host. The installer also sets the timezone to `Europe/Amsterdam`, enables time synchronization, and limits the journal size. It can set the CPU frequency governor to `performance`, stored in `/etc/tmpfiles.d/cpu-performance.conf`. Remove that file and reboot to restore the host default.
+Keep `HLS_DIR=/hls` and the default `SERVER_SOCKET_PATH` with the provided Compose file, so that HLS uses its own tmpfs mount and the control socket is available at `/opt/liquidsoap/socket` on the host.
+
+The installer also sets the timezone to `Europe/Amsterdam`, enables time synchronization, and limits the journal size. It can set the CPU frequency governor to `performance`, stored in `/etc/tmpfiles.d/cpu-performance.conf`. Remove that file and reboot to restore the host default.
 
 ## Configuration
 
