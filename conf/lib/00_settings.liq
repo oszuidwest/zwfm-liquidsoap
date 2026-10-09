@@ -10,6 +10,11 @@ settings.frame.audio.samplerate := 48000
 # Isolate quick tasks from blocking Bunny and DAB I/O.
 settings.scheduler.fast_queues := 1
 
+# Blocking recurring workers share this pool: three HLS variant workers, the
+# HLS main playlist and cleanup workers, and the DAB monitor. The default of 5
+# lets overlapping slow passes delay each other.
+settings.scheduler.generic_queues := 8
+
 # Station identity (REQUIRED - no defaults)
 let STATION_ID = string.case(environment.get("STATION_ID"), lower=true)
 let STATION_NAME = environment.get("STATION_NAME")
