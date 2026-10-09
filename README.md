@@ -3,7 +3,12 @@
 [![CI](https://github.com/oszuidwest/zwfm-liquidsoap/actions/workflows/ci.yml/badge.svg)](https://github.com/oszuidwest/zwfm-liquidsoap/actions/workflows/ci.yml)
 [![Docker Image](https://github.com/oszuidwest/zwfm-liquidsoap/actions/workflows/docker.yml/badge.svg)](https://github.com/oszuidwest/zwfm-liquidsoap/actions/workflows/docker.yml)
 
-A [Liquidsoap](https://www.liquidsoap.info)-based broadcast audio system for [ZuidWest FM](https://www.zuidwestfm.nl/), [Radio Rucphen](https://www.rucphenrtv.nl/), and [BredaNu](https://www.bredanu.nl/). Two encrypted SRT studio inputs fail over automatically on silence, StereoTool processing is optional, and the outputs are Icecast, HLS, DAB+, and MicroMPX. One Docker image serves AMD64 and ARM64.
+A [Liquidsoap](https://www.liquidsoap.info)-based broadcast audio system for [ZuidWest FM](https://www.zuidwestfm.nl/), [Radio Rucphen](https://www.rucphenrtv.nl/), and [BredaNu](https://www.bredanu.nl/).
+
+- Two encrypted SRT studio inputs with automatic failover on silence
+- Icecast, HLS, DAB+, and MicroMPX outputs
+- Optional StereoTool processing
+- One Docker container for AMD64 and ARM64
 
 ```mermaid
 %%{init: {"layout": "dagre"}}%%
