@@ -11,6 +11,7 @@ A [Liquidsoap](https://www.liquidsoap.info)-based broadcast audio system for [Zu
 - Single-container deployment on AMD64 and ARM64
 
 ```mermaid
+%%{init: {"layout": "dagre"}}%%
 flowchart LR
     subgraph inputs [" Inputs "]
         SRT1["SRT INPUT 1"]
@@ -24,44 +25,44 @@ flowchart LR
         MICROMPX["MICROMPX"]
         ICECAST["ICECAST"]
         DME["DME"]
+        ODR["ODR-AUDIOENC"]
         HLS["HLS"]
         BUNNY["BUNNY CDN"]
-        ODR["ODR-AUDIOENC"]
     end
 
     subgraph metadata [" Metadata "]
-        PADENC["ODR-PADENC"]
         ZWFM["ZWFM-METADATA"]
+        PADENC["ODR-PADENC"]
     end
 
+    %% Audio (links 0-8)
     SRT1 --> LIQUIDSOAP
     SRT2 --> LIQUIDSOAP
     FALLBACK --> LIQUIDSOAP
-
     LIQUIDSOAP --> MICROMPX
     LIQUIDSOAP --> ICECAST
     LIQUIDSOAP --> DME
+    LIQUIDSOAP --> ODR
     LIQUIDSOAP --> HLS
     HLS --> BUNNY
-    LIQUIDSOAP --> ODR
 
-    ODR <--> PADENC
+    %% Metadata (links 9-14)
     ZWFM -->|POST /metadata| LIQUIDSOAP
-    ZWFM -->|DL Plus file| PADENC
+    ZWFM -->|DL Plus| PADENC
+    ODR <-->|PAD| PADENC
     ZWFM -->|StereoTool API| MICROMPX
     LIQUIDSOAP -. stream metadata .-> ICECAST
     LIQUIDSOAP -. timed ID3 .-> HLS
 
-    classDef blue fill:#2196F3,stroke:#1565C0,color:#fff
-    classDef metadataFlow fill:#E91E8A,stroke:#AD1457,color:#fff
-
-    class SRT1,SRT2,FALLBACK,LIQUIDSOAP,MICROMPX,ICECAST,DME,HLS,BUNNY,ODR blue
-    class PADENC,ZWFM metadataFlow
+    classDef audio fill:#2196F3,stroke:#1565C0,color:#fff
+    classDef meta fill:#E91E8A,stroke:#AD1457,color:#fff
+    class SRT1,SRT2,FALLBACK,LIQUIDSOAP,MICROMPX,ICECAST,DME,ODR,HLS,BUNNY audio
+    class ZWFM,PADENC meta
     style metadata fill:#FFF0F6,stroke:#E91E8A,stroke-width:2px
     linkStyle 9,10,11,12,13,14 stroke:#E91E8A,stroke-width:2px
 ```
 
-Blue paths carry audio. Pink paths carry stream metadata, DAB+ PAD, or StereoTool/RDS metadata; dashed paths are metadata distributed by Liquidsoap.
+Blue paths carry audio. Pink paths carry now-playing metadata from zwfm-metadata: stream metadata for Liquidsoap, DL Plus for DAB+ PAD, and RDS via the StereoTool API. Dashed paths are metadata that Liquidsoap passes on in-band.
 
 ## Architecture
 
@@ -100,8 +101,8 @@ Icecast, Bunny, DME, ODR-DabMux, PAD, and metadata services are not bundled into
 
 - [rpi-audio-encoder](https://github.com/oszuidwest/rpi-audio-encoder): SRT studio encoder for Raspberry Pi
 - [rpi-umpx-decoder](https://github.com/oszuidwest/rpi-umpx-decoder): MicroMPX receiver for Raspberry Pi
-- [ODR-PadEnc](https://github.com/Opendigitalradio/ODR-PadEnc): DAB+ Programme Associated Data encoder
 - [zwfm-metadata](https://github.com/oszuidwest/zwfm-metadata): now-playing metadata router
+- [ODR-PadEnc](https://github.com/Opendigitalradio/ODR-PadEnc): DAB+ Programme Associated Data encoder
 
 ## Installation
 
@@ -393,7 +394,7 @@ tcp://primary.example.com:9001 down no_socket
 
 When `DAB_METADATA_SOCKET` is set, ODR-AudioEnc reads PAD data from the named socket and reserves `DAB_METADATA_SIZE` bytes per audio frame. The default size is 8 bytes; valid values are 0 through 196. A larger value sends slides faster but leaves less capacity for audio at the configured DAB+ bitrate.
 
-ODR-PadEnc runs outside this project and writes PAD data to the configured socket for ODR-AudioEnc. [zwfm-metadata](https://github.com/oszuidwest/zwfm-metadata) generates its ODR-PadEnc-compatible DL Plus file; ODR-PadEnc re-reads that file before each transmission. This route is independent of `POST /metadata`, which does not write DAB PAD.
+ODR-PadEnc runs outside this project and writes PAD data to the configured socket for ODR-AudioEnc. [zwfm-metadata](https://github.com/oszuidwest/zwfm-metadata) sends DL Plus data directly to ODR-PadEnc. This route is independent of `POST /metadata`, which does not write DAB PAD.
 
 ## Stream metadata
 
