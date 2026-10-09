@@ -37,11 +37,11 @@ jobs:
         id: docker_check
         run: |
           LATEST="${{ steps.latest.outputs.version }}"
-          if curl -sf "https://hub.docker.com/v2/repositories/savonet/liquidsoap/tags/v${LATEST}/" > /dev/null; then
-            echo "Docker image savonet/liquidsoap:v${LATEST} is available"
+          if docker manifest inspect "ghcr.io/savonet/liquidsoap:v${LATEST}" > /dev/null 2>&1; then
+            echo "Docker image ghcr.io/savonet/liquidsoap:v${LATEST} is available"
             echo "available=true" >> "$GITHUB_OUTPUT"
           else
-            echo "Docker image savonet/liquidsoap:v${LATEST} is not yet published, will retry next run"
+            echo "Docker image ghcr.io/savonet/liquidsoap:v${LATEST} is not yet published, will retry next run"
             echo "available=false" >> "$GITHUB_OUTPUT"
           fi
 

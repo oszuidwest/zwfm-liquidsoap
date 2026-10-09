@@ -83,7 +83,7 @@ jobs:
             if [ -f "$file" ]; then
               echo "Checking ${file}..."
               docker run --rm -v "$PWD:/app" -w /app \
-                "savonet/liquidsoap:${LIQUIDSOAP_VERSION}" \
+                "ghcr.io/savonet/liquidsoap:${LIQUIDSOAP_VERSION}" \
                 liquidsoap -c "${file}"
             fi
           done
@@ -95,7 +95,7 @@ jobs:
           for test in tests/*.liq; do
             echo "Running ${test}..."
             docker run --rm -v "$PWD:/app" -w /app \
-              "savonet/liquidsoap:${LIQUIDSOAP_VERSION}" \
+              "ghcr.io/savonet/liquidsoap:${LIQUIDSOAP_VERSION}" \
               liquidsoap "${test}"
           done
 

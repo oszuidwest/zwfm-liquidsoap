@@ -530,7 +530,7 @@ The Dockerfile pins the Liquidsoap version. Validate each station entry point wi
 ```bash
 for file in conf/*.liq; do
   docker run --rm -v "$PWD:/app" -w /app \
-    "savonet/liquidsoap:v$(grep "^ARG LIQUIDSOAP_VERSION" Dockerfile | cut -d= -f2)" liquidsoap -c "$file"
+    "ghcr.io/savonet/liquidsoap:v$(grep "^ARG LIQUIDSOAP_VERSION" Dockerfile | cut -d= -f2)" liquidsoap -c "$file"
 done
 ```
 
@@ -539,7 +539,7 @@ Run the Liquidsoap and shell tests:
 ```bash
 for test in tests/*.liq; do
   docker run --rm -v "$PWD:/app" -w /app \
-    "savonet/liquidsoap:v$(grep "^ARG LIQUIDSOAP_VERSION" Dockerfile | cut -d= -f2)" liquidsoap "$test"
+    "ghcr.io/savonet/liquidsoap:v$(grep "^ARG LIQUIDSOAP_VERSION" Dockerfile | cut -d= -f2)" liquidsoap "$test"
 done
 ./tests/test-dab-tcp-ack-monitor.sh
 ```
