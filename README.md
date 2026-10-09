@@ -442,9 +442,9 @@ The default ladder contains three MPEG-TS variants:
 - 96 kbps AAC-LC (`mp4a.40.2`): `aac_96.m3u8`
 - 192 kbps AAC-LC (`mp4a.40.2`): `aac_192.m3u8`
 
-`HLS_BITRATE_LOW`, `HLS_BITRATE_MID` and `HLS_BITRATE_HIGH` change the encoded bitrates; the playlist names stay fixed. Mixing HE-AAC and AAC-LC variants requires Liquidsoap 2.4.6 or newer: on older releases their segment boundaries drifted apart ([Liquidsoap issue #5319](https://github.com/savonet/liquidsoap/issues/5319)).
+`HLS_BITRATE_LOW`, `HLS_BITRATE_MID` and `HLS_BITRATE_HIGH` change the encoded bitrates; the playlist names stay fixed. The HE-AAC variant needs Liquidsoap 2.4.6 or newer; older releases let mixed-profile variants drift apart ([Liquidsoap issue #5319](https://github.com/savonet/liquidsoap/issues/5319)).
 
-`live.m3u8` is the main playlist. Defaults are 4-second segments, 10 segments per media playlist, and an `HLS_SEGMENTS_OVERHEAD` of `HLS_SEGMENTS + 3` (13), which keeps 12 removed segments locally for lagging clients. Each variant has an independent mirror worker, so a slow Bunny request cannot starve the other bitrate. A worker reads the newest playlist after every pass and uploads only its referenced segments; obsolete local backlog is skipped. A playlist is uploaded only after all segments it references are present remotely, so failed uploads leave the previous valid playlist online. Remote cleanup runs separately from publication and keeps every segment that is still local, published, or being uploaded, so while the mirror keeps up, a segment stays online for at least one segment plus one playlist duration after it leaves the playlist ([RFC 8216 section 6.2.2](https://www.rfc-editor.org/rfc/rfc8216#section-6.2.2)).
+`live.m3u8` is the main playlist. Defaults are 4-second segments, 10 segments per media playlist, and an `HLS_SEGMENTS_OVERHEAD` of `HLS_SEGMENTS + 3` (13), which keeps 12 removed segments locally for lagging clients. Each variant has an independent mirror worker, so a slow Bunny request cannot starve the other variants. A worker reads the newest playlist after every pass and uploads only its referenced segments; obsolete local backlog is skipped. A playlist is uploaded only after all segments it references are present remotely, so failed uploads leave the previous valid playlist online. Remote cleanup runs separately from publication and keeps every segment that is still local, published, or being uploaded, so while the mirror keeps up, a segment stays online for at least one segment plus one playlist duration after it leaves the playlist ([RFC 8216 section 6.2.2](https://www.rfc-editor.org/rfc/rfc8216#section-6.2.2)).
 
 ### Bunny setup
 
@@ -525,12 +525,12 @@ docker compose logs -f
 
 ## Development
 
-The Dockerfile pins Liquidsoap 2.4.6. Validate each station entry point with the same image:
+The Dockerfile pins the Liquidsoap version. Validate each station entry point with the same image:
 
 ```bash
 for file in conf/*.liq; do
   docker run --rm -v "$PWD:/app" -w /app \
-    savonet/liquidsoap:v2.4.6 liquidsoap -c "$file"
+    "savonet/liquidsoap:v$(grep "^ARG LIQUIDSOAP_VERSION" Dockerfile | cut -d= -f2)" liquidsoap -c "$file"
 done
 ```
 
@@ -539,7 +539,7 @@ Run the Liquidsoap and shell tests:
 ```bash
 for test in tests/*.liq; do
   docker run --rm -v "$PWD:/app" -w /app \
-    savonet/liquidsoap:v2.4.6 liquidsoap "$test"
+    "savonet/liquidsoap:v$(grep "^ARG LIQUIDSOAP_VERSION" Dockerfile | cut -d= -f2)" liquidsoap "$test"
 done
 ./tests/test-dab-tcp-ack-monitor.sh
 ```

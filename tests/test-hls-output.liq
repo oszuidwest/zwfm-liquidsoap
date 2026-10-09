@@ -45,7 +45,7 @@ thread.run(
       # Require writer progress plus the expected failed mirror pass.
       if
         health.local.status == "ok"
-        and health.local.playlist_count == 4
+        and health.local.playlist_count == 4 # live.m3u8 + three variants
         and health.local.segment_count > 0
         and health.mirror.status == "degraded"
         and health.mirror.pending_segments > 0

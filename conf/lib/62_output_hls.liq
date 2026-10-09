@@ -787,59 +787,48 @@ def output_hls_stream(audio_source) =
     )
 
     # MPEG-TS repeats source metadata as timed ID3v2.3 in every segment.
-    # Mixing HE-AAC and AAC-LC variants needs Liquidsoap >= 2.4.6, which keeps
-    # their segment boundaries aligned: https://github.com/savonet/liquidsoap/issues/5319
-    let aac_low =
+    # HE-AAC and AAC-LC in one ladder needs Liquidsoap >= 2.4.6 (savonet/liquidsoap#5319).
+    def hls_aac_variant(~bitrate, ~profile, ~codecs) =
       %ffmpeg(
         format = "mpegts",
         %audio(
           codec = "libfdk_aac",
-          b = "#{HLS_BITRATE_LOW}k",
+          b = "#{bitrate}k",
           ar = 48000,
           ac = 2,
-          profile = "aac_he"
+          profile = profile
         )
-      ).{
-        bandwidth = HLS_BITRATE_LOW * 1000 + 8000,
-        codecs = "mp4a.40.5",
-        extname = "ts"
-      }
-
-    let aac_mid =
-      %ffmpeg(
-        format = "mpegts",
-        %audio(
-          codec = "libfdk_aac",
-          b = "#{HLS_BITRATE_MID}k",
-          ar = 48000,
-          ac = 2,
-          profile = "aac_low"
-        )
-      ).{
-        bandwidth = HLS_BITRATE_MID * 1000 + 8000,
-        codecs = "mp4a.40.2",
-        extname = "ts"
-      }
-
-    let aac_high =
-      %ffmpeg(
-        format = "mpegts",
-        %audio(
-          codec = "libfdk_aac",
-          b = "#{HLS_BITRATE_HIGH}k",
-          ar = 48000,
-          ac = 2,
-          profile = "aac_low"
-        )
-      ).{
-        bandwidth = HLS_BITRATE_HIGH * 1000 + 8000,
-        codecs = "mp4a.40.2",
-        extname = "ts"
-      }
+      ).{bandwidth = bitrate * 1000 + 8000, codecs = codecs, extname = "ts"}
+    end
 
     # Stream ids also name the variant playlists the mirror publishes.
     let hls_streams =
-      [("aac_48", aac_low), ("aac_96", aac_mid), ("aac_192", aac_high)]
+      [
+        (
+          "aac_48",
+          hls_aac_variant(
+            bitrate=HLS_BITRATE_LOW,
+            profile="aac_he",
+            codecs="mp4a.40.5"
+          )
+        ),
+        (
+          "aac_96",
+          hls_aac_variant(
+            bitrate=HLS_BITRATE_MID,
+            profile="aac_low",
+            codecs="mp4a.40.2"
+          )
+        ),
+        (
+          "aac_192",
+          hls_aac_variant(
+            bitrate=HLS_BITRATE_HIGH,
+            profile="aac_low",
+            codecs="mp4a.40.2"
+          )
+        )
+      ]
 
     def try_start_hls_output() =
       if
