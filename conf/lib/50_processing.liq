@@ -41,7 +41,8 @@ def create_processed_audio(radio) =
     processed
   else
     log(
-      "StereoTool disabled - radio_processed will contain unprocessed audio",
+      "StereoTool disabled - radio_processed passes the input audio through \
+       unchanged",
       level=3
     )
     radio
