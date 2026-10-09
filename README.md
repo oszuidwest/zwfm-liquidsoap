@@ -194,12 +194,32 @@ The Dockerfile pins the Liquidsoap version. Check every station entry point and 
 
 ```bash
 IMAGE="ghcr.io/savonet/liquidsoap:v$(grep "^ARG LIQUIDSOAP_VERSION" Dockerfile | cut -d= -f2)"
-for file in conf/*.liq; do docker run --rm -v "$PWD:/app" -w /app "$IMAGE" liquidsoap -c "$file"; done
-for test in tests/*.liq; do docker run --rm -v "$PWD:/app" -w /app "$IMAGE" liquidsoap "$test"; done
+
+# Syntax check of every station entry point
+for file in conf/*.liq; do
+  docker run --rm -v "$PWD:/app" -w /app "$IMAGE" liquidsoap -c "$file"
+done
+
+# Liquidsoap and shell tests
+for test in tests/*.liq; do
+  docker run --rm -v "$PWD:/app" -w /app "$IMAGE" liquidsoap "$test"
+done
 ./tests/test-dab-tcp-ack-monitor.sh
 ```
 
-When you change shell or deployment files, also run `shellcheck install.sh` and `docker compose config --quiet`. Format Liquidsoap code with `liquidsoap-prettier -w "**/*.liq"`. Build a local image with `docker buildx build --load -t zwfm-liquidsoap:local .` and set `image` in the Compose file to `zwfm-liquidsoap:local` to run it.
+When you change shell or deployment files, also run:
+
+```bash
+shellcheck install.sh
+docker compose config --quiet
+liquidsoap-prettier -w "**/*.liq"
+```
+
+Build a local image and set `image` in the Compose file to `zwfm-liquidsoap:local` to run it:
+
+```bash
+docker buildx build --load -t zwfm-liquidsoap:local .
+```
 
 ## License
 
