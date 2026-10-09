@@ -8,6 +8,7 @@ let HLS_BUNNY_STORAGE_ZONE = "test-zone"
 let HLS_BUNNY_ACCESS_KEY = "test-key"
 let HLS_BUNNY_ENDPOINT = "http://127.0.0.1:9"
 let HLS_DIR = file.temp_dir(cleanup=true, "hls-test")
+let HLS_BITRATE_LOW = 48
 let HLS_BITRATE_MID = 96
 let HLS_BITRATE_HIGH = 192
 let HLS_SEGMENT_DURATION = 1.0
@@ -44,7 +45,7 @@ thread.run(
       # Require writer progress plus the expected failed mirror pass.
       if
         health.local.status == "ok"
-        and health.local.playlist_count == 3
+        and health.local.playlist_count == 4
         and health.local.segment_count > 0
         and health.mirror.status == "degraded"
         and health.mirror.pending_segments > 0

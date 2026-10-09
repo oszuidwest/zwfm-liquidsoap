@@ -787,8 +787,24 @@ def output_hls_stream(audio_source) =
     )
 
     # MPEG-TS repeats source metadata as timed ID3v2.3 in every segment.
-    # Keep HE-AAC disabled until mixed profiles share a timeline:
-    # https://github.com/savonet/liquidsoap/issues/5319
+    # Mixing HE-AAC and AAC-LC variants needs Liquidsoap >= 2.4.6, which keeps
+    # their segment boundaries aligned: https://github.com/savonet/liquidsoap/issues/5319
+    let aac_low =
+      %ffmpeg(
+        format = "mpegts",
+        %audio(
+          codec = "libfdk_aac",
+          b = "#{HLS_BITRATE_LOW}k",
+          ar = 48000,
+          ac = 2,
+          profile = "aac_he"
+        )
+      ).{
+        bandwidth = HLS_BITRATE_LOW * 1000 + 8000,
+        codecs = "mp4a.40.5",
+        extname = "ts"
+      }
+
     let aac_mid =
       %ffmpeg(
         format = "mpegts",
@@ -822,7 +838,8 @@ def output_hls_stream(audio_source) =
       }
 
     # Stream ids also name the variant playlists the mirror publishes.
-    let hls_streams = [("aac_96", aac_mid), ("aac_192", aac_high)]
+    let hls_streams =
+      [("aac_48", aac_low), ("aac_96", aac_mid), ("aac_192", aac_high)]
 
     def try_start_hls_output() =
       if

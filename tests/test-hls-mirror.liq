@@ -4,6 +4,7 @@ let HLS_BUNNY_STORAGE_ZONE = "test-zone"
 let HLS_BUNNY_ACCESS_KEY = "test-key"
 let HLS_BUNNY_ENDPOINT = "https://storage.example.test/"
 let HLS_DIR = file.temp_dir(cleanup=true, "hls-mirror-test")
+let HLS_BITRATE_LOW = 48
 let HLS_BITRATE_MID = 96
 let HLS_BITRATE_HIGH = 192
 let HLS_SEGMENT_DURATION = 4.0
