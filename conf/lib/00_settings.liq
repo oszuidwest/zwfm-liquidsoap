@@ -1,5 +1,4 @@
 # Settings and environment configuration
-# This file contains ONLY settings and environment variables - no logic or functions
 
 # Liquidsoap engine settings
 settings.ffmpeg.log.verbosity := "warning"
@@ -10,11 +9,14 @@ settings.frame.audio.samplerate := 48000
 # Isolate quick tasks from blocking Bunny and DAB I/O.
 settings.scheduler.fast_queues := 1
 
-# Station identity (REQUIRED - no defaults)
+# Capacity for six blocking workers: three HLS variants, master, cleanup and DAB.
+settings.scheduler.generic_queues := 8
+
+# Station identity (required)
 let STATION_ID = string.case(environment.get("STATION_ID"), lower=true)
 let STATION_NAME = environment.get("STATION_NAME")
 
-# Icecast server configuration (REQUIRED - no defaults)
+# Icecast server (required)
 let ICECAST_HOST = environment.get("ICECAST_HOST")
 let ICECAST_PORT = int_of_string(environment.get("ICECAST_PORT"))
 let ICECAST_SOURCE_PASSWORD = environment.get("ICECAST_SOURCE_PASSWORD")
@@ -59,12 +61,11 @@ let SILENCE_THRESHOLD =
 let EMERGENCY_AUDIO_PATH =
   environment.get("EMERGENCY_AUDIO_PATH", default="/audio/fallback.ogg")
 
-# Opt-in silent fallback when the emergency audio file is unusable
-# (development/testing only)
+# Allow silence if the fallback file is unusable (development/testing only).
 let EMERGENCY_ALLOW_BLANK =
   environment.get("EMERGENCY_ALLOW_BLANK", default="false") == "true"
 
-# DAB+ configuration (optional - both required to enable)
+# DAB+ requires bitrate and EDI destinations.
 let DAB_BITRATE = environment.get("DAB_BITRATE", default="")
 let DAB_EDI_DESTINATIONS = environment.get("DAB_EDI_DESTINATIONS", default="")
 let DAB_METADATA_SOCKET = environment.get("DAB_METADATA_SOCKET", default="")
@@ -80,13 +81,15 @@ let DAB_ACK_DOWN_SECONDS =
 let DAB_ACK_STARTUP_GRACE_SECONDS =
   int_of_string(environment.get("DAB_ACK_STARTUP_GRACE_SECONDS", default="10"))
 
-# HLS configuration (optional - storage zone and access key required to enable)
+# HLS requires a storage zone and access key.
 let HLS_BUNNY_STORAGE_ZONE =
   environment.get("HLS_BUNNY_STORAGE_ZONE", default="")
 let HLS_BUNNY_ACCESS_KEY = environment.get("HLS_BUNNY_ACCESS_KEY", default="")
 let HLS_BUNNY_ENDPOINT =
   environment.get("HLS_BUNNY_ENDPOINT", default="storage.bunnycdn.com")
 let HLS_DIR = environment.get("HLS_DIR", default="/hls")
+let HLS_BITRATE_LOW =
+  int_of_string(environment.get("HLS_BITRATE_LOW", default="48"))
 let HLS_BITRATE_MID =
   int_of_string(environment.get("HLS_BITRATE_MID", default="96"))
 let HLS_BITRATE_HIGH =

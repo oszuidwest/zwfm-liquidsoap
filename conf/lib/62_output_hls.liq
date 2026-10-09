@@ -1,7 +1,4 @@
 # HLS writes locally and mirrors to Bunny Edge Storage.
-# The isolated clock contains filesystem failures; a watchdog replaces detached
-# outputs. Do not add persist_at: writing state while a failed output detaches
-# re-raises on the dead clock thread and stops the entire process.
 
 let hls_bunny_headers = [("AccessKey", HLS_BUNNY_ACCESS_KEY), ("Expect", "")]
 let hls_main_playlist_name = "live.m3u8"
@@ -57,7 +54,7 @@ def hls_progress_age(last_progress_at) =
   )
 end
 
-# Explicit failures outrank stalls; missing progress starts the same grace.
+# Explicit errors take precedence; startup uses the same stall threshold.
 def hls_component_health(failure, age) =
   let observed_age = age ?? max(0.0, time() - hls_started_at())
   let failure =
@@ -335,8 +332,7 @@ def hls_playlist_segment_names(content) =
   )
 end
 
-# hls_segment_name embeds generation time, independent of upload completion.
-# Return null without segments or for an unrecognized name, never a fresh time.
+# Read generation time from the last segment name; unknown times stay null.
 def hls_newest_segment_time(segments) =
   let match =
     r/_([0-9]+)_[0-9]+\.(aac|ts)$/.exec(list.last(default="", segments))
@@ -412,7 +408,7 @@ def hls_create_mirror_worker(
         report(2, reason)
       end
 
-      # Keep exceptions from stopping the recurring task.
+      # Uncaught exceptions stop the recurring task.
       try
         pass(on_error)
       catch err do
@@ -503,7 +499,7 @@ def hls_create_playlist_worker(
     ok
   end
 
-  # Read the current local window, even while an upload is in progress.
+  # Sample the live window even during uploads.
   def pending() =
     let content =
       null.map(fun (snapshot) -> snapshot.content, read_snapshot()) ?? ""
@@ -727,7 +723,7 @@ def hls_remove_stale_local_files() =
   )
 end
 
-# Catch errors because an escaping exception permanently stops a recurring task.
+# Keep recurring tasks alive after exceptions.
 def hls_guard_task(what, task) =
   fun () ->
     try
@@ -787,42 +783,48 @@ def output_hls_stream(audio_source) =
     )
 
     # MPEG-TS repeats source metadata as timed ID3v2.3 in every segment.
-    # Keep HE-AAC disabled until mixed profiles share a timeline:
-    # https://github.com/savonet/liquidsoap/issues/5319
-    let aac_mid =
+    # HE-AAC and AAC-LC in one ladder needs Liquidsoap >= 2.4.6 (savonet/liquidsoap#5319).
+    def hls_aac_variant(~bitrate, ~profile, ~codecs) =
       %ffmpeg(
         format = "mpegts",
         %audio(
           codec = "libfdk_aac",
-          b = "#{HLS_BITRATE_MID}k",
+          b = "#{bitrate}k",
           ar = 48000,
           ac = 2,
-          profile = "aac_low"
+          profile = profile
         )
-      ).{
-        bandwidth = HLS_BITRATE_MID * 1000 + 8000,
-        codecs = "mp4a.40.2",
-        extname = "ts"
-      }
-
-    let aac_high =
-      %ffmpeg(
-        format = "mpegts",
-        %audio(
-          codec = "libfdk_aac",
-          b = "#{HLS_BITRATE_HIGH}k",
-          ar = 48000,
-          ac = 2,
-          profile = "aac_low"
-        )
-      ).{
-        bandwidth = HLS_BITRATE_HIGH * 1000 + 8000,
-        codecs = "mp4a.40.2",
-        extname = "ts"
-      }
+      ).{bandwidth = bitrate * 1000 + 8000, codecs = codecs, extname = "ts"}
+    end
 
     # Stream ids also name the variant playlists the mirror publishes.
-    let hls_streams = [("aac_96", aac_mid), ("aac_192", aac_high)]
+    let hls_streams =
+      [
+        (
+          "aac_48",
+          hls_aac_variant(
+            bitrate=HLS_BITRATE_LOW,
+            profile="aac_he",
+            codecs="mp4a.40.5"
+          )
+        ),
+        (
+          "aac_96",
+          hls_aac_variant(
+            bitrate=HLS_BITRATE_MID,
+            profile="aac_low",
+            codecs="mp4a.40.2"
+          )
+        ),
+        (
+          "aac_192",
+          hls_aac_variant(
+            bitrate=HLS_BITRATE_HIGH,
+            profile="aac_low",
+            codecs="mp4a.40.2"
+          )
+        )
+      ]
 
     def try_start_hls_output() =
       if
@@ -830,7 +832,7 @@ def output_hls_stream(audio_source) =
       then
         hls_remove_stale_local_files()
 
-        # Omit persist_at to preserve clock-error containment (see header).
+        # Omit persist_at: a state-write failure during detach can stop the process.
         let hls_output =
           output.file.hls(
             id="hls",

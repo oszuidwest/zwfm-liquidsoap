@@ -1,9 +1,10 @@
-# Load the HLS health helpers with minimal configuration.
+# HLS health and filesystem failure tests.
 let STATION_ID = "test"
 let HLS_BUNNY_STORAGE_ZONE = "test-zone"
 let HLS_BUNNY_ACCESS_KEY = "test-key"
 let HLS_BUNNY_ENDPOINT = "https://storage.example.test/"
 let HLS_DIR = file.temp_dir(cleanup=true, "hls-status-test")
+let HLS_BITRATE_LOW = 48
 let HLS_BITRATE_MID = 96
 let HLS_BITRATE_HIGH = 192
 let HLS_SEGMENT_DURATION = 4.0
@@ -31,14 +32,13 @@ assert(starting.mirror.storage_zone == "test-zone")
 assert(not null.defined(starting.local.update_age_seconds))
 assert(not null.defined(starting.mirror.published_age_seconds))
 
-# Apply the stall grace before initial progress.
+# Startup stalls after the grace period.
 hls_started_at := time() - hls_stale_after_seconds - 1.0
 let never_started = hls_health()
 assert(never_started.local.status == "degraded")
 assert(never_started.mirror.status == "degraded")
 hls_started_at := time()
 
-# Seed fresh local and mirror progress.
 file.write(data="#EXTM3U", "#{HLS_DIR}/aac_96.m3u8")
 file.write(data="#EXTM3U", "#{HLS_DIR}/live.m3u8")
 file.write(data="", "#{HLS_DIR}/aac_96_1.ts")
@@ -94,8 +94,7 @@ assert(string.contains(substring="\"pending_segments\":1", encoded))
 assert(not string.contains(substring="\"sync_age_seconds\":", encoded))
 assert(string.contains(substring="\"published_age_seconds\":", encoded))
 
-# The stalest published variant wins; the static master playlist must not
-# affect media freshness.
+# Freshness follows the stalest variant and excludes the static master playlist.
 hls_mirror_health_tick(
   mirror_worker("", 0, 0, time()),
   [
@@ -128,6 +127,31 @@ let stale = hls_health()
 assert(stale.status == "degraded")
 assert(stale.local.status == "degraded")
 assert(null.get(stale.local.error) == "stalled")
+
+# Unreadable HLS_DIR must not break cleanup or health checks. Requires non-root.
+hls_local_last_update_at := time()
+ignore(
+  process.run(
+    "chmod 000 #{HLS_DIR}"
+  )
+)
+let listing_caught = ref(false)
+try
+  ignore(file.ls(HLS_DIR))
+catch _ do
+  listing_caught := true
+end
+assert(listing_caught())
+hls_remove_stale_local_files()
+let unreadable = hls_health()
+assert(unreadable.local.status == "ok")
+assert(not null.defined(unreadable.local.error))
+assert(unreadable.local.playlist_count == 0)
+ignore(
+  process.run(
+    "chmod 700 #{HLS_DIR}"
+  )
+)
 
 # A missing HLS_DIR degrades local health even with fresh writer progress.
 hls_local_last_update_at := time()

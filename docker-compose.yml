@@ -2,7 +2,7 @@
 name: zwfm-liquidsoap
 services:
   liquidsoap:
-    image: ghcr.io/oszuidwest/zwfm-liquidsoap:2.4.5-next
+    image: ghcr.io/oszuidwest/zwfm-liquidsoap:2.4.6-next
     container_name: liquidsoap
     volumes:
       - ./scripts:/scripts
@@ -11,8 +11,7 @@ services:
       - ./socket:/tmp/liquidsoap # Server socket
     environment:
       - TZ=${CONTAINER_TIMEZONE:-Europe/Amsterdam}
-      # Pin listener ports to the values Compose interpolated for the port
-      # mappings, so a shell override cannot diverge from env_file
+      # Keep listener ports aligned with port mappings when the shell overrides .env.
       - SRT_PORT_PRIMARY=${SRT_PORT_PRIMARY:-8888}
       - SRT_PORT_SECONDARY=${SRT_PORT_SECONDARY:-9999}
       - HTTP_PORT=${HTTP_PORT:-7000}
@@ -42,7 +41,6 @@ services:
     command: /scripts/radio.liq
     restart: unless-stopped
     user: "liquidsoap:liquidsoap"
-    # HLS window on tmpfs: host disk-full, read-only remounts and ownership
-    # drift cannot break it. 64M is ~25x the default live window.
+    # Isolate HLS writes from host disk capacity and permissions.
     tmpfs:
       - /hls:size=64m,uid=100,gid=101,mode=0755
