@@ -130,6 +130,33 @@ assert(stale.status == "degraded")
 assert(stale.local.status == "degraded")
 assert(null.get(stale.local.error) == "stalled")
 
+# An HLS_DIR that exists but cannot be read (#138). The only directory
+# listing, in hls_remove_stale_local_files, must not escape, and the health
+# snapshot stays intact. Needs a non-root user, like the container's UID 100.
+hls_local_last_update_at := time()
+ignore(
+  process.run(
+    "chmod 000 #{HLS_DIR}"
+  )
+)
+let listing_caught = ref(false)
+try
+  ignore(file.ls(HLS_DIR))
+catch _ do
+  listing_caught := true
+end
+assert(listing_caught())
+hls_remove_stale_local_files()
+let unreadable = hls_health()
+assert(unreadable.local.status == "ok")
+assert(not null.defined(unreadable.local.error))
+assert(unreadable.local.playlist_count == 0)
+ignore(
+  process.run(
+    "chmod 700 #{HLS_DIR}"
+  )
+)
+
 # A missing HLS_DIR degrades local health even with fresh writer progress.
 hls_local_last_update_at := time()
 file.rmdir(HLS_DIR)
