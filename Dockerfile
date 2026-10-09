@@ -7,7 +7,7 @@ ARG TARGETARCH
 USER root
 RUN apt-get update \
  && apt-get upgrade -y --no-install-recommends \
- && apt-get install -y --no-install-recommends iproute2 wget \
+ && apt-get install -y --no-install-recommends iproute2 libcurl4t64 libzmq5 wget \
  && wget -q -O /usr/local/bin/odr-audioenc "https://github.com/oszuidwest/zwfm-odrbuilds/releases/download/odr-audioenc-${ODR_AUDIOENC_VERSION}/odr-audioenc-${ODR_AUDIOENC_VERSION}-minimal-debian13-${TARGETARCH}" \
  && chmod +x /usr/local/bin/odr-audioenc \
  && apt-get remove -y wget \
