@@ -99,10 +99,11 @@ Icecast, Bunny, DME, ODR-DabMux, ODR-PadEnc, and zwfm-metadata are not part of t
 
 ### Related projects
 
-- [rpi-audio-encoder](https://github.com/oszuidwest/rpi-audio-encoder): SRT studio encoder for Raspberry Pi
+- [zwfm-encoder](https://github.com/oszuidwest/zwfm-encoder): SRT studio encoder for Raspberry Pi
 - [rpi-umpx-decoder](https://github.com/oszuidwest/rpi-umpx-decoder): MicroMPX receiver for Raspberry Pi
 - [zwfm-metadata](https://github.com/oszuidwest/zwfm-metadata): now-playing metadata router
 - [ODR-PadEnc](https://github.com/Opendigitalradio/ODR-PadEnc): DAB+ Programme Associated Data encoder
+- [zwfm-odrbuilds](https://github.com/oszuidwest/zwfm-odrbuilds): prebuilt ODR-AudioEnc, ODR-PadEnc, and ODR-DabMux binaries used by the Dockerfile
 
 ## Installation
 
@@ -322,7 +323,7 @@ ffmpeg -f alsa -ac 2 -ar 48000 -i hw:0 \
   "srt://liquidsoap.example.com:8888?mode=caller&transtype=live&passphrase=your_passphrase"
 ```
 
-For production studio links, see [rpi-audio-encoder](https://github.com/oszuidwest/rpi-audio-encoder).
+For production studio links, see [zwfm-encoder](https://github.com/oszuidwest/zwfm-encoder).
 
 ## Icecast and DME
 
