@@ -62,7 +62,7 @@ Studio A listens on UDP `8888` and Studio B on UDP `9999` (`SRT_PORT_PRIMARY` an
 
 ### Audio routing
 
-The studio audio is already processed by an on-site Optimod. "StereoTool" below means the StereoTool instance inside this container.
+Any processing in the studio chain, such as an Optimod, happens before the audio reaches Liquidsoap. "StereoTool" below means the StereoTool instance inside this container.
 
 | Station       | Icecast, DAB+, and HLS | Other outputs                                      |
 | ------------- | ---------------------- | -------------------------------------------------- |
