@@ -120,7 +120,7 @@ The deployment uses these paths under `/opt/liquidsoap`:
 
 Keep `HLS_DIR=/hls` and the default `SERVER_SOCKET_PATH` with the provided Compose file, so that HLS uses its own tmpfs mount and the control socket is available at `/opt/liquidsoap/socket` on the host.
 
-The installer also sets the timezone to `Europe/Amsterdam`, enables time synchronization, and limits the journal size. It can set the CPU frequency governor to `performance`, stored in `/etc/tmpfiles.d/cpu-performance.conf`. Remove that file and reboot to restore the host default.
+The installer also sets the timezone to `Europe/Amsterdam`, enables time synchronization, and limits the journal size. It can set the CPU frequency governor to `performance`, stored in `/etc/tmpfiles.d/cpu-performance.conf`. Remove that file and reboot to restore the host default. StereoTool only deletes its own logs once they exceed 4 GB, so the installer adds `/etc/tmpfiles.d/stereotool-logs.conf`, and the daily `systemd-tmpfiles` cleanup then deletes logs in `stereotool/.st_plugin.so.log` that have not been written to for 30 days.
 
 ## Configuration
 

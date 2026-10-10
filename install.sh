@@ -74,6 +74,7 @@ STEREOTOOL_VERSION="1105"
 STEREOTOOL_BASE_URL="https://download.thimeo.com"
 STEREOTOOL_ZIP_URL="${STEREOTOOL_BASE_URL}/Stereo_Tool_Generic_plugin_${STEREOTOOL_VERSION}.zip"
 STEREOTOOL_INSTALL_DIR="${INSTALL_DIR}/stereotool"
+STEREOTOOL_LOGS_CONF_PATH="/etc/tmpfiles.d/stereotool-logs.conf"
 
 # General configuration
 TIMEZONE="Europe/Amsterdam"
@@ -240,6 +241,15 @@ cat > "${STEREOTOOL_RC_PATH}" <<'EOF'
 Enable web interface=1
 Whitelist=/0
 EOF
+
+# StereoTool only deletes its logs above 4 GB, so the daily systemd-tmpfiles cleanup
+# removes them after 30 days. m: ages by mtime only; reads and chown do not reset it.
+if _has_systemd; then
+  cat > "${STEREOTOOL_LOGS_CONF_PATH}" <<EOF
+# Delete StereoTool logs not written to for 30 days (written by zwfm-liquidsoap install.sh)
+e ${STEREOTOOL_INSTALL_DIR}/.st_plugin.so.log - - - m:30d
+EOF
+fi
 
 # Adjust ownership for the directories (the liquidsoap container runs as UID 100 and GID 101)
 echo -e "${BLUE}►► Setting ownership...${NC}"
