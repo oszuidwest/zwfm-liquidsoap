@@ -119,7 +119,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v7
         with:
-          node-version: "20"
+          node-version: "24"
+          check-latest: true
 
       - name: Install Formatters
         run: |
