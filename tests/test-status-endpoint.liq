@@ -43,12 +43,13 @@ output_icecast_stream(
   audio_source=blank()
 )
 
+let studio_a_status = ref("ok")
 studio_input_status_providers :=
   [
     fun () ->
       {
         name = "studio_a",
-        status = "ok",
+        status = studio_a_status(),
         error = null,
         buffer_seconds = 1.03,
         audio =
@@ -114,6 +115,17 @@ radio_sink.on_start(
       assert(snapshot.outputs.hls.status == "disabled")
       assert(not null.defined(snapshot.outputs.hls.mirror.host))
       assert(not null.defined(snapshot.outputs.hls.mirror.storage_zone))
+
+      # A studio that cannot take over yet breaks redundancy.
+      assert(snapshot.redundancy == "ok")
+      studio_a_status := "starting"
+      let snapshot =
+        status_snapshot(
+          radio,
+          (fun () -> "studio_a"),
+          sources=[("studio_a", radio)]
+        )
+      assert(snapshot.redundancy == "lost")
 
       # The public schema excludes free-text detail.
       assert(

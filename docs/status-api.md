@@ -15,10 +15,11 @@ The response code is `200` for `ok` and `degraded`, `503` for `down`, and `401` 
 | `status`                     | `ok`, `degraded`, or `down`                                                                                                                  |
 | `station_id`, `timestamp`, `silence_detection_enabled` | `STATION_ID`, the Unix time of the snapshot, and the silence detection state                                                    |
 | `radio`                      | `ready` (the radio source can produce audio), `mode` (`auto` or `forced`), and `active_source` (`studio_a`, `studio_b`, `fallback`, or `unknown`) |
+| `redundancy`                 | `ok` when every studio input is `ok`, `lost` otherwise. It does not change `status`                                                         |
 | `sources[]`                  | `name` and `ready` for each source in the fallback chain                                                                                     |
 | `studio_inputs[]`, `outputs` | See below; `outputs` has `icecast`, `dab`, and `hls`                                                                                         |
 
-`status` is `down` when the radio source is not ready, and `degraded` when the emergency source is active or an enabled output is not healthy. An output is healthy when its status is `ok`, `starting`, `unmonitored`, or `disabled`.
+`status` is `down` when the radio source is not ready, and `degraded` when the emergency source is active or an enabled output is not healthy. An output is healthy when its status is `ok`, `starting`, `unmonitored`, or `disabled`. A studio input that is down, silent, or still filling its buffer sets `redundancy` to `lost`, because Liquidsoap cannot fail over to that studio. Let your monitor alert only when `lost` lasts, because a short SRT reconnect also sets it.
 
 ## studio_inputs
 
