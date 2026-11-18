@@ -92,10 +92,23 @@ def register_bearer_endpoint(
   end
 end
 
+# Failover needs every studio ready to take over; this does not change status.
+def studio_redundancy(studio_inputs) =
+  if
+    list.for_all(fun (studio) -> studio.status == "ok", studio_inputs)
+  then
+    "ok"
+  else
+    "lost"
+  end
+end
+
 # Unavailable values are JSON null.
 def status_snapshot(radio_source, active_source, ~sources) =
   let radio_ready = radio_source.is_ready()
   let active_source = active_source()
+  let studio_inputs =
+    list.map(fun (get_status) -> get_status(), studio_input_status_providers())
   let icecast_state = icecast_health()
   let dab_state = dab_health()
   let hls_state = hls_health()
@@ -122,17 +135,14 @@ def status_snapshot(radio_source, active_source, ~sources) =
     timestamp = time(),
     radio =
       {ready = radio_ready, mode = radio_mode(), active_source = active_source},
+    redundancy = studio_redundancy(studio_inputs),
     silence_detection_enabled = is_silence_detection_enabled(),
     sources =
       list.map(
         fun ((name, src)) -> {name = name, ready = source.is_ready(src)},
         sources
       ),
-    studio_inputs =
-      list.map(
-        fun (get_status) -> get_status(),
-        studio_input_status_providers()
-      ),
+    studio_inputs = studio_inputs,
     outputs = {icecast = icecast_state, dab = dab_state, hls = hls_state}
   }
 end
